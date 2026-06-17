@@ -115,6 +115,18 @@ impl RuntimePluginState {
     self.connector_credentials.get(connector_id)
   }
 
+  pub(crate) fn connector_credential_ids_for_plugin(&self, plugin_id: &str) -> Vec<String> {
+    let mut connector_ids = self
+      .connector_credentials
+      .values()
+      .filter(|credential| credential.plugin_id == plugin_id)
+      .map(|credential| credential.connector_id.clone())
+      .collect::<Vec<_>>();
+    connector_ids.sort();
+    connector_ids.dedup();
+    connector_ids
+  }
+
   pub(crate) fn enabled_ready_count(&self) -> usize {
     self
       .catalog

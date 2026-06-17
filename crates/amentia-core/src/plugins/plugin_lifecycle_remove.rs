@@ -1,6 +1,7 @@
+use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
 
-use amentia_plugin_host::remove_local_plugin_bundle;
+use amentia_plugin_host::{remove_local_plugin_bundle, PluginConnectorEntry};
 use amentia_protocol::{JsonRpcRequest, JsonRpcResponse, PluginRemoveParams, PluginRemoveResult};
 
 use super::plugin_lifecycle_recovery::{plugin_lifecycle_error_response, PluginLifecycleRecovery};
@@ -18,6 +19,8 @@ pub(crate) fn handle_plugin_remove(
   };
 
   let manifest_path = PathBuf::from(&params.manifest_path);
+  let connector_ids_before_removal =
+    connector_ids_by_plugin(context.plugin_state.connector_entries());
   let removed_plugin =
     match remove_local_plugin_bundle(&manifest_path, context.plugin_state.install_root()) {
       Ok(plugin) => plugin,
@@ -34,13 +37,13 @@ pub(crate) fn handle_plugin_remove(
       }
     };
 
-  let connector_ids = context
-    .plugin_state
-    .connector_entries()
-    .into_iter()
-    .filter(|connector| connector.plugin_id == removed_plugin.plugin_id)
-    .map(|connector| connector.connector_id)
-    .collect::<Vec<_>>();
+  let connector_ids = connector_ids_for_removed_plugin(
+    &removed_plugin.plugin_id,
+    connector_ids_before_removal,
+    context
+      .plugin_state
+      .connector_credential_ids_for_plugin(&removed_plugin.plugin_id),
+  );
   let mut cleanup_error =
     delete_connector_secrets(connector_ids, secure_credentials::delete_connector_secret);
   if let Err(error) =
@@ -97,6 +100,34 @@ pub(crate) fn handle_plugin_remove(
   )
 }
 
+fn connector_ids_by_plugin(
+  connectors: Vec<PluginConnectorEntry>,
+) -> HashMap<String, Vec<String>> {
+  let mut ids_by_plugin = HashMap::new();
+  for connector in connectors {
+    ids_by_plugin
+      .entry(connector.plugin_id)
+      .or_default()
+      .push(connector.connector_id);
+  }
+  ids_by_plugin
+}
+
+fn connector_ids_for_removed_plugin(
+  plugin_id: &str,
+  mut connector_ids_before_removal: HashMap<String, Vec<String>>,
+  credential_connector_ids: Vec<String>,
+) -> Vec<String> {
+  connector_ids_before_removal
+    .remove(plugin_id)
+    .unwrap_or_default()
+    .into_iter()
+    .chain(credential_connector_ids)
+    .collect::<BTreeSet<_>>()
+    .into_iter()
+    .collect()
+}
+
 fn delete_connector_secrets<F>(
   connector_ids: Vec<String>,
   mut delete_secret: F,
@@ -140,7 +171,36 @@ fn plugin_remove_error_response(
 
 #[cfg(test)]
 mod tests {
-  use super::delete_connector_secrets;
+  use std::collections::HashMap;
+
+  use super::{connector_ids_for_removed_plugin, delete_connector_secrets};
+
+  #[test]
+  fn connector_cleanup_uses_pre_removal_ids_and_runtime_credentials() {
+    let connector_ids = connector_ids_for_removed_plugin(
+      "notion-tools",
+      HashMap::from([(
+        "notion-tools".to_string(),
+        vec![
+          "notion-tools::notion".to_string(),
+          "notion-tools::calendar".to_string(),
+        ],
+      )]),
+      vec![
+        "notion-tools::notion".to_string(),
+        "notion-tools::slack".to_string(),
+      ],
+    );
+
+    assert_eq!(
+      connector_ids,
+      vec![
+        "notion-tools::calendar",
+        "notion-tools::notion",
+        "notion-tools::slack"
+      ]
+    );
+  }
 
   #[test]
   fn connector_secret_cleanup_attempts_every_connector() {

@@ -256,6 +256,8 @@ Completed:
   marker exists but a required local API key secret is unavailable.
 - Runtime smoke covers the restart path where persisted connector metadata
   remains but the local secret store cannot restore the API key.
+- Plugin removal captures connector cleanup ids before deleting the bundle and
+  also cleans credential-backed ids so local connector secrets do not linger.
 
 Next:
 
