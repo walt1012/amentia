@@ -16,27 +16,27 @@ ROOT = Path(__file__).resolve().parents[1]
 FIRST_REQUEST_PRESENTER = (
   ROOT
   / "apps"
-  / "pith-macos"
+  / "amentia-macos"
   / "Sources"
-  / "PithApp"
+  / "AmentiaApp"
   / "Timeline"
   / "FirstRequestPromptPresenter.swift"
 )
 SETUP_PROGRESS_PRESENTER = (
   ROOT
   / "apps"
-  / "pith-macos"
+  / "amentia-macos"
   / "Sources"
-  / "PithApp"
+  / "AmentiaApp"
   / "Setup"
   / "SetupProgressPresenter.swift"
 )
 DISTRIBUTION_TRUST_PRESENTER = (
   ROOT
   / "apps"
-  / "pith-macos"
+  / "amentia-macos"
   / "Sources"
-  / "PithApp"
+  / "AmentiaApp"
   / "App"
   / "DistributionTrustPresenter.swift"
 )

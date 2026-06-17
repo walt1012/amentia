@@ -21,7 +21,7 @@ from package_contract import (
 
 
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
-PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
+PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/AmentiaPackage.json")
 APP_ICON_RELATIVE_PATH = Path(f"Contents/Resources/{APP_NAME}.icns")
 SOURCE_COMMIT_HEX_LENGTH = 40
 
@@ -109,11 +109,11 @@ def validate_app_icon(app_path: Path) -> None:
 
 def validate_package_manifest(app_path: Path) -> None:
   manifest_path = app_path / PACKAGE_MANIFEST_RELATIVE_PATH
-  require_file(manifest_path, "PithPackage.json")
+  require_file(manifest_path, "AmentiaPackage.json")
   manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
   if manifest.get("schemaVersion") != PACKAGE_MANIFEST_SCHEMA_VERSION:
     raise RuntimeError(
-      "Public distribution builds must record PithPackage schema version "
+      "Public distribution builds must record AmentiaPackage schema version "
       f"{PACKAGE_MANIFEST_SCHEMA_VERSION} in "
       f"{manifest_path}"
     )
@@ -134,7 +134,7 @@ def validate_package_manifest(app_path: Path) -> None:
     )
   budget = validate_package_manifest_contract(
     manifest,
-    f"Public distribution PithPackage.json: {manifest_path}",
+    f"Public distribution AmentiaPackage.json: {manifest_path}",
     signing_mode="developer-id",
   )
   validate_distribution_size_budget(budget, app_path)

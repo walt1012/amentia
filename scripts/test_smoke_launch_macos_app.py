@@ -17,7 +17,7 @@ from package_contract import (
   PACKAGED_SMOKE_JOURNEY,
   PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
 )
@@ -80,7 +80,7 @@ def smoke_package_metadata() -> dict:
     "modelDelivery": MODEL_DELIVERY_MODE,
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
-    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
     "sandboxMode": SANDBOX_CONTRACT["mode"],
     "sandboxFallback": SANDBOX_CONTRACT["fallback"],
     "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
@@ -125,7 +125,7 @@ def main() -> int:
     "packaged smoke should require stable snapshot hash shape",
   )
 
-  with TemporaryDirectory(prefix="pith-smoke-receipt-") as root:
+  with TemporaryDirectory(prefix="amentia-smoke-receipt-") as root:
     receipt_path = Path(root) / "receipt.json"
     write_packaged_smoke_receipt(
       receipt_path,

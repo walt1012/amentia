@@ -28,7 +28,7 @@ from package_contract import (
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   LOCAL_EXECUTION_SAFETY_MODES,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   PROHIBITED_MODEL_SUFFIXES,
   RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
@@ -86,7 +86,7 @@ def valid_manifest() -> dict[str, object]:
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
     "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
     "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "sandboxMode": SANDBOX_CONTRACT["mode"],
@@ -109,7 +109,7 @@ def main() -> int:
   assert_equal(DEFAULT_MODEL_ID, "lfm2.5-350m")
   assert_equal(MODEL_DELIVERY_MODE, "in-app-download")
   assert_equal(MODEL_WEIGHTS_BUNDLED, False)
-  assert_equal(PITH_ACCOUNT_REQUIRED, False)
+  assert_equal(AMENTIA_ACCOUNT_REQUIRED, False)
   assert_equal(DEFAULT_LOCAL_EXECUTION_SAFETY_MODE, "askBeforeChange")
   assert_equal(
     LOCAL_EXECUTION_SAFETY_MODES,
@@ -157,22 +157,22 @@ def main() -> int:
   )
 
   with_env(
-    "PITH_MAX_APP_BUNDLE_BYTES",
+    "AMENTIA_MAX_APP_BUNDLE_BYTES",
     "1024",
     lambda: assert_equal(package_size_budget()["maxAppBundleBytes"], 1024),
   )
   with_env(
-    "PITH_MAX_ZIP_ARTIFACT_BYTES",
+    "AMENTIA_MAX_ZIP_ARTIFACT_BYTES",
     "4096",
     lambda: assert_equal(package_size_budget()["maxZipArtifactBytes"], 4096),
   )
   with_env(
-    "PITH_MAX_APP_BUNDLE_BYTES",
+    "AMENTIA_MAX_APP_BUNDLE_BYTES",
     "0",
     lambda: assert_raises(package_size_budget, "zero package budgets should fail"),
   )
   with_env(
-    "PITH_MAX_ZIP_ARTIFACT_BYTES",
+    "AMENTIA_MAX_ZIP_ARTIFACT_BYTES",
     "not-a-number",
     lambda: assert_raises(package_size_budget, "non-integer package budgets should fail"),
   )
@@ -211,10 +211,10 @@ def main() -> int:
     "wrong model delivery should fail manifest contract validation",
   )
   wrong_manifest = dict(manifest)
-  wrong_manifest["pithAccountRequired"] = True
+  wrong_manifest["amentiaAccountRequired"] = True
   assert_raises(
     lambda: validate_package_manifest_contract(wrong_manifest, "test manifest"),
-    "package contract must not allow a required Pith account",
+    "package contract must not allow a required Amentia account",
   )
   wrong_manifest = dict(manifest)
   wrong_manifest["defaultLocalExecutionSafetyMode"] = "alwaysRun"
@@ -286,10 +286,10 @@ def main() -> int:
     custom_budget,
   )
 
-  with tempfile.TemporaryDirectory(prefix="pith-package-contract-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-package-contract-") as root:
     root_path = Path(root)
     (root_path / "metadata.json").write_text("{}", encoding="utf-8")
-    manifest_path = root_path / "PithPackage.json"
+    manifest_path = root_path / "AmentiaPackage.json"
     manifest_path.write_text('{"ok": true}', encoding="utf-8")
     assert_equal(read_json_object(manifest_path, "test manifest"), {"ok": True})
     manifest_path.write_text(

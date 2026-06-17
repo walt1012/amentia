@@ -1,13 +1,14 @@
 # Contributing
 
-This repository is in Milestone 12 public release readiness for `Pith`.
+This repository is in Milestone 14 connector and skill platform work for `Amentia`,
+with Milestone 13 installed-app quality as the release baseline.
 
 ## Project Rules
 
 - Use English only in source files, comments, docs, commit messages, branch names, and PR titles.
 - Keep changes scoped and reviewable.
 - Preserve the `macOS 12+` and `x86_64` product target. Do not introduce Apple Silicon-only assumptions.
-- Keep `Pith` lightweight. Prefer simple, maintainable solutions over broad heavy abstractions.
+- Keep `Amentia` lightweight. Prefer simple, maintainable solutions over broad heavy abstractions.
 - Preserve the local-first inference path. Do not add required external model APIs to the core product loop.
 - Treat plugins as first-class product modules rather than optional afterthoughts.
 - Favor free and open source dependencies and delivery paths.
@@ -61,9 +62,8 @@ The current repository target is a stable local daily-driver loop:
 - native sandbox diagnostics and bounded subprocess execution
 - plugin metadata, discovery, permissions, and visibility foundations
 
-The active milestone focuses on shipping the first usable macOS installer:
-release assets, downloaded-asset rehearsal, first-run model setup, workspace
-open, one cowork turn, Web Search, approval proof, and manual acceptance for an
-ad-hoc prerelease. Keep broad connector expansion, marketplace work, generic
-local RAG, remote MCP transport, and multi-agent orchestration out of scope
-until that release path is proven.
+The active milestone expands local plugins, connectors, skills, actions, checks,
+and MCP-style execution only where they strengthen the installed cowork loop.
+Keep broad marketplace work, generic local RAG, remote MCP transport, and
+multi-agent orchestration out of scope until the single local cowork loop stays
+excellent in the installed app.

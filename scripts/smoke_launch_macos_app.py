@@ -36,8 +36,8 @@ from package_contract import (
 
 
 APP_PROCESS_NAME = "Amentia"
-RUNTIME_PROCESS_NAME = "pith-runtime-bin"
-APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
+RUNTIME_PROCESS_NAME = "amentia-runtime-bin"
+APP_SUPPORT_ENV_KEY = "AMENTIA_APP_SUPPORT_DIR"
 WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
 WEB_SEARCH_SNAPSHOT_KIND = "searchResults"
 WEB_SEARCH_SNAPSHOT_HASH_LENGTH = 16
@@ -48,7 +48,7 @@ NOTION_PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 NOTION_CREDENTIAL_LABEL = "Packaged Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "packaged-smoke-token"
 NOTION_PARENT_PAGE_URL = (
-  "https://www.notion.so/Pith-Smoke-11112222333344445555666677778888?pvs=4"
+  "https://www.notion.so/Amentia-Smoke-11112222333344445555666677778888?pvs=4"
 )
 NOTION_PARENT_PAGE_ID = "11112222-3333-4444-5555-666677778888"
 DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
@@ -86,7 +86,7 @@ REQUIRED_DATABASE_TABLES = {
 REQUIRED_SCHEMA_VERSION = 10
 PACKAGED_SMOKE_PROOF_BY_CHECK_ID = {
   "mountedDmgAppBundle": "Mounted DMG exposes Amentia.app and install guide.",
-  "appLaunch": "Packaged app launches and starts pith-runtime-bin.",
+  "appLaunch": "Packaged app launches and starts amentia-runtime-bin.",
   "runtimeProtocol": "Bundled runtime initializes through JSON-RPC.",
   "defaultModelMetadata": "Default model metadata is bundled without weights.",
   "appOwnedModelActivation": "Local model can activate from app-owned storage.",
@@ -282,9 +282,9 @@ def terminate_processes(process_name: str, process_ids_to_stop: set[int]) -> Non
 def validate_app_bundle(app_path: Path) -> dict:
   require_file(app_path / "Contents" / "Info.plist")
   require_file(app_path / "Contents" / "MacOS" / APP_PROCESS_NAME)
-  require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
+  require_file(app_path / "Contents" / "MacOS" / "amentia-runtime-bin")
   require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
-  require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
+  require_file(app_path / "Contents" / "Resources" / "AmentiaPackage.json")
   package_metadata = validate_packaged_model_metadata(app_path)
   assert_portable_llama_backend(app_path / "Contents" / "Resources" / "tools" / "llama.cpp")
   validate_packaged_llama_backend_launch(app_path)
@@ -293,7 +293,7 @@ def validate_app_bundle(app_path: Path) -> dict:
 
 def validate_packaged_model_metadata(app_path: Path) -> dict:
   resources_path = bundled_resource_path(app_path)
-  package_manifest_path = resources_path / "PithPackage.json"
+  package_manifest_path = resources_path / "AmentiaPackage.json"
   package_manifest = read_json_object(package_manifest_path)
   size_budget = validate_package_manifest_contract(
     package_manifest,
@@ -413,11 +413,11 @@ def launch_runtime_process(
 ) -> subprocess.Popen[str]:
   resources_path = bundled_resource_path(app_path)
   environment = os.environ.copy()
-  environment["PITH_DATA_DIR"] = str(support_dir / "storage")
-  environment["PITH_LOCAL_PLUGIN_DIR"] = str(support_dir / "plugins")
-  environment["PITH_MODEL_PACK_ROOT"] = str(resources_path)
-  environment["PITH_PLUGIN_DIR"] = str(resources_path / "plugins")
-  environment["PITH_LLAMACPP_PATH"] = str(
+  environment["AMENTIA_DATA_DIR"] = str(support_dir / "storage")
+  environment["AMENTIA_LOCAL_PLUGIN_DIR"] = str(support_dir / "plugins")
+  environment["AMENTIA_MODEL_PACK_ROOT"] = str(resources_path)
+  environment["AMENTIA_PLUGIN_DIR"] = str(resources_path / "plugins")
+  environment["AMENTIA_LLAMACPP_PATH"] = str(
     resources_path / "tools" / "llama.cpp" / "llama-cli"
   )
   if extra_environment:
@@ -482,7 +482,7 @@ def validate_isolated_support_dir(support_dir: Path) -> None:
     )
 
   storage_dir = support_dir / "storage"
-  validate_runtime_database(storage_dir / "pith.db")
+  validate_runtime_database(storage_dir / "amentia.db")
 
 
 def validate_runtime_database(database_path: Path) -> None:
@@ -726,7 +726,7 @@ def validate_tooling_readiness(
     "webSearchProvider": "DuckDuckGo Lite",
     "webSearchAvailable": "true",
     "webSearchPermissionGranted": "true",
-    "pithAccountRequired": "false",
+    "amentiaAccountRequired": "false",
     "defaultLocalExecutionSafetyMode": "askBeforeChange",
     "localExecutionSafetyModes": "explore,askBeforeChange,approvedWorkspaceExecution",
     "sandboxMode": SANDBOX_CONTRACT["mode"],
@@ -915,8 +915,8 @@ def write_smoke_model_pack(support_dir: Path) -> tuple[Path, Path]:
     "max_output_tokens": 32,
     "backend": "llama.cpp",
     "license": "test-fixture",
-    "homepage": "https://example.com/pith-smoke-model",
-    "download_url": "https://example.com/pith-smoke-model.gguf",
+    "homepage": "https://example.com/amentia-smoke-model",
+    "download_url": "https://example.com/amentia-smoke-model.gguf",
     "sha256": hashlib.sha256(model_bytes).hexdigest(),
     "size_bytes": len(model_bytes),
   }
@@ -1206,7 +1206,7 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("connectorWorkflowId") == "notion.create-page"
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "prepared"
     and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
-    == "pith.connectorWorkflow.v1"
+    == "amentia.connectorWorkflow.v1"
     for item in items
   ):
     raise RuntimeError(
@@ -1280,7 +1280,7 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "retryNeeded"
     and item.get("attributes", {}).get("connectorWorkflowRecovery") == "retry"
     and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
-    == "pith.connectorWorkflow.v1"
+    == "amentia.connectorWorkflow.v1"
     for item in failed_items
   ):
     raise RuntimeError(
@@ -1449,7 +1449,7 @@ def validate_packaged_mcp_plugin_command(
     and item.get("attributes", {}).get("connectorWorkflowStatus") == "completed"
     and item.get("attributes", {}).get("connectorWorkflowProof") == "notionApiResponse"
     and item.get("attributes", {}).get("pluginRunnerConnectorWorkflowContract")
-    == "pith.connectorWorkflow.v1"
+    == "amentia.connectorWorkflow.v1"
     for item in published_items
   ):
     raise RuntimeError(
@@ -1653,7 +1653,7 @@ def request_packaged_workspace_write(
 
 def validate_packaged_first_cowork_request(app_path: Path) -> None:
   with (
-    tempfile.TemporaryDirectory(prefix="pith-packaged-first-cowork-") as support_root,
+    tempfile.TemporaryDirectory(prefix="amentia-packaged-first-cowork-") as support_root,
     FakeNotionApiServer() as notion_api,
   ):
     support_dir = Path(support_root)
@@ -1661,13 +1661,13 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
     backend_path = write_deterministic_llama_backend_fixture(support_dir)
     web_search_fixture_path = write_web_search_fixture(support_dir)
     runtime_environment = {
-      "PITH_MODEL_PACK_MANIFEST": str(manifest_path),
-      "PITH_MODEL_PATH": str(model_path),
-      "PITH_LFM_MODEL_PATH": str(model_path),
-      "PITH_LLAMACPP_PATH": str(backend_path),
-      "PITH_ENABLE_WEB_SEARCH_FIXTURE": "1",
-      "PITH_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
-      "PITH_PLUGIN_RUNNER_ENV_PITH_TEST_NOTION_API_BASE": notion_api.api_base,
+      "AMENTIA_MODEL_PACK_MANIFEST": str(manifest_path),
+      "AMENTIA_MODEL_PATH": str(model_path),
+      "AMENTIA_LFM_MODEL_PATH": str(model_path),
+      "AMENTIA_LLAMACPP_PATH": str(backend_path),
+      "AMENTIA_ENABLE_WEB_SEARCH_FIXTURE": "1",
+      "AMENTIA_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),
+      "AMENTIA_PLUGIN_RUNNER_ENV_AMENTIA_TEST_NOTION_API_BASE": notion_api.api_base,
     }
     process = launch_runtime_process(
       app_path,
@@ -1686,7 +1686,7 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
           }
         },
       )
-      if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+      if initialize["result"]["serverInfo"]["name"] != "amentia-runtime":
         raise RuntimeError("Packaged first cowork initialize returned the wrong server name.")
 
       model_health = send_runtime_request(process, 21, "model/health")
@@ -1762,7 +1762,7 @@ def validate_packaged_runtime_recovery(
         }
       },
     )
-    if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+    if initialize["result"]["serverInfo"]["name"] != "amentia-runtime":
       raise RuntimeError("Packaged runtime recovery returned the wrong server name.")
 
     model_health = send_runtime_request(recovered_process, 51, "model/health")
@@ -1831,7 +1831,7 @@ def validate_packaged_runtime_recovery(
 
 
 def validate_packaged_runtime_protocol(app_path: Path) -> None:
-  with tempfile.TemporaryDirectory(prefix="pith-runtime-protocol-") as support_root:
+  with tempfile.TemporaryDirectory(prefix="amentia-runtime-protocol-") as support_root:
     support_dir = Path(support_root)
     process = launch_runtime_process(app_path, support_dir)
     try:
@@ -1846,7 +1846,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
           }
         },
       )
-      if initialize["result"]["serverInfo"]["name"] != "pith-runtime":
+      if initialize["result"]["serverInfo"]["name"] != "amentia-runtime":
         raise RuntimeError("Packaged runtime initialize returned the wrong server name.")
 
       bootstrap = send_runtime_request(process, 2, "model/bootstrap")
@@ -1863,7 +1863,7 @@ def validate_packaged_runtime_protocol(app_path: Path) -> None:
         )
       validate_runtime_readiness(send_runtime_request(process, 4, "runtime/readiness"))
       validate_packaged_runtime_workspace_bootstrap(process, support_dir)
-      validate_runtime_database(support_dir / "storage" / "pith.db")
+      validate_runtime_database(support_dir / "storage" / "amentia.db")
       validate_packaged_first_cowork_request(app_path)
       print(
         "Packaged runtime protocol smoke passed with model metadata and plugins "
@@ -1946,7 +1946,7 @@ def main() -> int:
   stability_duration = (
     args.duration if args.duration is not None else args.stability_duration
   )
-  with tempfile.TemporaryDirectory(prefix="pith-app-smoke-") as support_root:
+  with tempfile.TemporaryDirectory(prefix="amentia-app-smoke-") as support_root:
     support_dir = Path(support_root)
     app_process = launch_app_process(app_path, support_dir)
     launched_runtime_pids: set[int] = set()
@@ -1978,7 +1978,7 @@ def main() -> int:
 
       stdout, stderr = terminate_process_with_output(app_process)
       raise RuntimeError(
-        "Packaged app did not start pith-runtime-bin within "
+        "Packaged app did not start amentia-runtime-bin within "
         f"{args.startup_timeout:.0f}s.\n"
         f"stdout:\n{stdout[-2000:]}\n"
         f"stderr:\n{stderr[-2000:]}"

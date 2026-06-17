@@ -38,7 +38,7 @@ from package_contract import (
   PACKAGE_SIGNING_MODES,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   LOCAL_EXECUTION_SAFETY_MODES,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
@@ -52,10 +52,10 @@ from release_identity import normalize_product_version
 
 
 APP_EXECUTABLE_NAME = APP_NAME
-SWIFT_EXECUTABLE_NAME = "PithApp"
-RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
+SWIFT_EXECUTABLE_NAME = "AmentiaApp"
+RUNTIME_EXECUTABLE_NAME = "amentia-runtime-bin"
 APP_ICON_FILE_NAME = f"{APP_NAME}.icns"
-APP_ICON_SOURCE_RELATIVE_PATH = Path("docs/brand/pith-blue-p-icon-candidate.png")
+APP_ICON_SOURCE_RELATIVE_PATH = Path("docs/brand/amentia-blue-symbol-icon-candidate.png")
 APP_ICON_MIN_SOURCE_SIZE = 1024
 APP_ICONSET_RENDITIONS = (
   (16, 1),
@@ -73,7 +73,7 @@ LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
 DEFAULT_BUNDLE_ID = "app.amentia.Amentia"
 DEFAULT_VERSION = "0.1.0"
 DEFAULT_SOURCE_COMMIT = (
-  os.environ.get("PITH_SOURCE_COMMIT")
+  os.environ.get("AMENTIA_SOURCE_COMMIT")
   or os.environ.get("GITHUB_SHA")
   or "development"
 )
@@ -87,7 +87,7 @@ REQUIRED_ZIP_BASE_ENTRIES = {
   f"{APP_NAME}.app/Contents/MacOS/{APP_EXECUTABLE_NAME}",
   f"{APP_NAME}.app/Contents/MacOS/{RUNTIME_EXECUTABLE_NAME}",
   f"{APP_NAME}.app/Contents/Resources/{APP_ICON_FILE_NAME}",
-  f"{APP_NAME}.app/Contents/Resources/PithPackage.json",
+  f"{APP_NAME}.app/Contents/Resources/AmentiaPackage.json",
 }
 REQUIRED_PACKAGED_MODEL_FIELDS = {
   "id",
@@ -198,7 +198,7 @@ def parse_args() -> argparse.Namespace:
   parser.add_argument(
     "--runtime-binary",
     type=Path,
-    help="Use an existing pith-runtime-bin instead of building one.",
+    help="Use an existing amentia-runtime-bin instead of building one.",
   )
   parser.add_argument(
     "--llama-binary",
@@ -208,7 +208,7 @@ def parse_args() -> argparse.Namespace:
   parser.add_argument(
     "--app-binary",
     type=Path,
-    help="Use an existing PithApp executable instead of the default Swift build output.",
+    help="Use an existing AmentiaApp executable instead of the default Swift build output.",
   )
   parser.add_argument(
     "--skip-build",
@@ -227,7 +227,7 @@ def parse_args() -> argparse.Namespace:
   )
   parser.add_argument(
     "--version",
-    default=os.environ.get("PITH_RELEASE_VERSION", DEFAULT_VERSION),
+    default=os.environ.get("AMENTIA_RELEASE_VERSION", DEFAULT_VERSION),
     help="App bundle version, normally derived from the release tag without the leading v.",
   )
   parser.add_argument(
@@ -239,7 +239,7 @@ def parse_args() -> argparse.Namespace:
     "--signing-mode",
     default="ad-hoc",
     choices=sorted(PACKAGE_SIGNING_MODES),
-    help="Signing state recorded in PithPackage.json.",
+    help="Signing state recorded in AmentiaPackage.json.",
   )
   parser.add_argument(
     "--stage-llama-backend",
@@ -255,7 +255,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_swift_app(repo_root: Path, configuration: str, arch: str) -> Path:
-  package_root = repo_root / "apps" / "pith-macos"
+  package_root = repo_root / "apps" / "amentia-macos"
   swift_command = [
     "swift",
     "build",
@@ -318,7 +318,7 @@ def package_app(
 
   write_info_plist(contents_path / "Info.plist", version)
   write_package_manifest(
-    resources_path / "PithPackage.json",
+    resources_path / "AmentiaPackage.json",
     arch,
     version,
     source_commit,
@@ -365,8 +365,8 @@ def create_app_icon(repo_root: Path, destination: Path) -> None:
       raise FileNotFoundError(f"macOS app icon generation requires {tool}")
 
   destination.parent.mkdir(parents=True, exist_ok=True)
-  with tempfile.TemporaryDirectory(prefix="pith-iconset-") as temp_root:
-    iconset_path = Path(temp_root) / "Pith.iconset"
+  with tempfile.TemporaryDirectory(prefix="amentia-iconset-") as temp_root:
+    iconset_path = Path(temp_root) / "Amentia.iconset"
     iconset_path.mkdir()
     for point_size, scale in APP_ICONSET_RENDITIONS:
       pixel_size = point_size * scale
@@ -554,12 +554,12 @@ def assert_macos_icon_packaged(path: Path) -> None:
 
 
 def validate_swift_package_rules(repo_root: Path) -> None:
-  package_path = repo_root / "apps" / "pith-macos" / "Package.swift"
+  package_path = repo_root / "apps" / "amentia-macos" / "Package.swift"
   text = package_path.read_text(encoding="utf-8")
   required_fragments = {
     "minimum macOS 12 platform": ".macOS(.v12)",
-    "PithApp executable product": 'name: "PithApp"',
-    "PithApp source target": 'path: "Sources/PithApp"',
+    "AmentiaApp executable product": 'name: "AmentiaApp"',
+    "AmentiaApp source target": 'path: "Sources/AmentiaApp"',
   }
   for label, fragment in required_fragments.items():
     if fragment not in text:
@@ -616,7 +616,7 @@ def write_package_manifest(
     "modelDelivery": MODEL_DELIVERY_MODE,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
     "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
     "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "dailyDriverStageSource": DAILY_DRIVER_STAGE_SOURCE,
@@ -699,7 +699,7 @@ def validate_app_bundle(
 ) -> None:
   required_paths = [
     app_path / "Contents" / "Info.plist",
-    app_path / "Contents" / "Resources" / "PithPackage.json",
+    app_path / "Contents" / "Resources" / "AmentiaPackage.json",
     app_path / "Contents" / "PkgInfo",
     app_path / "Contents" / "MacOS" / APP_EXECUTABLE_NAME,
     app_path / "Contents" / "MacOS" / RUNTIME_EXECUTABLE_NAME,
@@ -821,7 +821,7 @@ def assert_package_manifest_matches_bundle(
   expected_source_commit: str,
   expected_signing_mode: str,
 ) -> None:
-  manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+  manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
   manifest = read_json_object(manifest_path)
   validate_package_manifest_contract(
     manifest,
@@ -944,7 +944,7 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
   bundled_root = app_path / "Contents" / "Resources" / "plugins" / "bundled"
   for plugin_id, required_capabilities in REQUIRED_BUNDLED_PLUGIN_CAPABILITIES.items():
     plugin_root = bundled_root / plugin_id
-    manifest_path = plugin_root / "pith-plugin.json"
+    manifest_path = plugin_root / "amentia-plugin.json"
     require_file(manifest_path, f"bundled plugin manifest for {plugin_id}")
     manifest = read_json_object(manifest_path)
     if manifest.get("name") != plugin_id:
@@ -1323,7 +1323,7 @@ def required_zip_entries() -> set[str]:
   )
   for plugin_id in REQUIRED_BUNDLED_PLUGIN_CAPABILITIES:
     entries.add(
-      f"{APP_NAME}.app/Contents/Resources/plugins/bundled/{plugin_id}/pith-plugin.json"
+      f"{APP_NAME}.app/Contents/Resources/plugins/bundled/{plugin_id}/amentia-plugin.json"
     )
   return entries
 
@@ -1363,7 +1363,7 @@ def main() -> int:
     dist_dir.mkdir(parents=True, exist_ok=True)
 
     if args.skip_build:
-      app_binary = args.app_binary or repo_root / "apps" / "pith-macos" / ".build" / args.configuration / SWIFT_EXECUTABLE_NAME
+      app_binary = args.app_binary or repo_root / "apps" / "amentia-macos" / ".build" / args.configuration / SWIFT_EXECUTABLE_NAME
       runtime_binary = args.runtime_binary or repo_root / "target" / args.configuration / RUNTIME_EXECUTABLE_NAME
       require_file(app_binary, "Swift app executable")
       require_file(runtime_binary, "runtime executable")

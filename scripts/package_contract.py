@@ -21,7 +21,7 @@ DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
 MODEL_DELIVERY_MODE = "in-app-download"
 MODEL_WEIGHTS_BUNDLED = False
 MODEL_METADATA_BUNDLED = True
-PITH_ACCOUNT_REQUIRED = False
+AMENTIA_ACCOUNT_REQUIRED = False
 LOCAL_EXECUTION_SAFETY_MODES = (
   "explore",
   "askBeforeChange",
@@ -53,7 +53,7 @@ DAILY_DRIVER_CONTRACT = {
 }
 FIRST_APP_OPEN_CONTRACT_ID = "map-plan-or-short-cowork-prompt"
 PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION = 1
-PACKAGED_SMOKE_RECEIPT_KIND = "pith.packagedSmokeReceipt"
+PACKAGED_SMOKE_RECEIPT_KIND = "amentia.packagedSmokeReceipt"
 PACKAGED_SMOKE_REQUIRED_CHECK_IDS = (
   "mountedDmgAppBundle",
   "appLaunch",
@@ -141,7 +141,7 @@ PACKAGED_SMOKE_PACKAGE_METADATA_FIELDS = (
   "modelDelivery",
   "defaultModelId",
   "modelWeightsBundled",
-  "pithAccountRequired",
+  "amentiaAccountRequired",
   "sandboxMode",
   "sandboxFallback",
   "dailyDriverStageSource",
@@ -154,11 +154,11 @@ PACKAGED_SMOKE_PACKAGE_METADATA_FIELDS = (
 def package_size_budget() -> dict[str, int]:
   return {
     "maxAppBundleBytes": env_positive_int(
-      "PITH_MAX_APP_BUNDLE_BYTES",
+      "AMENTIA_MAX_APP_BUNDLE_BYTES",
       DEFAULT_MAX_APP_BUNDLE_BYTES,
     ),
     "maxZipArtifactBytes": env_positive_int(
-      "PITH_MAX_ZIP_ARTIFACT_BYTES",
+      "AMENTIA_MAX_ZIP_ARTIFACT_BYTES",
       DEFAULT_MAX_ZIP_ARTIFACT_BYTES,
     ),
   }
@@ -207,7 +207,7 @@ def validate_package_manifest_contract(
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
     "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
     "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "sandboxMode": SANDBOX_CONTRACT["mode"],
@@ -328,10 +328,10 @@ def main() -> int:
   args = parse_args()
   try:
     manifest_path = args.manifest.resolve()
-    manifest = read_json_object(manifest_path, "PithPackage.json")
+    manifest = read_json_object(manifest_path, "AmentiaPackage.json")
     validate_package_manifest_contract(
       manifest,
-      f"PithPackage.json: {manifest_path}",
+      f"AmentiaPackage.json: {manifest_path}",
       source_commit=args.source_commit,
       signing_mode=args.signing_mode,
       bundle_version=args.bundle_version,

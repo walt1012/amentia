@@ -45,10 +45,10 @@ env:
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: init.defaultBranch
   GIT_CONFIG_VALUE_0: main
-  SWIFT_PACKAGE_PATH: apps/pith-macos
+  SWIFT_PACKAGE_PATH: apps/amentia-macos
   PREBUILT_ARTIFACT_DIR: artifacts/prebuilt
-  SWIFT_APP_BINARY: PithApp
-  RUNTIME_BINARY: pith-runtime-bin
+  SWIFT_APP_BINARY: AmentiaApp
+  RUNTIME_BINARY: amentia-runtime-bin
   LLAMA_BINARY: llama-cli
   LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
   LLAMA_BACKEND_CACHE_DIR: .ci-cache/llama-backend
@@ -81,7 +81,7 @@ jobs:
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-pith
+      KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-amentia
       MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
       MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
       MACOS_DEVELOPER_ID_APPLICATION: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
@@ -110,9 +110,9 @@ jobs:
             echo "::error title=Release tag mismatch::Release tag $RELEASE_TAG points at $release_tag_commit, but checkout HEAD is $release_sha."
             exit 1
           fi
-          echo "PITH_RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
-          echo "PITH_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
-          echo "PITH_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"
 
           successful_ci_url="$(
             gh run list \
@@ -127,7 +127,7 @@ jobs:
             echo "::error title=Release CI gate::The release commit $release_sha does not have a successful CI run. Run CI for this commit before publishing a release."
             exit 1
           fi
-          echo "PITH_RELEASE_CI_RUN_URL=$successful_ci_url" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_CI_RUN_URL=$successful_ci_url" >> "$GITHUB_ENV"
 
       - name: Determine release signing mode
         run: |
@@ -147,9 +147,9 @@ jobs:
           if (( ${#missing[@]} > 0 )); then
             joined="$(IFS=', '; echo "${missing[*]}")"
             echo "::warning title=Developer ID unavailable::Building an ad-hoc DMG because these release secrets are missing: $joined"
-            echo "PITH_RELEASE_SIGNING_MODE=ad-hoc" >> "$GITHUB_ENV"
+            echo "AMENTIA_RELEASE_SIGNING_MODE=ad-hoc" >> "$GITHUB_ENV"
           else
-            echo "PITH_RELEASE_SIGNING_MODE=developer-id" >> "$GITHUB_ENV"
+            echo "AMENTIA_RELEASE_SIGNING_MODE=developer-id" >> "$GITHUB_ENV"
           fi
 
       - name: Write release readiness report
@@ -157,11 +157,11 @@ jobs:
           set -euo pipefail
           python3 scripts/release_readiness.py \
             --tag "$RELEASE_TAG" \
-            --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
+            --ci-run-url "$AMENTIA_RELEASE_CI_RUN_URL" \
             --output release-readiness.md \
             --json-output release-readiness.json \
             --dry-run "$RELEASE_DRY_RUN" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --requested-draft "$RELEASE_DRAFT" \
             --requested-prerelease "$RELEASE_PRERELEASE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
@@ -173,10 +173,10 @@ jobs:
         run: python3 scripts/validate_model_pack.py --remote
 
       - name: Import Developer ID certificate
-        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
+        if: env.AMENTIA_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
-          keychain_path="$RUNNER_TEMP/pith-release.keychain-db"
+          keychain_path="$RUNNER_TEMP/amentia-release.keychain-db"
           certificate_path="$RUNNER_TEMP/developer-id.p12"
           printf '%s' "$MACOS_CERTIFICATE_P12_BASE64" | base64 -D > "$certificate_path"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
@@ -212,8 +212,8 @@ jobs:
       - name: Cache Swift build output
         uses: actions/cache@v5
         with:
-          path: apps/pith-macos/.build
-          key: release-swift-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          path: apps/amentia-macos/.build
+          key: release-swift-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
           restore-keys: |
             release-swift-${{ runner.os }}-${{ runner.arch }}-
 
@@ -229,7 +229,7 @@ jobs:
       - name: Build runtime executable
         run: |
           set -euo pipefail
-          cargo build -p pith-runtime-bin --release
+          cargo build -p amentia-runtime-bin --release
           mkdir -p "$PREBUILT_ARTIFACT_DIR"
           cp "target/release/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
           chmod +x "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
@@ -260,14 +260,14 @@ jobs:
           package_args=(
             --skip-build \
             --no-zip \
-            --version "$PITH_RELEASE_VERSION" \
-            --source-commit "$PITH_RELEASE_SHA" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --version "$AMENTIA_RELEASE_VERSION" \
+            --source-commit "$AMENTIA_RELEASE_SHA" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --app-binary "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY" \
             --runtime-binary "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY" \
             --llama-binary "$PREBUILT_ARTIFACT_DIR/$LLAMA_BINARY"
           )
-          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+          if [[ "$AMENTIA_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
             package_args+=(--skip-ad-hoc-sign)
           fi
           python3 scripts/package_macos_app.py "${package_args[@]}"
@@ -276,13 +276,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/package_contract.py \
-            --manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
-            --source-commit "$PITH_RELEASE_SHA" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
-            --bundle-version "$PITH_RELEASE_VERSION"
+            --manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
+            --source-commit "$AMENTIA_RELEASE_SHA" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
+            --bundle-version "$AMENTIA_RELEASE_VERSION"
 
       - name: Sign app for public distribution
-        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
+        if: env.AMENTIA_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           python3 scripts/sign_macos_app_for_distribution.py \
@@ -295,7 +295,7 @@ jobs:
           set -euo pipefail
           python3 scripts/release_text.py \
             --tag "$RELEASE_TAG" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
             --draft "$RELEASE_DRAFT" \
             --install-guide-output artifacts/macos/README-FIRST.txt \
@@ -311,7 +311,7 @@ jobs:
             --readme-file artifacts/macos/README-FIRST.txt \
             --smoke-launch-script scripts/smoke_launch_macos_app.py \
             --smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json
-          if [[ "$PITH_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
+          if [[ "$AMENTIA_RELEASE_SIGNING_MODE" == "developer-id" ]]; then
             codesign \
               --force \
               --timestamp \
@@ -322,7 +322,7 @@ jobs:
           fi
 
       - name: Notarize and staple DMG
-        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
+        if: env.AMENTIA_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           set -euo pipefail
           dmg_path="artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg"
@@ -344,10 +344,10 @@ jobs:
             --artifact "$dmg_path" \
             --checksum-output "$dmg_path.sha256" \
             --tag "$RELEASE_TAG" \
-            --source-commit "$PITH_RELEASE_SHA" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --source-commit "$AMENTIA_RELEASE_SHA" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --install-guide artifacts/macos/README-FIRST.txt \
-            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
+            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
             --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
@@ -383,7 +383,7 @@ jobs:
             --title "$release_title" \
             --tag "$RELEASE_TAG" \
             --notes-file release-notes.md \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --requested-draft "$RELEASE_DRAFT" \
             --requested-prerelease "$RELEASE_PRERELEASE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
@@ -395,8 +395,8 @@ jobs:
             --env-output release-state.env \
             --summary-output release-plan.md \
             --plan-output release-plan.json \
-            --source-commit "$PITH_RELEASE_SHA" \
-            --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
+            --source-commit "$AMENTIA_RELEASE_SHA" \
+            --ci-run-url "$AMENTIA_RELEASE_CI_RUN_URL" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --dry-run "$RELEASE_DRY_RUN"
           source release-state.env
@@ -484,7 +484,7 @@ jobs:
               --notes-file release-notes.md
           else
             create_args=(--title "$release_title" --notes-file release-notes.md --draft)
-            if [[ "$PITH_RELEASE_STATE_PRERELEASE" == "true" ]]; then
+            if [[ "$AMENTIA_RELEASE_STATE_PRERELEASE" == "true" ]]; then
               create_args+=(--prerelease)
             fi
             gh release create "$RELEASE_TAG" "${create_args[@]}"
@@ -550,13 +550,13 @@ jobs:
           echo "Apply final GitHub Release visibility started" >> release-progress.txt
           release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"
           test -n "$release_id"
-          echo "PITH_RELEASE_ID=$release_id" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_ID=$release_id" >> "$GITHUB_ENV"
           gh api \
             -X PATCH \
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \
             --input release-state.json
 
-          if [[ "$PITH_RELEASE_STATE_DRAFT" == "true" ]]; then
+          if [[ "$AMENTIA_RELEASE_STATE_DRAFT" == "true" ]]; then
             echo "Release $RELEASE_TAG kept as draft."
           fi
 
@@ -567,18 +567,18 @@ jobs:
         run: |
           set -euo pipefail
           echo "Validate final GitHub Release started" >> release-progress.txt
-          test -n "${PITH_RELEASE_ID:-}"
-          gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID" \
+          test -n "${AMENTIA_RELEASE_ID:-}"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$AMENTIA_RELEASE_ID" \
             > release-published.json
           set +e
           python3 scripts/release_publish_contract.py \
             --tag "$RELEASE_TAG" \
             --release-json release-published.json \
-            --source-commit "$PITH_RELEASE_SHA" \
-            --tag-commit "$PITH_RELEASE_TAG_COMMIT" \
-            --expected-draft "$PITH_RELEASE_STATE_DRAFT" \
-            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --source-commit "$AMENTIA_RELEASE_SHA" \
+            --tag-commit "$AMENTIA_RELEASE_TAG_COMMIT" \
+            --expected-draft "$AMENTIA_RELEASE_STATE_DRAFT" \
+            --expected-prerelease "$AMENTIA_RELEASE_STATE_PRERELEASE" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
             --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE" \
             2>&1 | tee release-final-validation.log
@@ -615,5 +615,5 @@ jobs:
       - name: Cleanup release keychain
         if: always()
         run: |
-          keychain_path="$RUNNER_TEMP/pith-release.keychain-db"
+          keychain_path="$RUNNER_TEMP/amentia-release.keychain-db"
           security delete-keychain "$keychain_path" >/dev/null 2>&1 || true

@@ -20,7 +20,7 @@ from package_contract import (
   MODEL_METADATA_BUNDLED,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   package_distribution_trust,
@@ -61,7 +61,7 @@ def package_manifest_data(tag: str, signing: str = "ad-hoc") -> dict:
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
     "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
     "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "dailyDriverStageSource": DAILY_DRIVER_CONTRACT["stageSource"],
@@ -82,11 +82,11 @@ def package_manifest_data(tag: str, signing: str = "ad-hoc") -> dict:
 def write_downloaded_assets(root: Path, tag: str = "v0.1.0") -> None:
   dmg_name, checksum_name, guide_name, manifest_name = release_installer_asset_names(tag)
   artifact = root / dmg_name
-  artifact.write_bytes(b"pith downloaded release artifact\n")
+  artifact.write_bytes(b"amentia downloaded release artifact\n")
   guide = root / guide_name
   guide.write_text(release_install_guide(tag, "ad-hoc"), encoding="utf-8")
   checksum = write_checksum_file(artifact, root / checksum_name)
-  package_manifest = root / "PithPackage.json"
+  package_manifest = root / "AmentiaPackage.json"
   package_manifest.write_text(
     json.dumps(package_manifest_data(tag), indent=2, sort_keys=True) + "\n",
     encoding="utf-8",
@@ -124,7 +124,7 @@ def expect_failure(action, expected: str) -> None:
 
 
 def main() -> int:
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     summary = validate_release_rehearsal("v0.1.0", root)
@@ -240,7 +240,7 @@ def main() -> int:
     if summary_payload["manualPrereleaseChecks"] != summary["manualPrereleaseChecks"]:
       raise AssertionError("release rehearsal JSON should preserve manual acceptance checks")
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     (root / "unexpected.txt").write_text("extra release asset\n", encoding="utf-8")
@@ -254,7 +254,7 @@ def main() -> int:
       allow_extra_assets=True,
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
@@ -267,7 +267,7 @@ def main() -> int:
       "Gatekeeper guidance",
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
@@ -280,7 +280,7 @@ def main() -> int:
       "journey",
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
@@ -293,7 +293,7 @@ def main() -> int:
       "default model",
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
@@ -306,7 +306,7 @@ def main() -> int:
       "daily driver nextActionSource must be runtime/readiness",
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
@@ -319,7 +319,7 @@ def main() -> int:
       "sandbox fallback must be processOnlyWhenNativeUnavailable",
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
@@ -332,7 +332,7 @@ def main() -> int:
       "packagedSmokeReceipt result must be 'passed'",
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     _dmg_name, _checksum_name, _guide_name, manifest_name = release_installer_asset_names("v0.1.0")
@@ -347,7 +347,7 @@ def main() -> int:
       "smoke metadata must match app package metadata",
     )
 
-  with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
     (root / "Amentia-v0.1.0-macos-x86_64.dmg").write_bytes(b"tampered artifact\n")

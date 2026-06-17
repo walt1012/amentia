@@ -20,7 +20,7 @@ WORKFLOW_RUN_ID = "123456789"
 WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
 
 
-def write_bytes(path: Path, content: bytes = b"pith installer asset\n") -> Path:
+def write_bytes(path: Path, content: bytes = b"amentia installer asset\n") -> Path:
   path.write_bytes(content)
   return path
 
@@ -63,7 +63,7 @@ def assert_raises(action, expected: str) -> None:
 
 
 def main() -> int:
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     validate_installer_asset_set("v0.1.0", valid_assets(root, "v0.1.0"))
     validate_installer_asset_set(
@@ -79,7 +79,7 @@ def main() -> int:
       ),
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     valid_assets(root, "v0.1.0")
     write_bytes(root / "unexpected.txt")
@@ -105,7 +105,7 @@ def main() -> int:
       ),
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     assert_raises(
@@ -117,7 +117,7 @@ def main() -> int:
       "Use either --asset-dir",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     assert_raises(
@@ -130,11 +130,11 @@ def main() -> int:
       "--allow-extra-assets only applies to --asset-dir",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     validate_installer_asset_set("ci-0123456789ab", valid_assets(root, "ci-0123456789ab"))
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     missing_manifest = [
@@ -147,7 +147,7 @@ def main() -> int:
       "missing Amentia-v0.1.0-release-manifest.json",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "Amentia-v0.1.0-macos-x86_64.zip")]
     assert_raises(
@@ -155,7 +155,7 @@ def main() -> int:
       "must not include .zip payloads",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "internal-release-notes.md")]
     assert_raises(
@@ -163,7 +163,7 @@ def main() -> int:
       "must not include internal notes",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "MiniCPM5-1B-Q4_K_M.gguf")]
     assert_raises(
@@ -171,7 +171,7 @@ def main() -> int:
       "must not include .gguf payloads",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     assets[0] = write_bytes(root / "Amentia-v0.2.0-macos-x86_64.dmg")
@@ -180,7 +180,7 @@ def main() -> int:
       "missing Amentia-v0.1.0-macos-x86_64.dmg",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     assert_raises(
@@ -188,7 +188,7 @@ def main() -> int:
       "duplicate asset",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     missing_file = root / "README-FIRST.txt"
@@ -198,7 +198,7 @@ def main() -> int:
       "Installer asset is missing",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     (root / "Amentia-v0.1.0-macos-x86_64.dmg").write_bytes(b"tampered dmg\n")
@@ -207,7 +207,7 @@ def main() -> int:
       "Release checksum does not match artifact",
     )
 
-  with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
+  with TemporaryDirectory(prefix="amentia-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
     (root / "README-FIRST.txt").write_text("Install Amentia.\n", encoding="utf-8")

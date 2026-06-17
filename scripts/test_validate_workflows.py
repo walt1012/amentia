@@ -16,8 +16,8 @@ on:
   pull_request:
 
 env:
-  SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
-  RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
+  SWIFT_APP_ARTIFACT: internal-AmentiaApp-x86_64
+  RUNTIME_ARTIFACT: internal-amentia-runtime-bin-x86_64
   LLAMA_ARTIFACT: internal-llama-cli-x86_64
   MACOS_APP_ARTIFACT: Amentia-installer-x86_64
 
@@ -113,7 +113,7 @@ jobs:
         id: swift_app_binary_cache
         uses: actions/cache/restore@v5
         with:
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
       - name: Use cached Swift app executable
         run: cp "$SWIFT_APP_BINARY_CACHE_DIR/$SWIFT_APP_BINARY" "$PREBUILT_ARTIFACT_DIR/$SWIFT_APP_BINARY"
       - name: Upload Swift app executable
@@ -155,14 +155,14 @@ jobs:
         id: package_swift_cache
         uses: actions/cache@v5
         with:
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
       - name: Cache runtime executable
         id: package_runtime_cache
         uses: actions/cache@v5
         with:
           key: runtime-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/*.rs', 'crates/**/Cargo.toml') }}
       - name: Build missing package executables
-        run: swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 && cargo build -p pith-runtime-bin --release
+        run: swift build --package-path "$SWIFT_PACKAGE_PATH" -c release --arch x86_64 && cargo build -p amentia-runtime-bin --release
       - name: Cache pinned llama.cpp backend
         id: package_llama_cache
         uses: actions/cache@v5
@@ -193,7 +193,7 @@ jobs:
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
-            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
+            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
             --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
@@ -217,7 +217,7 @@ jobs:
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
-            --manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
+            --manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc
       - name: Upload macOS installer artifact
@@ -296,18 +296,18 @@ jobs:
           fi
           git fetch --depth 1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
           release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
-          echo "PITH_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_TAG_COMMIT=$release_tag_commit" >> "$GITHUB_ENV"
           gh run list --workflow CI --status success --json conclusion,headSha,url
-          echo "PITH_RELEASE_CI_RUN_URL=https://github.com/walt1012/pith/actions/runs/100" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_CI_RUN_URL=https://github.com/walt1012/pith/actions/runs/100" >> "$GITHUB_ENV"
       - name: Write release readiness report
         run: |
           python3 scripts/release_readiness.py \
             --tag "$RELEASE_TAG" \
-            --ci-run-url "$PITH_RELEASE_CI_RUN_URL" \
+            --ci-run-url "$AMENTIA_RELEASE_CI_RUN_URL" \
             --output release-readiness.md \
             --json-output release-readiness.json \
             --dry-run "$RELEASE_DRY_RUN" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --requested-draft "$RELEASE_DRAFT" \
             --requested-prerelease "$RELEASE_PRERELEASE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
@@ -331,10 +331,10 @@ jobs:
         run: |
           python3 scripts/release_artifacts.py \
             --tag "$RELEASE_TAG" \
-            --source-commit "$PITH_RELEASE_SHA" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
+            --source-commit "$AMENTIA_RELEASE_SHA" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
             --install-guide artifacts/macos/README-FIRST.txt \
-            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
+            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
             --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
@@ -351,19 +351,19 @@ jobs:
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
-            --manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
-            --source-commit "$PITH_RELEASE_SHA" \
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
-            --bundle-version "$PITH_RELEASE_VERSION"
+            --manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
+            --source-commit "$AMENTIA_RELEASE_SHA" \
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \
+            --bundle-version "$AMENTIA_RELEASE_VERSION"
       - name: Sign app for public distribution
-        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
+        if: env.AMENTIA_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           python3 scripts/sign_macos_app_for_distribution.py \
             artifacts/macos/Amentia.app \
             --identity "$MACOS_DEVELOPER_ID_APPLICATION"
           python3 scripts/validate_macos_distribution.py artifacts/macos/Amentia.app
       - name: Notarize and staple DMG
-        if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
+        if: env.AMENTIA_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           dmg_path="artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg"
           xcrun notarytool submit "$dmg_path" \
@@ -381,14 +381,14 @@ jobs:
           python3 scripts/release_state.py
           --title "$release_title"
           --tag "$RELEASE_TAG"
-          --signing-mode "$PITH_RELEASE_SIGNING_MODE"
+          --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE"
           --requested-draft "$RELEASE_DRAFT"
           --requested-prerelease "$RELEASE_PRERELEASE"
           --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"
           --summary-output release-plan.md
           --plan-output release-plan.json
-          --source-commit "$PITH_RELEASE_SHA"
-          --ci-run-url "$PITH_RELEASE_CI_RUN_URL"
+          --source-commit "$AMENTIA_RELEASE_SHA"
+          --ci-run-url "$AMENTIA_RELEASE_CI_RUN_URL"
           --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           --dry-run "$RELEASE_DRY_RUN"
           --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"
@@ -492,7 +492,7 @@ jobs:
         run: |
           release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"
           test -n "$release_id"
-          echo "PITH_RELEASE_ID=$release_id" >> "$GITHUB_ENV"
+          echo "AMENTIA_RELEASE_ID=$release_id" >> "$GITHUB_ENV"
           gh api \\
             -X PATCH \\
             "repos/$GITHUB_REPOSITORY/releases/$release_id" \\
@@ -500,17 +500,17 @@ jobs:
       - name: Validate final GitHub Release
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
-          test -n "${PITH_RELEASE_ID:-}"
-          gh api "repos/$GITHUB_REPOSITORY/releases/$PITH_RELEASE_ID" \\
+          test -n "${AMENTIA_RELEASE_ID:-}"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$AMENTIA_RELEASE_ID" \\
             > release-published.json
           python3 scripts/release_publish_contract.py \\
             --tag "$RELEASE_TAG" \\
             --release-json release-published.json \\
-            --source-commit "$PITH_RELEASE_SHA" \\
-            --tag-commit "$PITH_RELEASE_TAG_COMMIT" \\
-            --expected-draft "$PITH_RELEASE_STATE_DRAFT" \\
-            --expected-prerelease "$PITH_RELEASE_STATE_PRERELEASE" \\
-            --signing-mode "$PITH_RELEASE_SIGNING_MODE" \\
+            --source-commit "$AMENTIA_RELEASE_SHA" \\
+            --tag-commit "$AMENTIA_RELEASE_TAG_COMMIT" \\
+            --expected-draft "$AMENTIA_RELEASE_STATE_DRAFT" \\
+            --expected-prerelease "$AMENTIA_RELEASE_STATE_PRERELEASE" \\
+            --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \\
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \\
             --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
       - name: Upload release rehearsal summary
@@ -766,11 +766,11 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
-        "SWIFT_APP_ARTIFACT: internal-PithApp-x86_64",
-        "SWIFT_APP_ARTIFACT: PithApp-x86_64",
+        "SWIFT_APP_ARTIFACT: internal-AmentiaApp-x86_64",
+        "SWIFT_APP_ARTIFACT: AmentiaApp-x86_64",
       ),
     )
-    assert_issue(issue_messages(root), "internal-PithApp")
+    assert_issue(issue_messages(root), "internal-AmentiaApp")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -1202,9 +1202,9 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '          test -n "${PITH_RELEASE_ID:-}"\n',
+        '          test -n "${AMENTIA_RELEASE_ID:-}"\n',
         "          trap 'echo \"::error title=Release final validation failed::Validate final GitHub Release failed.\"' ERR\n"
-        '          test -n "${PITH_RELEASE_ID:-}"\n',
+        '          test -n "${AMENTIA_RELEASE_ID:-}"\n',
       ),
     )
     assert_issue(issue_messages(root), "generic error annotations")
@@ -1233,14 +1233,14 @@ def main() -> int:
         "          python3 scripts/release_publish_contract.py \\\n",
       ),
     )
-    assert_issue(issue_messages(root), "PITH_RELEASE_TAG_COMMIT")
+    assert_issue(issue_messages(root), "AMENTIA_RELEASE_TAG_COMMIT")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '--source-commit "$PITH_RELEASE_SHA"',
+        '--source-commit "$AMENTIA_RELEASE_SHA"',
         "--missing-source-commit",
       ),
     )
@@ -1250,14 +1250,14 @@ def main() -> int:
     root = Path(directory)
     final_validation_source = (
       '            --release-json release-published.json \\\n'
-      '            --source-commit "$PITH_RELEASE_SHA" \\\n'
+      '            --source-commit "$AMENTIA_RELEASE_SHA" \\\n'
     )
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
         final_validation_source,
         final_validation_source.replace(
-          '--source-commit "$PITH_RELEASE_SHA"',
+          '--source-commit "$AMENTIA_RELEASE_SHA"',
           '--source-commit "$SOURCE_COMMIT"',
         ),
         1,
@@ -1270,7 +1270,7 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '--tag-commit "$PITH_RELEASE_TAG_COMMIT"',
+        '--tag-commit "$AMENTIA_RELEASE_TAG_COMMIT"',
         "--missing-tag-commit",
       ),
     )
@@ -1281,7 +1281,7 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '--expected-draft "$PITH_RELEASE_STATE_DRAFT"',
+        '--expected-draft "$AMENTIA_RELEASE_STATE_DRAFT"',
         "--missing-expected-draft",
       ),
     )
@@ -1292,7 +1292,7 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '--signing-mode "$PITH_RELEASE_SIGNING_MODE"',
+        '--signing-mode "$AMENTIA_RELEASE_SIGNING_MODE"',
         "--missing-signing-mode",
       ),
     )
@@ -1418,11 +1418,11 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
-        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json",
+        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json",
         "",
       ),
     )
-    assert_issue(issue_messages(root), "PithPackage.json")
+    assert_issue(issue_messages(root), "AmentiaPackage.json")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -1499,7 +1499,7 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
-      release=VALID_RELEASE.replace('--source-commit "$PITH_RELEASE_SHA"', ""),
+      release=VALID_RELEASE.replace('--source-commit "$AMENTIA_RELEASE_SHA"', ""),
     )
     assert_issue(issue_messages(root), "source-commit")
 
@@ -1554,11 +1554,11 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json",
+        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json",
         "",
       ),
     )
-    assert_issue(issue_messages(root), "PithPackage.json")
+    assert_issue(issue_messages(root), "AmentiaPackage.json")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared release identity rules for Pith package and release helpers."""
+"""Shared release identity rules for Amentia package and release helpers."""
 
 from __future__ import annotations
 

@@ -15,7 +15,7 @@ from pathlib import Path
 NOTION_CONNECTOR_ID = "notion-connector::notion"
 NOTION_CREDENTIAL_LABEL = "Smoke Notion"
 NOTION_CREDENTIAL_SECRET = "notion-smoke-token"
-LOCAL_CREDENTIAL_PROVIDER = "pith.localCredentialProvider"
+LOCAL_CREDENTIAL_PROVIDER = "amentia.localCredentialProvider"
 RUNTIME_STDERR_LOG_NAME = "runtime-smoke-stderr.log"
 WEB_SEARCH_FIXTURE_NAME = "web-search-fixture.html"
 DEFAULT_MODEL_ID = "lfm2.5-350m"
@@ -38,7 +38,7 @@ def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]
   stderr_path.parent.mkdir(parents=True, exist_ok=True)
   with stderr_path.open("a", encoding="utf-8") as stderr:
     return subprocess.Popen(
-      ["cargo", "run", "-p", "pith-runtime-bin"],
+      ["cargo", "run", "-p", "amentia-runtime-bin"],
       cwd=repo_root,
       env=env,
       stdin=subprocess.PIPE,
@@ -49,7 +49,7 @@ def start_runtime(repo_root: Path, env: dict[str, str]) -> subprocess.Popen[str]
 
 
 def runtime_stderr_path(env: Mapping[str, str]) -> Path:
-  return Path(env["PITH_DATA_DIR"]) / RUNTIME_STDERR_LOG_NAME
+  return Path(env["AMENTIA_DATA_DIR"]) / RUNTIME_STDERR_LOG_NAME
 
 
 def runtime_stderr_tail(env: Mapping[str, str], max_lines: int = 80) -> str:
@@ -68,7 +68,7 @@ def write_web_search_fixture(state_dir: Path) -> Path:
   fixture_path.parent.mkdir(parents=True, exist_ok=True)
   fixture_path.write_text(
     """
-      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith&amp;rut=abc" class='result-link'>Pith fixture result</a>
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Famentia&amp;rut=abc" class='result-link'>Amentia fixture result</a>
       <td class='result-snippet'>Deterministic local web search result.</td>
     """,
     encoding="utf-8",
@@ -448,7 +448,7 @@ def main() -> int:
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "review-assistant" / "commands").mkdir(parents=True, exist_ok=True)
   write_json_file(
-    plugin_dir / "workspace-notes" / "pith-plugin.json",
+    plugin_dir / "workspace-notes" / "amentia-plugin.json",
     {
       "name": "workspace-notes",
       "version": "0.1.0",
@@ -470,7 +470,7 @@ def main() -> int:
     },
   )
   write_json_file(
-    plugin_dir / "notion-connector" / "pith-plugin.json",
+    plugin_dir / "notion-connector" / "amentia-plugin.json",
     {
       "name": "notion-connector",
       "version": "0.1.0",
@@ -527,7 +527,7 @@ def main() -> int:
     },
   )
   write_json_file(
-    plugin_dir / "shell-recorder" / "pith-plugin.json",
+    plugin_dir / "shell-recorder" / "amentia-plugin.json",
     {
       "name": "shell-recorder",
       "version": "0.1.0",
@@ -573,7 +573,7 @@ def main() -> int:
     },
   )
   write_json_file(
-    plugin_dir / "review-assistant" / "pith-plugin.json",
+    plugin_dir / "review-assistant" / "amentia-plugin.json",
     {
       "name": "review-assistant",
       "version": "0.1.0",
@@ -607,7 +607,7 @@ def main() -> int:
   )
   (plugin_import_dir / "focus-review" / "commands").mkdir(parents=True, exist_ok=True)
   write_json_file(
-    plugin_import_dir / "focus-review" / "pith-plugin.json",
+    plugin_import_dir / "focus-review" / "amentia-plugin.json",
     {
       "name": "focus-review",
       "version": "0.1.0",
@@ -638,10 +638,10 @@ def main() -> int:
   (workspace_dir / "apps").mkdir()
   (workspace_dir / "notes.txt").write_text("Needle term for search tool\n", encoding="utf-8")
   env = os.environ.copy()
-  env["PITH_DATA_DIR"] = str(state_dir)
-  env["PITH_PLUGIN_DIR"] = str(plugin_dir)
-  env["PITH_ENABLE_WEB_SEARCH_FIXTURE"] = "1"
-  env["PITH_WEB_SEARCH_FIXTURE_PATH"] = str(write_web_search_fixture(state_dir))
+  env["AMENTIA_DATA_DIR"] = str(state_dir)
+  env["AMENTIA_PLUGIN_DIR"] = str(plugin_dir)
+  env["AMENTIA_ENABLE_WEB_SEARCH_FIXTURE"] = "1"
+  env["AMENTIA_WEB_SEARCH_FIXTURE_PATH"] = str(write_web_search_fixture(state_dir))
   process = start_runtime(repo_root, env)
   success = False
 
@@ -659,7 +659,7 @@ def main() -> int:
         },
       },
     )
-    assert initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+    assert initialize["result"]["serverInfo"]["name"] == "amentia-runtime"
     assert initialize["result"]["capabilities"]["supportsRuntimeReadiness"] is True
 
     health, _ = send_request(
@@ -733,7 +733,7 @@ def main() -> int:
     assert runtime_readiness["result"]["metrics"]["shellTimeoutSeconds"] == "120"
     assert runtime_readiness["result"]["metrics"]["llamaTimeoutSeconds"] == "180"
     assert runtime_readiness["result"]["metrics"]["sandboxMode"] == "workspaceReadWrite"
-    assert runtime_readiness["result"]["metrics"]["pithAccountRequired"] == "false"
+    assert runtime_readiness["result"]["metrics"]["amentiaAccountRequired"] == "false"
     assert (
       runtime_readiness["result"]["metrics"]["defaultLocalExecutionSafetyMode"]
       == "askBeforeChange"
@@ -1068,7 +1068,7 @@ def main() -> int:
         },
       },
     )
-    assert recovery_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+    assert recovery_initialize["result"]["serverInfo"]["name"] == "amentia-runtime"
 
     recovered_workspace, _ = send_request(
       process,
@@ -1172,7 +1172,7 @@ def main() -> int:
         },
       },
     )
-    assert cleared_recovery_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+    assert cleared_recovery_initialize["result"]["serverInfo"]["name"] == "amentia-runtime"
 
     cleared_recovery_registry, _ = send_request(
       process,
@@ -1350,7 +1350,7 @@ def main() -> int:
         },
       },
     )
-    assert restarted_initialize["result"]["serverInfo"]["name"] == "pith-runtime"
+    assert restarted_initialize["result"]["serverInfo"]["name"] == "amentia-runtime"
 
     restarted_thread, _ = send_request(
       process,

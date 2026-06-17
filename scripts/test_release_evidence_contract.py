@@ -457,7 +457,7 @@ def write_evidence_set(root: Path, mode: str) -> list[Path]:
 def write_installer_assets(root: Path) -> None:
   dmg_name, checksum_name, guide_name, manifest_name = release_installer_asset_names(TAG)
   dmg = root / dmg_name
-  dmg.write_bytes(b"pith release dmg\n")
+  dmg.write_bytes(b"amentia release dmg\n")
   guide = root / guide_name
   guide.write_text(release_install_guide(TAG, "ad-hoc"), encoding="utf-8")
   checksum = write_checksum_file(dmg, root / checksum_name)
@@ -485,7 +485,7 @@ def expect_failure(action, expected: str) -> None:
 
 
 def assert_dry_run_evidence_accepts_exact_set() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     validate_release_evidence_set(mode="dry-run", tag=TAG, evidence_paths=paths)
@@ -495,7 +495,7 @@ def assert_dry_run_evidence_accepts_exact_set() -> None:
 
 
 def assert_publish_rehearsal_accepts_exact_set() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     validate_release_evidence_set(
@@ -508,7 +508,7 @@ def assert_publish_rehearsal_accepts_exact_set() -> None:
 
 
 def assert_rejects_missing_extra_empty_and_invalid_json() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     expect_failure(
@@ -520,7 +520,7 @@ def assert_rejects_missing_extra_empty_and_invalid_json() -> None:
       "missing",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     extra = root / "unexpected.json"
@@ -534,7 +534,7 @@ def assert_rejects_missing_extra_empty_and_invalid_json() -> None:
       "extra",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     paths[0].write_text("", encoding="utf-8")
@@ -547,7 +547,7 @@ def assert_rejects_missing_extra_empty_and_invalid_json() -> None:
       "must not be empty",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     json_path = next(path for path in paths if path.suffix == ".json")
@@ -563,7 +563,7 @@ def assert_rejects_missing_extra_empty_and_invalid_json() -> None:
 
 
 def assert_rejects_invalid_dry_run_installer_asset_evidence() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     (root / f"Amentia-{TAG}-macos-x86_64.dmg.sha256").write_text(
@@ -581,7 +581,7 @@ def assert_rejects_invalid_dry_run_installer_asset_evidence() -> None:
 
 
 def assert_rejects_stale_structured_json() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -597,7 +597,7 @@ def assert_rejects_stale_structured_json() -> None:
       "missing required keys",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     plan_path = root / "release-plan.json"
@@ -615,7 +615,7 @@ def assert_rejects_stale_structured_json() -> None:
 
 
 def assert_rejects_stale_readiness_commands() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -631,7 +631,7 @@ def assert_rejects_stale_readiness_commands() -> None:
       "tag commands",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -649,7 +649,7 @@ def assert_rejects_stale_readiness_commands() -> None:
       "remote tag verification command",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -667,7 +667,7 @@ def assert_rejects_stale_readiness_commands() -> None:
       "successful CI lookup command",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -683,7 +683,7 @@ def assert_rejects_stale_readiness_commands() -> None:
       "dry-run evidence validation command",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -702,7 +702,7 @@ def assert_rejects_stale_readiness_commands() -> None:
       "dry-run artifact lookup command",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -721,7 +721,7 @@ def assert_rejects_stale_readiness_commands() -> None:
       "next command",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -741,7 +741,7 @@ def assert_rejects_stale_readiness_commands() -> None:
 
 
 def assert_rejects_stale_readiness_checklist() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -764,7 +764,7 @@ def assert_rejects_stale_readiness_checklist() -> None:
 
 
 def assert_rejects_blocked_readiness_state() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -780,7 +780,7 @@ def assert_rejects_blocked_readiness_state() -> None:
       "status must be ready",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -801,7 +801,7 @@ def assert_rejects_blocked_readiness_state() -> None:
     "tagPointsAtSourceCommit",
     "releaseWorkflowInputsReady",
   ):
-    with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+    with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
       root = Path(directory)
       paths = write_evidence_set(root, "dry-run")
       readiness_path = root / "release-readiness.json"
@@ -819,7 +819,7 @@ def assert_rejects_blocked_readiness_state() -> None:
 
 
 def assert_rejects_stale_release_plan_actions() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     plan_path = root / "release-plan.json"
@@ -842,7 +842,7 @@ def assert_rejects_stale_release_plan_actions() -> None:
       "nextMaintainerActions",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     plan_path = root / "release-plan.json"
@@ -867,7 +867,7 @@ def assert_rejects_stale_release_plan_actions() -> None:
 
 
 def assert_rejects_stale_manual_acceptance_markdown() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     acceptance_path = root / "release-dry-run-manual-acceptance.md"
@@ -881,7 +881,7 @@ def assert_rejects_stale_manual_acceptance_markdown() -> None:
       "missing required terms",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     acceptance_path = root / "release-manual-acceptance.md"
@@ -898,7 +898,7 @@ def assert_rejects_stale_manual_acceptance_markdown() -> None:
 
 
 def assert_accepts_developer_id_publish_command() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -918,7 +918,7 @@ def assert_accepts_developer_id_publish_command() -> None:
 
 
 def assert_rejects_stale_release_rehearsal_evidence() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     rehearsal_path = root / "release-dry-run-rehearsal.json"
@@ -934,7 +934,7 @@ def assert_rejects_stale_release_rehearsal_evidence() -> None:
       "packageMetadataMatched",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     rehearsal_path = root / "release-rehearsal.md"
@@ -949,7 +949,7 @@ def assert_rejects_stale_release_rehearsal_evidence() -> None:
       "reviewing the diff",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     rehearsal_path = root / "release-dry-run-rehearsal.json"
@@ -969,7 +969,7 @@ def assert_rejects_stale_release_rehearsal_evidence() -> None:
       "firstAppOpenChecks",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     rehearsal_path = root / "release-rehearsal.json"
@@ -991,7 +991,7 @@ def assert_rejects_stale_release_rehearsal_evidence() -> None:
 
 
 def assert_rejects_inconsistent_structured_json() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -1007,7 +1007,7 @@ def assert_rejects_inconsistent_structured_json() -> None:
       "must be 'v0.1.0'",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     plan_path = root / "release-plan.json"
@@ -1023,7 +1023,7 @@ def assert_rejects_inconsistent_structured_json() -> None:
       "must be 'publish'",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     readiness_path = root / "release-readiness.json"
@@ -1041,7 +1041,7 @@ def assert_rejects_inconsistent_structured_json() -> None:
 
 
 def assert_rejects_cross_file_json_disagreement() -> None:
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     plan_path = root / "release-plan.json"
@@ -1057,7 +1057,7 @@ def assert_rejects_cross_file_json_disagreement() -> None:
       "disagree on sourceCommit",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
     plan_path = root / "release-plan.json"
@@ -1073,7 +1073,7 @@ def assert_rejects_cross_file_json_disagreement() -> None:
       "disagree on allowUntrustedAdHoc/allowVisibleAdHoc",
     )
 
-  with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
+  with TemporaryDirectory(prefix="amentia-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "publish-rehearsal")
     readiness_path = root / "release-readiness.json"

@@ -1,6 +1,6 @@
 {
   "title": "Summarize Shell Session",
-  "description": "Ask Pith to explain the recent shell work in a compact operator-friendly summary.",
+  "description": "Ask Amentia to explain the recent shell work in a compact operator-friendly summary.",
   "prompt": "Summarize the most relevant recent shell activity for this workspace, highlighting what changed, what still needs approval, and what command should come next.",
   "execution": {
     "kind": "builtin.shellSessionSummary",

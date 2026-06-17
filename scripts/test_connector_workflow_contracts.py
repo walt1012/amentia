@@ -34,7 +34,7 @@ def require(condition: bool, message: str) -> None:
 
 
 def validate_plugin(plugin_root: Path) -> None:
-  manifest_path = plugin_root / "pith-plugin.json"
+  manifest_path = plugin_root / "amentia-plugin.json"
   if not manifest_path.exists():
     return
 

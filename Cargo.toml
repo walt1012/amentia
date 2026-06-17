@@ -1,15 +1,15 @@
 [workspace]
 members = [
-  "crates/pith-core",
-  "crates/pith-memory",
-  "crates/pith-model-runtime",
-  "crates/pith-plugin-host",
-  "crates/pith-process",
-  "crates/pith-protocol",
-  "crates/pith-sandbox",
-  "crates/pith-runtime-bin",
-  "crates/pith-storage",
-  "crates/pith-tools",
+  "crates/amentia-core",
+  "crates/amentia-memory",
+  "crates/amentia-model-runtime",
+  "crates/amentia-plugin-host",
+  "crates/amentia-process",
+  "crates/amentia-protocol",
+  "crates/amentia-sandbox",
+  "crates/amentia-runtime-bin",
+  "crates/amentia-storage",
+  "crates/amentia-tools",
 ]
 resolver = "2"
 
@@ -17,7 +17,7 @@ resolver = "2"
 edition = "2021"
 license = "Apache-2.0"
 version = "0.1.0"
-authors = ["Pith Contributors"]
+authors = ["Amentia Contributors"]
 
 [workspace.dependencies]
 anyhow = "1.0"

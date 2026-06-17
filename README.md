@@ -32,17 +32,17 @@ The repository is intentionally English-only.
 ```text
 /
 |-- apps/
-|   `-- pith-macos/
+|   `-- amentia-macos/
 |-- crates/
-|   |-- pith-core/
-|   |-- pith-memory/
-|   |-- pith-model-runtime/
-|   |-- pith-plugin-host/
-|   |-- pith-protocol/
-|   |-- pith-runtime-bin/
-|   |-- pith-sandbox/
-|   |-- pith-storage/
-|   `-- pith-tools/
+|   |-- amentia-core/
+|   |-- amentia-memory/
+|   |-- amentia-model-runtime/
+|   |-- amentia-plugin-host/
+|   |-- amentia-protocol/
+|   |-- amentia-runtime-bin/
+|   |-- amentia-sandbox/
+|   |-- amentia-storage/
+|   `-- amentia-tools/
 |-- plugins/
 |   `-- bundled/
 |-- docs/
@@ -53,10 +53,8 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-The previous public ad-hoc macOS prerelease was shipped under the Pith name:
-[v0.1.14](https://github.com/walt1012/pith/releases/tag/v0.1.14).
-The next release should use Amentia app, DMG, checksum, and release-manifest
-asset names.
+The next public macOS release should use Amentia app, DMG, checksum, and
+release-manifest asset names.
 The app has the daily-driver cowork foundation: first-use local model setup,
 workspace flow, Web Search, sandbox visibility, approvals, compact context
 receipts, actionable source/file evidence, session delete and revert safety,
@@ -68,13 +66,6 @@ small, human, and usable from the installed package before expanding the
 connector platform.
 
 Detailed milestone scope lives in [docs/development-plan.md](docs/development-plan.md).
-
-Naming note:
-
-- `Amentia` is the product and app name users see in releases and the macOS app.
-- Existing `pith-*` crate, target, protocol, environment-variable, and plugin
-  namespace names remain internal implementation names until a low-risk
-  repository-wide namespace migration is worth doing.
 
 Model packaging note:
 
@@ -101,14 +92,14 @@ See [docs/development-plan.md](docs/development-plan.md) for the execution roadm
 ## Source Organization
 
 The repository should stay organized by product and runtime ownership rather than by incidental helper
-shape. `pith-core` is the Rust orchestration layer, and its source tree is grouped by runtime, request,
+shape. `amentia-core` is the Rust orchestration layer, and its source tree is grouped by runtime, request,
 turn, plugin, context, workspace, thread, and support domains. The macOS target follows the same rule
 with app, runtime, local model, plugin, memory, timeline, workspace, and setup domains.
 
-`pith-memory` owns memory semantics such as notes, events, summaries, and note ranking. `pith-storage`
+`amentia-memory` owns memory semantics such as notes, events, summaries, and note ranking. `amentia-storage`
 owns durable runtime persistence for threads, workspace state, approvals, memory notes, and plugin
 state.
-`pith-plugin-host` owns plugin manifests, discovery, capability registries, connector metadata, and
+`amentia-plugin-host` owns plugin manifests, discovery, capability registries, connector metadata, and
 plugin bundle lifecycle boundaries.
 
 See [docs/development-environment.md](docs/development-environment.md) for local setup and CI notes.

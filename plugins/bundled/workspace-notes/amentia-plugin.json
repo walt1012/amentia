@@ -1,0 +1,19 @@
+{
+  "name": "workspace-notes",
+  "version": "0.1.0",
+  "displayName": "Workspace Notes",
+  "description": "Captures reusable workspace notes and preferences for local threads.",
+  "author": {
+    "name": "Amentia"
+  },
+  "capabilities": [
+    "command:workspace.capture-note",
+    "prompt_pack:workspace.notes",
+    "settings:workspace.preferences"
+  ],
+  "permissions": [
+    "file.read",
+    "file.write"
+  ],
+  "defaultEnabled": true
+}

@@ -19,7 +19,7 @@ from release_state import validate_manual_acceptance_evidence as validate_manual
 from release_text import validate_release_notes
 
 
-RELEASE_REPOSITORY = "walt1012/pith"
+RELEASE_REPOSITORY = "walt1012/amentia"
 
 
 def validate_published_release(

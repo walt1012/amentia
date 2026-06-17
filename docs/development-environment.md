@@ -79,21 +79,21 @@ CI should stay both fast and boring:
 
 The macOS shell looks for the runtime binary in this order:
 
-1. `PITH_RUNTIME_PATH`
-2. a bundled `pith-runtime-bin` executable next to the app executable
+1. `AMENTIA_RUNTIME_PATH`
+2. a bundled `amentia-runtime-bin` executable next to the app executable
 
 For manual runtime experiments, the bridge can still be pointed at a locally built runtime:
 
 ```bash
-export PITH_RUNTIME_PATH=/absolute/path/to/pith-runtime-bin
+export AMENTIA_RUNTIME_PATH=/absolute/path/to/amentia-runtime-bin
 ```
 
 One optional manual flow after building the Rust runtime:
 
 ```bash
-cargo build -p pith-runtime-bin
-export PITH_RUNTIME_PATH="$(pwd)/target/debug/pith-runtime-bin"
-cd apps/pith-macos
+cargo build -p amentia-runtime-bin
+export AMENTIA_RUNTIME_PATH="$(pwd)/target/debug/amentia-runtime-bin"
+cd apps/amentia-macos
 swift run
 ```
 
@@ -106,7 +106,7 @@ python3 scripts/package_macos_app.py
 ```
 
 CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
-and `pith-runtime-bin` build or run in parallel cached jobs. The packaging job
+and `amentia-runtime-bin` build or run in parallel cached jobs. The packaging job
 starts from change detection, restores cached app/runtime/llama executables
 directly, builds missing app/runtime cache entries concurrently, assembles
 `Amentia.app`, places executables under `Contents/MacOS`, bundles model metadata
@@ -116,7 +116,7 @@ artifact with bounded retention. Internal executable artifacts stay separate,
 short-lived, and clearly named as internal.
 
 Package validation checks the product `Info.plist`, `PkgInfo`,
-`PithPackage.json`, source commit metadata, x86_64-only binaries, first-use
+`AmentiaPackage.json`, source commit metadata, x86_64-only binaries, first-use
 model download metadata,
 bundled plugin resource contracts, absence of model weights, symlink-free
 packaged resources and optional backend inputs, llama.cpp dependency
@@ -212,22 +212,22 @@ signed, notarized, stapled DMG.
 
 The local runtime resolves the model backend in this order:
 
-1. `PITH_LLAMACPP_PATH`
+1. `AMENTIA_LLAMACPP_PATH`
 2. an executable-relative `third_party/llama.cpp/llama-cli`
 3. an executable-relative `tools/llama.cpp/llama-cli`
 4. repo-local `third_party/llama.cpp/llama-cli`
 5. repo-local `tools/llama.cpp/llama-cli`
 
-The installed `.app` sets `PITH_REQUIRE_PACKAGED_LLAMACPP=1`, so it must use the
-packaged backend through `PITH_LLAMACPP_PATH` and must not be rescued by a
+The installed `.app` sets `AMENTIA_REQUIRE_PACKAGED_LLAMACPP=1`, so it must use the
+packaged backend through `AMENTIA_LLAMACPP_PATH` and must not be rescued by a
 user-installed `llama-cli`. Development and CI can still inject an explicit
 backend path.
 
 The default model pack path resolves in this order:
 
-1. `PITH_MODEL_PACK_MANIFEST`
-2. `PITH_MODEL_PACK_ROOT`
-3. `PITH_DATA_DIR/models/builtin/lfm2.5-350m/model-pack.json`
+1. `AMENTIA_MODEL_PACK_MANIFEST`
+2. `AMENTIA_MODEL_PACK_ROOT`
+3. `AMENTIA_DATA_DIR/models/builtin/lfm2.5-350m/model-pack.json`
 4. an executable-relative `models/builtin/lfm2.5-350m/model-pack.json`
 5. an executable-relative `model-packs/lfm2.5-350m/model-pack.json`
 6. repo-local `models/builtin/lfm2.5-350m/model-pack.json`
@@ -235,10 +235,10 @@ The default model pack path resolves in this order:
 
 The resolved model file path then checks:
 
-1. `PITH_MODEL_PATH`
-2. `PITH_LFM_MODEL_PATH` as a legacy alias
+1. `AMENTIA_MODEL_PATH`
+2. `AMENTIA_LFM_MODEL_PATH` as a legacy alias
 3. a sibling of the resolved manifest using the manifest `file_name`
-4. `PITH_DATA_DIR/models/LFM2.5-350M-Q4_K_M.gguf`
+4. `AMENTIA_DATA_DIR/models/LFM2.5-350M-Q4_K_M.gguf`
 5. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
 6. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
 
@@ -248,11 +248,11 @@ path; they must not be committed to git history. Environment variables remain
 development overrides, not the normal user setup path.
 
 The macOS Local Model panel keeps a curated list of lightweight models, downloads
-files into `PITH_DATA_DIR/models`, verifies integrity, and activates one model at
+files into `AMENTIA_DATA_DIR/models`, verifies integrity, and activates one model at
 a time by writing a local `model-pack.json`. Activation stores selected model
-paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and
-`PITH_MODEL_PATH` for the local service, and restarts the runtime so health
-checks report the selected model. Normal app installs set `PITH_DATA_DIR` to
+paths in app preferences, injects `AMENTIA_MODEL_PACK_MANIFEST` and
+`AMENTIA_MODEL_PATH` for the local service, and restarts the runtime so health
+checks report the selected model. Normal app installs set `AMENTIA_DATA_DIR` to
 `~/Library/Application Support/Amentia/storage`, so downloaded GGUF files live under
 `~/Library/Application Support/Amentia/storage/models`. Removing `Amentia.app` does not
 delete that user data; Settings > Storage can reveal data or Reset Amentia without
@@ -263,16 +263,16 @@ blocks agent work until a verified local model is selected. A development-only
 setup example is:
 
 ```bash
-export PITH_LLAMACPP_PATH=/absolute/path/to/llama-cli
-export PITH_MODEL_PACK_MANIFEST=/absolute/path/to/model-pack.json
-export PITH_MODEL_PATH=/absolute/path/to/LFM2.5-350M-Q4_K_M.gguf
+export AMENTIA_LLAMACPP_PATH=/absolute/path/to/llama-cli
+export AMENTIA_MODEL_PACK_MANIFEST=/absolute/path/to/model-pack.json
+export AMENTIA_MODEL_PATH=/absolute/path/to/LFM2.5-350M-Q4_K_M.gguf
 ```
 
 ## Plugin Discovery
 
 The runtime resolves bundled plugins in this order:
 
-1. `PITH_PLUGIN_DIR`
+1. `AMENTIA_PLUGIN_DIR`
 2. an executable-relative `plugins/`
 3. repo-local `plugins/`
 

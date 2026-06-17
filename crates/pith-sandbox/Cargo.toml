@@ -1,8 +1,0 @@
-[package]
-name = "pith-sandbox"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-
-[dependencies]
-pith-process = { path = "../pith-process" }

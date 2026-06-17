@@ -18,9 +18,9 @@ README_PATH = REPO_ROOT / "models" / "builtin" / "lfm2.5-350m" / "README.md"
 SWIFT_SOURCE_ROOT = (
   REPO_ROOT
   / "apps"
-  / "pith-macos"
+  / "amentia-macos"
   / "Sources"
-  / "PithApp"
+  / "AmentiaApp"
 )
 SWIFT_LOCAL_MODELS_DIR = SWIFT_SOURCE_ROOT / "LocalModels"
 REQUIRED_KEYS = {
@@ -291,7 +291,7 @@ def remote_download_headers(
   request = urllib.request.Request(
     download_url,
     method="HEAD",
-    headers={"User-Agent": "pith-model-audit"},
+    headers={"User-Agent": "amentia-model-audit"},
   )
   opener = urllib.request.build_opener(NoRedirectHandler)
   try:
@@ -382,7 +382,7 @@ def hugging_face_repo_id(homepage: str) -> str:
 def remote_json(api_url: str, model_id: str) -> dict[str, object]:
   request = urllib.request.Request(
     api_url,
-    headers={"User-Agent": "pith-model-audit"},
+    headers={"User-Agent": "amentia-model-audit"},
   )
   try:
     with urllib.request.urlopen(

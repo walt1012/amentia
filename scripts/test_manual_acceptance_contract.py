@@ -49,7 +49,7 @@ def valid_payload() -> dict[str, object]:
     "approvalDiffReceiptInspected": True,
     "restartRecoveryProof": "Restart restored runtime, model, workspace, and recent proof.",
     "restartRecoveryVerified": True,
-    "noPithLoginRequired": True,
+    "noAmentiaLoginRequired": True,
     "acceptedForVisiblePrerelease": True,
     "acceptedBy": "Maintainer",
     "acceptedAt": "2026-06-08T00:00:00Z",
@@ -283,7 +283,7 @@ def main() -> int:
   expect_failure({**valid_payload(), "sourceCommit": "z" * 40}, "Git SHA hex digest")
   expect_failure({**valid_payload(), "checksum": "short"}, "64 characters")
   expect_failure({**valid_payload(), "checksum": "g" * 64}, "SHA-256 hex digest")
-  expect_failure({**valid_payload(), "dmgAssetName": "Pith.zip"}, "dmgAssetName")
+  expect_failure({**valid_payload(), "dmgAssetName": "Amentia.zip"}, "dmgAssetName")
   expect_failure({**valid_payload(), "selectedModelId": "other-model"}, "selectedModelId")
   expect_failure({**valid_payload(), "workspaceOpened": False}, "workspaceOpened")
   expect_failure({**valid_payload(), "approvalReceipt": ""}, "approvalReceipt")

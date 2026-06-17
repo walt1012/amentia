@@ -1,0 +1,64 @@
+use amentia_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoragePaths {
+  pub database_path: String,
+  pub artifacts_path: String,
+  pub plugins_path: String,
+  pub runtime_state_path: String,
+}
+
+impl StoragePaths {
+  pub fn application_support_defaults() -> Self {
+    Self {
+      database_path: "~/Library/Application Support/Amentia/storage/amentia.db".to_string(),
+      artifacts_path: "~/Library/Application Support/Amentia/artifacts".to_string(),
+      plugins_path: "~/Library/Application Support/Amentia/plugins".to_string(),
+      runtime_state_path: "~/Library/Application Support/Amentia/storage/threads.json".to_string(),
+    }
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredThreadRecord {
+  pub summary: ThreadSummary,
+  pub turn_count: usize,
+  pub items: Vec<TimelineItem>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub workspace: Option<WorkspaceSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredApprovalRecord {
+  pub id: String,
+  pub thread_id: String,
+  pub action: String,
+  pub title: String,
+  pub relative_path: String,
+  pub content: Option<String>,
+  pub command: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StoredWorkspaceChangeRecord {
+  pub id: String,
+  pub thread_id: String,
+  pub approval_id: Option<String>,
+  pub workspace_root_path: String,
+  pub relative_path: String,
+  pub action: String,
+  pub previous_content: Option<Vec<u8>>,
+  pub next_content: Vec<u8>,
+  pub reverted_at: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StoredPluginConnectorCredential {
+  pub connector_id: String,
+  pub plugin_id: String,
+  pub credential_store: String,
+  pub credential_label: String,
+  pub authorized_at: i64,
+  pub updated_at: i64,
+}

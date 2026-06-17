@@ -24,7 +24,7 @@ REQUIRED_TRUE_CHECKS = (
   "webSearchProofInspected",
   "approvalDiffReceiptInspected",
   "restartRecoveryVerified",
-  "noPithLoginRequired",
+  "noAmentiaLoginRequired",
   "acceptedForVisiblePrerelease",
 )
 REQUIRED_TEXT_FIELDS = (
@@ -91,7 +91,7 @@ def manual_acceptance_template(
     "approvalDiffReceiptInspected": False,
     "restartRecoveryProof": "",
     "restartRecoveryVerified": False,
-    "noPithLoginRequired": False,
+    "noAmentiaLoginRequired": False,
     "acceptedForVisiblePrerelease": False,
     "acceptedBy": "",
     "acceptedAt": "",

@@ -17,11 +17,11 @@ def main() -> int:
     CiChanges(False, False, False, False),
   )
   assert_equal(
-    classify_changed_paths(["crates/pith-core/src/lib.rs"]),
+    classify_changed_paths(["crates/amentia-core/src/lib.rs"]),
     CiChanges(True, False, True, False),
   )
   assert_equal(
-    classify_changed_paths(["apps/pith-macos/Sources/PithApp/App/AppViewModel.swift"]),
+    classify_changed_paths(["apps/amentia-macos/Sources/AmentiaApp/App/AppViewModel.swift"]),
     CiChanges(False, True, True, False),
   )
   assert_equal(
@@ -66,7 +66,7 @@ def main() -> int:
     CiChanges(False, False, True, True),
   )
   assert_equal(
-    classify_changed_paths(["docs/brand/pith-blue-p-icon-source.svg"]),
+    classify_changed_paths(["docs/brand/amentia-blue-symbol-icon-source.svg"]),
     CiChanges(False, False, True, False),
   )
   assert_equal(classify_changed_paths([".github/workflows/ci.yml"]), CiChanges.all())

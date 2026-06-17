@@ -57,7 +57,7 @@ def main() -> int:
     require_tool("hdiutil")
     require_app(app_path)
     dmg_path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="pith-dmg-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="amentia-dmg-") as temp_dir:
       staging_dir = Path(temp_dir) / "staging"
       staging_dir.mkdir()
       readme_file = args.readme_file.resolve() if args.readme_file else None
@@ -171,7 +171,7 @@ def validate_dmg(
     raise RuntimeError(f"macOS DMG artifact is empty: {dmg_path}")
 
   run(["hdiutil", "imageinfo", str(dmg_path)])
-  temp_dir = Path(tempfile.mkdtemp(prefix="pith-dmg-mount-"))
+  temp_dir = Path(tempfile.mkdtemp(prefix="amentia-dmg-mount-"))
   mountpoint = temp_dir / "mount"
   mountpoint.mkdir()
   attached = False

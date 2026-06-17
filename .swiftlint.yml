@@ -1,5 +1,5 @@
 included:
-  - apps/pith-macos/Sources
+  - apps/amentia-macos/Sources
 
 disabled_rules:
   - todo

@@ -1,0 +1,18 @@
+{
+  "name": "shell-recorder",
+  "version": "0.1.0",
+  "displayName": "Shell Recorder",
+  "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
+  "author": {
+    "name": "Amentia"
+  },
+  "capabilities": [
+    "command:shell.summarize-session",
+    "hook:shell.recorder",
+    "tool:shell.timeline"
+  ],
+  "permissions": [
+    "shell.exec"
+  ],
+  "defaultEnabled": false
+}

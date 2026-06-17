@@ -23,7 +23,7 @@ def assert_raises(action, message: str) -> None:
 
 
 def main() -> int:
-  with tempfile.TemporaryDirectory(prefix="pith-signing-helper-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-signing-helper-") as root:
     root_path = Path(root)
     app_path = root_path / "Amentia.app"
     contents_path = app_path / "Contents"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small local MCP server for Pith's bundled Notion connector."""
+"""Small local MCP server for Amentia's bundled Notion connector."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ from typing import Any
 
 
 NOTION_API_BASE = os.environ.get(
-  "PITH_TEST_NOTION_API_BASE",
+  "AMENTIA_TEST_NOTION_API_BASE",
   "https://api.notion.com/v1",
 ).rstrip("/")
-NOTION_VERSION = os.environ.get("PITH_NOTION_VERSION", "2026-03-11")
+NOTION_VERSION = os.environ.get("AMENTIA_NOTION_VERSION", "2026-03-11")
 HTTP_TIMEOUT_SECONDS = 30
 MAX_BODY_CHARS = 20_000
 MAX_NOTION_BLOCKS = 20
@@ -46,7 +46,7 @@ def initialize_response(request_id: Any) -> dict[str, Any]:
     "result": {
       "protocolVersion": "2025-06-18",
       "capabilities": {"tools": {}},
-      "serverInfo": {"name": "pith-notion-local-connector", "version": "0.2.0"},
+      "serverInfo": {"name": "amentia-notion-local-connector", "version": "0.2.0"},
     },
   }
 
@@ -100,7 +100,7 @@ def prepare_page_draft(arguments: dict[str, Any]) -> dict[str, Any]:
     memory_body = (
       "The Notion connector prepared a credential-scoped local page draft without a remote write."
     )
-  draft_title = "Pith Notion Draft" if source == "workspace" else f"Pith draft from {source}"
+  draft_title = "Amentia Notion Draft" if source == "workspace" else f"Amentia draft from {source}"
   return {
     "items": [
       plugin_result(
@@ -152,7 +152,7 @@ def inspect_page_write(arguments: dict[str, Any]) -> dict[str, Any]:
       "write was sent. Review the target page, content, and credential scope before "
       "running the publish command."
     )
-  draft_title = "Pith Notion Publish" if source == "workspace" else f"Pith publish from {source}"
+  draft_title = "Amentia Notion Publish" if source == "workspace" else f"Amentia publish from {source}"
   return {
     "items": [
       plugin_result(
@@ -227,7 +227,7 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
       "missingCredential",
     )
 
-  raw_title = string_value(input_data, "title", "pageTitle", "page_title") or "Pith Draft"
+  raw_title = string_value(input_data, "title", "pageTitle", "page_title") or "Amentia Draft"
   title, title_truncated = bounded_title(raw_title)
   body = string_value(input_data, "body", "content", "markdown", "text") or ""
   body, body_truncated = bounded_body(body)
@@ -295,7 +295,7 @@ def publish_page_draft(request_id: Any, arguments: dict[str, Any]) -> dict[str, 
         memory_note(
           "Notion Page Published",
           (
-            f"Pith created Notion page `{title}` at {page_url} under parent page "
+            f"Amentia created Notion page `{title}` at {page_url} under parent page "
             f"{parent_page_id}. Title truncated: {str(title_truncated).lower()}. "
             f"Body truncated: {str(truncated).lower()}. Blocks: {block_count}."
           ),
@@ -315,7 +315,7 @@ def notion_post(path: str, token: str, payload: dict[str, Any]) -> dict[str, Any
       "Authorization": f"Bearer {token}",
       "Content-Type": "application/json",
       "Notion-Version": NOTION_VERSION,
-      "User-Agent": "Pith/0.1",
+      "User-Agent": "Amentia/0.1",
     },
   )
   try:
@@ -460,7 +460,7 @@ def publish_retry_needed(
     "publishRetryable": "true",
     "publishFailureReason": reason_code,
     "retryCommand": "notion.publish-page-draft",
-    "retryCommandId": os.environ.get("PITH_PLUGIN_COMMAND_ID", DEFAULT_PUBLISH_COMMAND_ID),
+    "retryCommandId": os.environ.get("AMENTIA_PLUGIN_COMMAND_ID", DEFAULT_PUBLISH_COMMAND_ID),
     "retryInput": retry_input_json(input_data, reason_code),
     "retryInputEditable": str(retry_input_should_be_editable(reason_code)).lower(),
     "retryInputHint": retry_input_hint(reason_code),
@@ -487,7 +487,7 @@ def publish_retry_needed(
       "memoryNotes": [
         memory_note(
           "Notion Publish Retry Needed",
-          f"Pith could not confirm a Notion page publish. Reason: {reason_code}.",
+          f"Amentia could not confirm a Notion page publish. Reason: {reason_code}.",
           ["connector", "notion", "retry-needed"],
         )
       ],
@@ -499,7 +499,7 @@ def retry_input_json(input_data: dict[str, str], reason_code: str) -> str:
   retry_input = dict(input_data)
   if retry_input_should_be_editable(reason_code):
     retry_input.setdefault("parentPageId", "")
-    retry_input.setdefault("title", "Pith Draft")
+    retry_input.setdefault("title", "Amentia Draft")
     retry_input.setdefault("body", "")
   return json.dumps(retry_input, ensure_ascii=False, sort_keys=True)
 
@@ -560,7 +560,7 @@ def publish_follow_up_attributes(title: str, body: str) -> dict[str, str]:
     "nextCommandLabel": "Publish to Notion",
     "nextCommandInputHint": (
       "Fill parentPageId with a Notion page ID or URL shared with the local "
-      "integration. Pith will request approval before any remote Notion write."
+      "integration. Amentia will request approval before any remote Notion write."
     ),
     "nextCommandInputTemplate": publish_input_template(title, body),
     "nextCommandInputRequired": "true",
@@ -791,7 +791,7 @@ def bounded_body(body: str) -> tuple[str, bool]:
 
 
 def bounded_title(title: str) -> tuple[str, bool]:
-  text = title.strip() or "Pith Draft"
+  text = title.strip() or "Amentia Draft"
   if len(text) <= MAX_TITLE_CHARS:
     return text, False
   return text[:MAX_TITLE_CHARS], True

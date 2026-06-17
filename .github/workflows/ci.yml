@@ -14,17 +14,17 @@ env:
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: init.defaultBranch
   GIT_CONFIG_VALUE_0: main
-  SWIFT_PACKAGE_PATH: apps/pith-macos
+  SWIFT_PACKAGE_PATH: apps/amentia-macos
   PREBUILT_ARTIFACT_DIR: artifacts/prebuilt
-  SWIFT_APP_BINARY: PithApp
-  RUNTIME_BINARY: pith-runtime-bin
+  SWIFT_APP_BINARY: AmentiaApp
+  RUNTIME_BINARY: amentia-runtime-bin
   LLAMA_BINARY: llama-cli
   LLAMA_CPP_REF: fff0e0eafe817eef429ecb64f892ab7bdae31846
   SWIFT_APP_BINARY_CACHE_DIR: .ci-cache/swift-app-bin
   RUNTIME_BINARY_CACHE_DIR: .ci-cache/runtime-bin
   LLAMA_BACKEND_CACHE_DIR: .ci-cache/llama-backend
-  SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
-  RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
+  SWIFT_APP_ARTIFACT: internal-AmentiaApp-x86_64
+  RUNTIME_ARTIFACT: internal-amentia-runtime-bin-x86_64
   LLAMA_ARTIFACT: internal-llama-cli-x86_64
   MACOS_APP_ARTIFACT: Amentia-installer-x86_64
   MACOS_DMG_NAME: Amentia-macos-x86_64.dmg
@@ -349,7 +349,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
 
       - name: Use cached Swift app executable
         if: steps.swift_app_binary_cache.outputs.cache-hit == 'true'
@@ -363,8 +363,8 @@ jobs:
         if: steps.swift_app_binary_cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
-          path: apps/pith-macos/.build
-          key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          path: apps/amentia-macos/.build
+          key: swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
           restore-keys: |
             swift-build-${{ runner.os }}-${{ runner.arch }}-
 
@@ -406,8 +406,8 @@ jobs:
       - name: Cache Swift test output
         uses: actions/cache@v5
         with:
-          path: apps/pith-macos/.build
-          key: swift-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift', 'apps/pith-macos/Tests/**/*.swift') }}
+          path: apps/amentia-macos/.build
+          key: swift-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift', 'apps/amentia-macos/Tests/**/*.swift') }}
           restore-keys: |
             swift-test-${{ runner.os }}-${{ runner.arch }}-
 
@@ -497,7 +497,7 @@ jobs:
         if: steps.runtime_binary_cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          cargo build -p pith-runtime-bin --release
+          cargo build -p amentia-runtime-bin --release
           mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
           cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
           cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
@@ -592,7 +592,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.SWIFT_APP_BINARY_CACHE_DIR }}
-          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          key: swift-app-bin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
 
       - name: Restore cached Swift app executable
         if: steps.package_swift_cache.outputs.cache-hit == 'true'
@@ -605,8 +605,8 @@ jobs:
         if: steps.package_swift_cache.outputs.cache-hit != 'true'
         uses: actions/cache@v5
         with:
-          path: apps/pith-macos/.build
-          key: package-swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/pith-macos/Package.swift', 'apps/pith-macos/Package.resolved', 'apps/pith-macos/Sources/**/*.swift') }}
+          path: apps/amentia-macos/.build
+          key: package-swift-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/amentia-macos/Package.swift', 'apps/amentia-macos/Package.resolved', 'apps/amentia-macos/Sources/**/*.swift') }}
           restore-keys: |
             package-swift-build-${{ runner.os }}-${{ runner.arch }}-
             swift-build-${{ runner.os }}-${{ runner.arch }}-
@@ -665,7 +665,7 @@ jobs:
 
           if [[ "$RUNTIME_CACHE_HIT" != "true" ]]; then
             (
-              cargo build -p pith-runtime-bin --release
+              cargo build -p amentia-runtime-bin --release
               mkdir -p "$PREBUILT_ARTIFACT_DIR" "$RUNTIME_BINARY_CACHE_DIR"
               cp "target/release/$RUNTIME_BINARY" "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY"
               cp "$RUNTIME_BINARY_CACHE_DIR/$RUNTIME_BINARY" "$PREBUILT_ARTIFACT_DIR/$RUNTIME_BINARY"
@@ -744,7 +744,7 @@ jobs:
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
-            --manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
+            --manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc
 
@@ -779,7 +779,7 @@ jobs:
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
-            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
+            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json \
             --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \

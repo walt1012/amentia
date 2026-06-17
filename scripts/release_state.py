@@ -137,8 +137,8 @@ def write_env(path: Path, state: ReleaseState) -> None:
   path.write_text(
     "\n".join(
       [
-        f"PITH_RELEASE_STATE_DRAFT={str(state.draft).lower()}",
-        f"PITH_RELEASE_STATE_PRERELEASE={str(state.prerelease).lower()}",
+        f"AMENTIA_RELEASE_STATE_DRAFT={str(state.draft).lower()}",
+        f"AMENTIA_RELEASE_STATE_PRERELEASE={str(state.prerelease).lower()}",
         "",
       ]
     ),

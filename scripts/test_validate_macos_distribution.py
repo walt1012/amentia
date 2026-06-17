@@ -20,7 +20,7 @@ from package_contract import (
   MODEL_METADATA_BUNDLED,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   package_distribution_trust,
@@ -40,7 +40,7 @@ def assert_raises(action, message: str) -> None:
 
 
 def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
-  manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+  manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
   manifest_path.parent.mkdir(parents=True)
   manifest_path.write_text(
     json.dumps(
@@ -57,7 +57,7 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
         "modelDelivery": MODEL_DELIVERY_MODE,
         "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
         "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-        "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+        "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
         "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
         "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
         "sandboxMode": SANDBOX_CONTRACT["mode"],
@@ -84,19 +84,19 @@ def write_icns(path: Path, declared_size: int, body: bytes = b"") -> None:
 
 
 def main() -> int:
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-icon-") as root:
     app_path = Path(root) / "Amentia.app"
     write_icns(app_path / "Contents" / "Resources" / "Amentia.icns", 12, b"abcd")
     validate_app_icon(app_path)
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-icon-") as root:
     app_path = Path(root) / "Amentia.app"
     assert_raises(
       lambda: validate_app_icon(app_path),
       "public distribution should require a packaged app icon",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-icon-") as root:
     app_path = Path(root) / "Amentia.app"
     write_icns(app_path / "Contents" / "Resources" / "Amentia.icns", 8, b"abcd")
     assert_raises(
@@ -104,12 +104,12 @@ def main() -> int:
       "public distribution should reject invalid ICNS headers",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     validate_package_manifest(app_path)
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "ad-hoc", SOURCE_COMMIT)
     assert_raises(
@@ -117,7 +117,7 @@ def main() -> int:
       "public distribution should require developer-id signing metadata",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", "development")
     assert_raises(
@@ -125,10 +125,10 @@ def main() -> int:
       "public distribution should require full source commit metadata",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["schemaVersion"] = 2
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -137,10 +137,10 @@ def main() -> int:
       "public distribution should require package schema version 1",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["architecture"] = "arm64"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -149,10 +149,10 @@ def main() -> int:
       "public distribution should require x86_64 package metadata",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["modelDelivery"] = "bundled"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -161,10 +161,10 @@ def main() -> int:
       "public distribution should require in-app model delivery",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["modelWeightsBundled"] = True
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -173,10 +173,10 @@ def main() -> int:
       "public distribution should reject bundled model weights metadata",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["sandboxFallback"] = "none"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -185,10 +185,10 @@ def main() -> int:
       "public distribution should require sandbox fallback metadata",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["dailyDriverStageSource"] = "app-only"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -197,10 +197,10 @@ def main() -> int:
       "public distribution should require daily-driver readiness metadata",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["firstAppOpenActionContract"] = "static-checklist"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -209,10 +209,10 @@ def main() -> int:
       "public distribution should require first app-open action metadata",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
-    manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
+    manifest_path = app_path / "Contents" / "Resources" / "AmentiaPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["sizeBudget"]["maxAppBundleBytes"] = 1
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -221,7 +221,7 @@ def main() -> int:
       "public distribution should enforce package size budget",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-distribution-") as root:
     app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     model_path = app_path / "Contents" / "Resources" / "models" / "local.gguf"

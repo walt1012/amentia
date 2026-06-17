@@ -41,7 +41,7 @@ from package_contract import (
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   LOCAL_EXECUTION_SAFETY_MODES,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   assert_size_under_budget,
@@ -121,7 +121,7 @@ def main() -> int:
     lambda: normalize_source_commit("short"),
     "short source commits should fail package metadata validation",
   )
-  with tempfile.TemporaryDirectory(prefix="pith-package-icon-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-package-icon-") as root:
     root_path = Path(root)
     png_path = root_path / "icon.png"
     write_rgba_png(png_path, 1254, 1254)
@@ -154,8 +154,8 @@ def main() -> int:
       lambda: assert_macos_icon_packaged(broken_icns_path),
       "invalid ICNS size header should fail",
     )
-  with tempfile.TemporaryDirectory(prefix="pith-package-manifest-") as root:
-    manifest_path = Path(root) / "PithPackage.json"
+  with tempfile.TemporaryDirectory(prefix="amentia-package-manifest-") as root:
+    manifest_path = Path(root) / "AmentiaPackage.json"
     write_package_manifest(
       manifest_path,
       SUPPORTED_ARCH,
@@ -169,7 +169,7 @@ def main() -> int:
       manifest["sourceCommit"],
       "abcdef0123456789abcdef0123456789abcdef01",
     )
-    assert_equal(manifest["pithAccountRequired"], PITH_ACCOUNT_REQUIRED)
+    assert_equal(manifest["amentiaAccountRequired"], AMENTIA_ACCOUNT_REQUIRED)
     assert_equal(
       manifest["defaultLocalExecutionSafetyMode"],
       DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
@@ -220,7 +220,7 @@ def main() -> int:
   )
   assert_equal(
     parse_lipo_architectures(
-      "Architectures in the fat file: Pith are: x86_64 arm64"
+      "Architectures in the fat file: Amentia are: x86_64 arm64"
     ),
     {"x86_64", "arm64"},
   )
@@ -263,7 +263,7 @@ def main() -> int:
     "connector:notion",
     "connector_workflow:notion.create-page",
   }
-  with tempfile.TemporaryDirectory(prefix="pith-package-plugin-workflow-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-package-plugin-workflow-") as root:
     plugin_root = Path(root)
     commands_dir = plugin_root / "commands"
     commands_dir.mkdir()
@@ -303,7 +303,7 @@ def main() -> int:
       "command workflow must be bound to the declared connector",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-package-copy-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-package-copy-") as root:
     root_path = Path(root)
     executable = root_path / "Amentia.app" / "Contents" / "MacOS" / "Amentia"
     executable.parent.mkdir(parents=True)
@@ -360,19 +360,19 @@ def main() -> int:
     "zip symlinks should be rejected",
   )
 
-  with tempfile.TemporaryDirectory(prefix="pith-package-resource-copy-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-package-resource-copy-") as root:
     root_path = Path(root)
     source = root_path / "source"
     destination = root_path / "destination"
     source.mkdir()
-    (source / "pith-plugin.json").write_text("{}", encoding="utf-8")
+    (source / "amentia-plugin.json").write_text("{}", encoding="utf-8")
     (source / "model.gguf").write_text("weight", encoding="utf-8")
     (source / "module.pyc").write_bytes(b"cache")
     pycache = source / "__pycache__"
     pycache.mkdir()
     (pycache / "module.cpython-311.pyc").write_bytes(b"cache")
     copy_tree_if_present(source, destination)
-    if not (destination / "pith-plugin.json").is_file():
+    if not (destination / "amentia-plugin.json").is_file():
       raise AssertionError("resource copy should keep plugin metadata")
     for generated_path in (
       destination / "model.gguf",
@@ -382,7 +382,7 @@ def main() -> int:
       if generated_path.exists():
         raise AssertionError(f"resource copy should exclude {generated_path.name}")
 
-  with tempfile.TemporaryDirectory(prefix="pith-package-test-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-package-test-") as root:
     root_path = Path(root)
     source_backend = root_path / "llama-cli"
     source_backend.write_text("#!/bin/sh\n", encoding="utf-8")
@@ -406,7 +406,7 @@ def main() -> int:
     ).is_file():
       raise AssertionError("packaged llama backend should include sibling dylib bundle")
 
-  with tempfile.TemporaryDirectory(prefix="pith-package-missing-backend-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-package-missing-backend-") as root:
     try:
       copy_required_llama_backend(Path(root), Path(root) / "Resources", None)
     except FileNotFoundError:

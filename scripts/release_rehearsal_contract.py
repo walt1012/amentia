@@ -19,7 +19,7 @@ from package_contract import (
   LOCAL_EXECUTION_SAFETY_MODES,
   MODEL_DELIVERY_MODE,
   MODEL_WEIGHTS_BUNDLED,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   packaged_smoke_package_metadata,
@@ -105,7 +105,7 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
   if model_delivery.get("modelWeightsBundled") is not MODEL_WEIGHTS_BUNDLED:
     raise RuntimeError("Downloaded release manifest must not bundle model weights")
   identity = manifest.get("identity")
-  if not isinstance(identity, dict) or identity.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
+  if not isinstance(identity, dict) or identity.get("amentiaAccountRequired") is not AMENTIA_ACCOUNT_REQUIRED:
     raise RuntimeError(f"Downloaded release manifest must keep {APP_NAME} account-free")
   local_execution = manifest.get("localExecution")
   if (
@@ -134,7 +134,7 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
     raise RuntimeError("Downloaded release app package default model is wrong")
   if app_package.get("modelWeightsBundled") is not MODEL_WEIGHTS_BUNDLED:
     raise RuntimeError("Downloaded release app package must not bundle model weights")
-  if app_package.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
+  if app_package.get("amentiaAccountRequired") is not AMENTIA_ACCOUNT_REQUIRED:
     raise RuntimeError(f"Downloaded release app package must keep {APP_NAME} account-free")
   if app_package.get("firstAppOpenActionContract") != FIRST_APP_OPEN_CONTRACT_ID:
     raise RuntimeError("Downloaded release app package first app-open contract is wrong")

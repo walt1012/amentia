@@ -43,7 +43,7 @@ def can_create_symlink(root: Path) -> bool:
 
 def validate_detach_force_fallback() -> None:
   calls: list[list[str]] = []
-  mountpoint = Path("pith-mount")
+  mountpoint = Path("amentia-mount")
 
   def fake_run(command: list[str]) -> str:
     calls.append(command)
@@ -93,9 +93,9 @@ def validate_create_retries_transient_hdiutil_error() -> None:
   try:
     create_macos_dmg.run = fake_run
     create_macos_dmg.time.sleep = lambda seconds: sleeps.append(seconds)
-    with tempfile.TemporaryDirectory(prefix="pith-dmg-create-test-") as root:
+    with tempfile.TemporaryDirectory(prefix="amentia-dmg-create-test-") as root:
       root_path = Path(root)
-      create_dmg(root_path / "staging", root_path / "Pith.dmg", "Pith")
+      create_dmg(root_path / "staging", root_path / "Amentia.dmg", "Amentia")
   finally:
     create_macos_dmg.run = original_run
     create_macos_dmg.time.sleep = original_sleep
@@ -114,10 +114,10 @@ def validate_create_does_not_retry_permanent_hdiutil_error() -> None:
   original_run = create_macos_dmg.run
   try:
     create_macos_dmg.run = fake_run
-    with tempfile.TemporaryDirectory(prefix="pith-dmg-create-test-") as root:
+    with tempfile.TemporaryDirectory(prefix="amentia-dmg-create-test-") as root:
       root_path = Path(root)
       try:
-        create_dmg(root_path / "staging", root_path / "Pith.dmg", "Pith")
+        create_dmg(root_path / "staging", root_path / "Amentia.dmg", "Amentia")
       except RuntimeError:
         pass
       else:
@@ -139,7 +139,7 @@ def main() -> int:
   validate_readme_contract_rejects_stale_guidance()
   validate_create_retries_transient_hdiutil_error()
   validate_create_does_not_retry_permanent_hdiutil_error()
-  with tempfile.TemporaryDirectory(prefix="pith-dmg-stage-test-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-dmg-stage-test-") as root:
     root_path = Path(root)
     if not can_create_symlink(root_path):
       print("Skipping DMG staging helper tests because symlink creation is unavailable.")

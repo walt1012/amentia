@@ -23,7 +23,7 @@ RUST_PATTERNS = (
   "scripts/runtime_smoke_test.py",
 )
 SWIFT_PATTERNS = (
-  "apps/pith-macos/*",
+  "apps/amentia-macos/*",
 )
 LLAMA_PATTERNS = (
   "scripts/build_macos_llama_backend.sh",
@@ -34,7 +34,7 @@ PACKAGE_PATTERNS = (
   "Cargo.toml",
   "Cargo.lock",
   "crates/*",
-  "apps/pith-macos/*",
+  "apps/amentia-macos/*",
   "docs/brand/*",
   "models/*",
   "plugins/*",

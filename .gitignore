@@ -13,7 +13,7 @@ xcuserdata/
 *.log
 __pycache__/
 
-.pith/
+.amentia/
 .tmp-runtime-state/
 
 models/**/*.gguf

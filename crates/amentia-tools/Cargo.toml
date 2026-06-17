@@ -1,0 +1,11 @@
+[package]
+name = "amentia-tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+amentia-process = { path = "../amentia-process" }
+amentia-sandbox = { path = "../amentia-sandbox" }
+serde.workspace = true

@@ -1,0 +1,76 @@
+{
+  "name": "notion-connector",
+  "version": "0.1.0",
+  "displayName": "Notion Connector",
+  "description": "Provides credential-scoped local MCP commands for preparing Notion-ready drafts through a local Notion integration token.",
+  "author": {
+    "name": "Amentia"
+  },
+  "capabilities": [
+    "command:notion.prepare-page-draft",
+    "command:notion.inspect-page-write",
+    "command:notion.publish-page-draft",
+    "connector:notion",
+    "connector_workflow:notion.create-page",
+    "mcp_server:notion",
+    "prompt_pack:notion.workspace"
+  ],
+  "permissions": [
+    "network.outbound",
+    "mcp.connect"
+  ],
+  "skills": [
+    {
+      "id": "notion.workspace",
+      "description": "Guidance for turning local workspace context into Notion-ready pages and notes.",
+      "path": "skills/notion-workspace.md"
+    }
+  ],
+  "mcpServers": [
+    {
+      "id": "notion",
+      "transport": "stdio",
+      "command": "bin/notion-mcp-local-draft.sh"
+    }
+  ],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "connectorWorkflows": [
+    {
+      "id": "notion.create-page",
+      "displayName": "Notion Create Page",
+      "connectorId": "notion",
+      "action": "createPage",
+      "maxAgentSteps": 5,
+      "stages": [
+        "draftPrepared",
+        "inspectBeforeWrite",
+        "blockedBeforeWrite",
+        "completed",
+        "failedBeforeProof"
+      ],
+      "statuses": [
+        "prepared",
+        "inspected",
+        "completed",
+        "retryNeeded"
+      ]
+    }
+  ],
+  "authPolicy": {
+    "type": "api_key",
+    "required": true,
+    "scopes": [
+      "read_content",
+      "insert_content"
+    ],
+    "credentialStore": "local"
+  },
+  "defaultEnabled": false
+}

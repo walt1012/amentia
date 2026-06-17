@@ -18,11 +18,11 @@ PLUGIN_ROOT = ROOT / "plugins" / "bundled" / "notion-connector"
 PUBLISH_COMMAND_ID = "notion-connector::notion.publish-page-draft"
 WORKFLOW_ID = "notion.create-page"
 VALID_PARENT_PAGE_ID = "11112222-3333-4444-5555-666677778888"
-VALID_PARENT_PAGE_URL = "https://www.notion.so/Pith-Test-11112222333344445555666677778888?pvs=4"
+VALID_PARENT_PAGE_URL = "https://www.notion.so/Amentia-Test-11112222333344445555666677778888?pvs=4"
 
 
 def load_connector() -> ModuleType:
-  spec = importlib.util.spec_from_file_location("pith_notion_connector", CONNECTOR_PATH)
+  spec = importlib.util.spec_from_file_location("amentia_notion_connector", CONNECTOR_PATH)
   if spec is None or spec.loader is None:
     raise AssertionError(f"Could not load connector at {CONNECTOR_PATH}")
   module = importlib.util.module_from_spec(spec)
@@ -102,7 +102,7 @@ def assert_workflow(
 
 
 def assert_manifest_workflow_coverage() -> None:
-  manifest = json.loads((PLUGIN_ROOT / "pith-plugin.json").read_text(encoding="utf-8"))
+  manifest = json.loads((PLUGIN_ROOT / "amentia-plugin.json").read_text(encoding="utf-8"))
   command_capabilities = sorted(
     capability.removeprefix("command:")
     for capability in manifest.get("capabilities", [])
@@ -148,8 +148,8 @@ def assert_publish_success(
   expected_body_truncated: str = "false",
 ) -> None:
   captured: dict[str, object] = {}
-  previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
-  os.environ["PITH_TEST_NOTION_TOKEN"] = "secret-token"
+  previous_token = os.environ.get("AMENTIA_TEST_NOTION_TOKEN")
+  os.environ["AMENTIA_TEST_NOTION_TOKEN"] = "secret-token"
 
   def fake_notion_post(path: str, token: str, payload: dict) -> dict:
     captured["path"] = path
@@ -190,7 +190,7 @@ def assert_publish_success(
             "service": "notion",
             "credentialProvider": {
               "provider": "env",
-              "envKey": "PITH_TEST_NOTION_TOKEN",
+              "envKey": "AMENTIA_TEST_NOTION_TOKEN",
             },
           }
         ],
@@ -198,9 +198,9 @@ def assert_publish_success(
     )
   finally:
     if previous_token is None:
-      os.environ.pop("PITH_TEST_NOTION_TOKEN", None)
+      os.environ.pop("AMENTIA_TEST_NOTION_TOKEN", None)
     else:
-      os.environ["PITH_TEST_NOTION_TOKEN"] = previous_token
+      os.environ["AMENTIA_TEST_NOTION_TOKEN"] = previous_token
   item = response_first_item(response)
   structured = response.get("result", {}).get("structuredContent", {})
   attributes = item.get("attributes", {})
@@ -276,8 +276,8 @@ def assert_publish_success(
 
 
 def assert_publish_missing_remote_proof_retry(connector: ModuleType) -> None:
-  previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
-  os.environ["PITH_TEST_NOTION_TOKEN"] = "secret-token"
+  previous_token = os.environ.get("AMENTIA_TEST_NOTION_TOKEN")
+  os.environ["AMENTIA_TEST_NOTION_TOKEN"] = "secret-token"
 
   def fake_notion_post(_path: str, _token: str, _payload: dict) -> dict:
     return {
@@ -303,7 +303,7 @@ def assert_publish_missing_remote_proof_retry(connector: ModuleType) -> None:
             "service": "notion",
             "credentialProvider": {
               "provider": "env",
-              "envKey": "PITH_TEST_NOTION_TOKEN",
+              "envKey": "AMENTIA_TEST_NOTION_TOKEN",
             },
           }
         ],
@@ -311,9 +311,9 @@ def assert_publish_missing_remote_proof_retry(connector: ModuleType) -> None:
     )
   finally:
     if previous_token is None:
-      os.environ.pop("PITH_TEST_NOTION_TOKEN", None)
+      os.environ.pop("AMENTIA_TEST_NOTION_TOKEN", None)
     else:
-      os.environ["PITH_TEST_NOTION_TOKEN"] = previous_token
+      os.environ["AMENTIA_TEST_NOTION_TOKEN"] = previous_token
 
   item = response_first_item(response)
   attributes = item.get("attributes", {})
@@ -411,8 +411,8 @@ def main() -> int:
     raise AssertionError(f"Notion credential retry should not force input editing: {retry_attributes}")
 
   invalid_parent_called_remote = False
-  previous_token = os.environ.get("PITH_TEST_NOTION_TOKEN")
-  os.environ["PITH_TEST_NOTION_TOKEN"] = "secret-token"
+  previous_token = os.environ.get("AMENTIA_TEST_NOTION_TOKEN")
+  os.environ["AMENTIA_TEST_NOTION_TOKEN"] = "secret-token"
 
   def fail_if_invalid_parent_reaches_remote(_path: str, _token: str, _payload: dict) -> dict:
     nonlocal invalid_parent_called_remote
@@ -437,7 +437,7 @@ def main() -> int:
             "service": "notion",
             "credentialProvider": {
               "provider": "env",
-              "envKey": "PITH_TEST_NOTION_TOKEN",
+              "envKey": "AMENTIA_TEST_NOTION_TOKEN",
             },
           }
         ],
@@ -445,9 +445,9 @@ def main() -> int:
     )
   finally:
     if previous_token is None:
-      os.environ.pop("PITH_TEST_NOTION_TOKEN", None)
+      os.environ.pop("AMENTIA_TEST_NOTION_TOKEN", None)
     else:
-      os.environ["PITH_TEST_NOTION_TOKEN"] = previous_token
+      os.environ["AMENTIA_TEST_NOTION_TOKEN"] = previous_token
   invalid_parent_item = response_first_item(invalid_parent_retry)
   invalid_parent_attributes = invalid_parent_item.get("attributes", {})
   if invalid_parent_called_remote:
@@ -508,7 +508,7 @@ def main() -> int:
     connector,
     raw_input=VALID_PARENT_PAGE_URL,
     expected_parent_id=VALID_PARENT_PAGE_ID,
-    expected_title="Pith Draft",
+    expected_title="Amentia Draft",
     expected_block_count="0",
   )
   assert_publish_success(
@@ -539,7 +539,7 @@ def main() -> int:
     expected_title="Inline Body",
     expected_block_count="2",
   )
-  long_title = "Pith Long Title " * 20
+  long_title = "Amentia Long Title " * 20
   assert_publish_success(
     connector,
     raw_input=json.dumps(

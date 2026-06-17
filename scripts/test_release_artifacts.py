@@ -20,7 +20,7 @@ from package_contract import (
   MODEL_METADATA_BUNDLED,
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
   packaged_smoke_package_metadata,
@@ -130,7 +130,7 @@ def write_package_manifest(
         "defaultModelId": DEFAULT_MODEL_ID,
         "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
         "modelMetadataBundled": MODEL_METADATA_BUNDLED,
-        "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+        "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
         "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
         "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
         "dailyDriverStageSource": daily_driver_stage_source,
@@ -164,16 +164,16 @@ def assert_raises(action, message: str) -> None:
 
 
 def main() -> int:
-  with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-release-artifacts-") as root:
     root_path = Path(root)
     artifact = root_path / "Amentia-v0.1.0-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
-    package_manifest = write_package_manifest(root_path / "PithPackage.json")
+    package_manifest = write_package_manifest(root_path / "AmentiaPackage.json")
     smoke_receipt = write_smoke_receipt(
       root_path / "packaged-smoke-receipt.json",
       smoke_metadata_from_package_manifest(package_manifest),
     )
-    artifact.write_bytes(b"pith release artifact\n")
+    artifact.write_bytes(b"amentia release artifact\n")
     install_guide.write_text(
       release_install_guide("v0.1.0", "ad-hoc"),
       encoding="utf-8",
@@ -216,8 +216,8 @@ def main() -> int:
       raise AssertionError("release manifest should record the source commit")
     if manifest["modelDelivery"]["modelWeightsBundled"] is not False:
       raise AssertionError("release manifest should not claim bundled model weights")
-    if manifest["identity"]["pithAccountRequired"] is not False:
-      raise AssertionError("release manifest should not require a Pith account")
+    if manifest["identity"]["amentiaAccountRequired"] is not False:
+      raise AssertionError("release manifest should not require a Amentia account")
     if manifest["localExecution"]["defaultSafetyMode"] != DEFAULT_LOCAL_EXECUTION_SAFETY_MODE:
       raise AssertionError("release manifest should record default action safety mode")
     if manifest["localExecution"]["safetyModes"] != list(LOCAL_EXECUTION_SAFETY_MODES):
@@ -267,7 +267,7 @@ def main() -> int:
       raise AssertionError("release manifest should summarize package schema version")
     if "sha256" not in manifest["appPackage"]:
       raise AssertionError("release manifest should hash the package manifest")
-    if manifest["appPackage"]["pithAccountRequired"] is not False:
+    if manifest["appPackage"]["amentiaAccountRequired"] is not False:
       raise AssertionError("release manifest should summarize account-free package policy")
     if manifest["appPackage"]["defaultLocalExecutionSafetyMode"] != DEFAULT_LOCAL_EXECUTION_SAFETY_MODE:
       raise AssertionError("release manifest should summarize package default execution mode")
@@ -484,7 +484,7 @@ def main() -> int:
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
     tampered_manifest = json.loads(manifest_data)
-    tampered_manifest["verification"]["assetNames"] = ["Pith.dmg"]
+    tampered_manifest["verification"]["assetNames"] = ["Amentia.dmg"]
     manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
     assert_raises(
       lambda: validate_release_manifest(
@@ -498,7 +498,7 @@ def main() -> int:
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
     tampered_manifest = json.loads(manifest_data)
-    tampered_manifest["verification"]["checksumCommand"] = "shasum Pith.dmg"
+    tampered_manifest["verification"]["checksumCommand"] = "shasum Amentia.dmg"
     manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
     assert_raises(
       lambda: validate_release_manifest(
@@ -555,7 +555,7 @@ def main() -> int:
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
     tampered_manifest = json.loads(manifest_data)
-    tampered_manifest["artifacts"].append({"name": "../Pith.dmg", "kind": "dmg"})
+    tampered_manifest["artifacts"].append({"name": "../Amentia.dmg", "kind": "dmg"})
     manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
     assert_raises(
       lambda: validate_release_manifest(
@@ -588,7 +588,7 @@ def main() -> int:
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
     tampered_manifest = json.loads(manifest_data)
-    tampered_manifest["artifacts"].append("Pith.dmg")
+    tampered_manifest["artifacts"].append("Amentia.dmg")
     manifest_path.write_text(json.dumps(tampered_manifest), encoding="utf-8")
     assert_raises(
       lambda: validate_release_manifest(
@@ -622,7 +622,7 @@ def main() -> int:
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
     wrong_artifact = root_path / "Amentia-wrong-macos-x86_64.dmg"
-    wrong_artifact.write_bytes(b"pith release artifact\n")
+    wrong_artifact.write_bytes(b"amentia release artifact\n")
     wrong_checksum_path = write_checksum_file(wrong_artifact)
     assert_raises(
       lambda: release_manifest(
@@ -691,7 +691,7 @@ def main() -> int:
     )
 
     developer_package_manifest = write_package_manifest(
-      root_path / "DeveloperIdPithPackage.json",
+      root_path / "DeveloperIdAmentiaPackage.json",
       signing="developer-id",
     )
     developer_manifest = release_manifest(
@@ -774,7 +774,7 @@ def main() -> int:
     )
 
     wrong_package_manifest = write_package_manifest(
-      root_path / "WrongSourcePithPackage.json",
+      root_path / "WrongSourceAmentiaPackage.json",
       source_commit="abcdef0123456789abcdef0123456789abcdef01",
     )
     assert_raises(
@@ -791,7 +791,7 @@ def main() -> int:
     )
 
     wrong_package_manifest = write_package_manifest(
-      root_path / "WrongVersionPithPackage.json",
+      root_path / "WrongVersionAmentiaPackage.json",
       bundle_version="0.2.0",
     )
     assert_raises(
@@ -807,7 +807,7 @@ def main() -> int:
       "release manifest should reject packaged app versions that do not match the tag",
     )
 
-    wrong_package_manifest = write_package_manifest(root_path / "WrongSchemaPithPackage.json")
+    wrong_package_manifest = write_package_manifest(root_path / "WrongSchemaAmentiaPackage.json")
     wrong_package_data = json.loads(wrong_package_manifest.read_text(encoding="utf-8"))
     wrong_package_data["schemaVersion"] = 2
     wrong_package_manifest.write_text(json.dumps(wrong_package_data), encoding="utf-8")
@@ -825,7 +825,7 @@ def main() -> int:
     )
 
     wrong_package_manifest = write_package_manifest(
-      root_path / "WrongSigningPithPackage.json",
+      root_path / "WrongSigningAmentiaPackage.json",
       signing="developer-id",
     )
     assert_raises(
@@ -842,7 +842,7 @@ def main() -> int:
     )
 
     wrong_package_manifest = write_package_manifest(
-      root_path / "WrongModelDeliveryPithPackage.json",
+      root_path / "WrongModelDeliveryAmentiaPackage.json",
       model_delivery="bundled",
     )
     assert_raises(
@@ -859,7 +859,7 @@ def main() -> int:
     )
 
     wrong_package_manifest = write_package_manifest(
-      root_path / "WrongSandboxPithPackage.json",
+      root_path / "WrongSandboxAmentiaPackage.json",
       sandbox_mode="none",
     )
     assert_raises(
@@ -876,7 +876,7 @@ def main() -> int:
     )
 
     wrong_package_manifest = write_package_manifest(
-      root_path / "WrongDailyDriverPithPackage.json",
+      root_path / "WrongDailyDriverAmentiaPackage.json",
       daily_driver_stage_source="app-only",
     )
     assert_raises(
@@ -907,12 +907,12 @@ def main() -> int:
       "tampered release artifact should fail release manifest validation",
     )
 
-  with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-release-artifacts-") as root:
     root_path = Path(root)
     artifact = root_path / "Amentia-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
-    package_manifest = write_package_manifest(root_path / "PithPackage.json")
-    artifact.write_bytes(b"pith internal ci artifact\n")
+    package_manifest = write_package_manifest(root_path / "AmentiaPackage.json")
+    artifact.write_bytes(b"amentia internal ci artifact\n")
     install_guide.write_text(
       release_install_guide("ci-0123456789ab", "ad-hoc"),
       encoding="utf-8",
@@ -950,7 +950,7 @@ def main() -> int:
     ):
       raise AssertionError("internal release manifests should record the checksum command")
 
-  with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
+  with tempfile.TemporaryDirectory(prefix="amentia-release-artifacts-") as root:
     root_path = Path(root)
     weak_guide = root_path / "README-FIRST.txt"
     weak_guide.write_text("Install Amentia from this DMG.\n", encoding="utf-8")

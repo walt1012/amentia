@@ -1,6 +1,6 @@
 # Notion Workspace Connector
 
-Use this connector skill when a user wants Pith to prepare workspace notes, summaries, or task context for Notion.
+Use this connector skill when a user wants Amentia to prepare workspace notes, summaries, or task context for Notion.
 
 Current contract:
 

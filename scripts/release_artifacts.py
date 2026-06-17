@@ -26,7 +26,7 @@ from package_contract import (
   PACKAGED_SMOKE_JOURNEY,
   PACKAGED_SMOKE_PROOF_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
-  PITH_ACCOUNT_REQUIRED,
+  AMENTIA_ACCOUNT_REQUIRED,
   RELEASE_SIGNING_MODES,
   SANDBOX_CONTRACT,
   SUPPORTED_ARCH,
@@ -134,7 +134,7 @@ def release_manifest(
       "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
     },
     "identity": {
-      "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+      "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
     },
     "localExecution": {
       "defaultSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
@@ -270,7 +270,7 @@ def validate_release_manifest(
   )
   validate_package_version_matches_tag(tag, package_summary)
   if package_summary is not None and manifest.get("appPackage") != package_summary:
-    raise RuntimeError("Release manifest app package summary does not match PithPackage.json")
+    raise RuntimeError("Release manifest app package summary does not match AmentiaPackage.json")
   smoke_receipt_summary = manifest.get("verification", {}).get("packagedSmokeReceipt")
   if package_summary is not None and (
     smoke_receipt_path is not None
@@ -342,13 +342,13 @@ def package_manifest_summary(
 ) -> dict | None:
   if package_manifest_path is None:
     return None
-  package_manifest = read_json_object(package_manifest_path, "PithPackage.json")
+  package_manifest = read_json_object(package_manifest_path, "AmentiaPackage.json")
   bundle_version = package_manifest.get("bundleVersion")
   if not isinstance(bundle_version, str) or not bundle_version.strip():
-    raise RuntimeError(f"PithPackage.json bundleVersion is required: {package_manifest_path}")
+    raise RuntimeError(f"AmentiaPackage.json bundleVersion is required: {package_manifest_path}")
   size_budget = validate_package_manifest_contract(
     package_manifest,
-    f"PithPackage.json: {package_manifest_path}",
+    f"AmentiaPackage.json: {package_manifest_path}",
     source_commit=source_commit,
     signing_mode=signing_mode,
   )
@@ -365,7 +365,7 @@ def package_manifest_summary(
     "modelDelivery": MODEL_DELIVERY_MODE,
     "defaultModelId": DEFAULT_MODEL_ID,
     "modelWeightsBundled": MODEL_WEIGHTS_BUNDLED,
-    "pithAccountRequired": PITH_ACCOUNT_REQUIRED,
+    "amentiaAccountRequired": AMENTIA_ACCOUNT_REQUIRED,
     "defaultLocalExecutionSafetyMode": DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
     "localExecutionSafetyModes": list(LOCAL_EXECUTION_SAFETY_MODES),
     "sandboxMode": SANDBOX_CONTRACT["mode"],
@@ -390,7 +390,7 @@ def validate_package_version_matches_tag(tag: str, package_summary: dict | None)
   expected_version = product_version_from_tag(tag)
   if package_summary.get("bundleVersion") != expected_version:
     raise RuntimeError(
-      "PithPackage.json bundleVersion must match the public release tag"
+      "AmentiaPackage.json bundleVersion must match the public release tag"
     )
 
 
@@ -563,8 +563,8 @@ def validate_sandbox_contract(value: object, label: str) -> None:
 def validate_identity_contract(value: object, label: str) -> None:
   if not isinstance(value, dict):
     raise RuntimeError(f"{label} must be an object")
-  if value.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
-    raise RuntimeError(f"{label} pithAccountRequired must be false")
+  if value.get("amentiaAccountRequired") is not AMENTIA_ACCOUNT_REQUIRED:
+    raise RuntimeError(f"{label} amentiaAccountRequired must be false")
 
 
 def validate_local_execution_contract(value: object, label: str) -> None:
@@ -771,7 +771,7 @@ def validate_packaged_smoke_package_metadata(
     raise RuntimeError(f"{label} packagedSmokeReceipt must be an object")
   if smoke_receipt_summary.get("packageMetadata") != expected_metadata:
     raise RuntimeError(
-      f"{label} packagedSmokeReceipt packageMetadata must match PithPackage.json"
+      f"{label} packagedSmokeReceipt packageMetadata must match AmentiaPackage.json"
     )
 
 

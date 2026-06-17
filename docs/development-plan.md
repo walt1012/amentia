@@ -49,22 +49,22 @@ The daily loop is:
 
 ## Architecture Boundaries
 
-- `apps/pith-macos`: native UI, setup, timeline, approvals, model manager, and
+- `apps/amentia-macos`: native UI, setup, timeline, approvals, model manager, and
   app-facing state.
-- `crates/pith-runtime-bin`: JSON-RPC process, routing, notifications, request
+- `crates/amentia-runtime-bin`: JSON-RPC process, routing, notifications, request
   supervision, and lock boundaries.
-- `crates/pith-core`: orchestration, turn lifecycle, context selection, memory
+- `crates/amentia-core`: orchestration, turn lifecycle, context selection, memory
   use, plugin execution, and local execution safety.
-- `crates/pith-tools`: bounded workspace tools, shell, Web Search, compaction,
+- `crates/amentia-tools`: bounded workspace tools, shell, Web Search, compaction,
   and path safety.
-- `crates/pith-sandbox`: native sandbox policy and diagnostics.
-- `crates/pith-model-runtime`: local model discovery, validation, health,
+- `crates/amentia-sandbox`: native sandbox policy and diagnostics.
+- `crates/amentia-model-runtime`: local model discovery, validation, health,
   bounded inference, and failure wording.
-- `crates/pith-memory`: memory meaning, ranking, summaries, and context
+- `crates/amentia-memory`: memory meaning, ranking, summaries, and context
   selection.
-- `crates/pith-storage`: durable records for threads, workspace state,
+- `crates/amentia-storage`: durable records for threads, workspace state,
   approvals, workspace change ledger, memory notes, and plugin state.
-- `crates/pith-plugin-host`: manifests, discovery, validation, registries,
+- `crates/amentia-plugin-host`: manifests, discovery, validation, registries,
   connector metadata, and bundle lifecycle.
 
 Memory owns meaning and ranking. Storage owns durable records. Connector
@@ -117,22 +117,19 @@ Current constraints:
 - Release assets stay limited to the DMG, checksum, `README-FIRST.txt`, and
   release manifest.
 - Visible ad-hoc prereleases require an explicit manual acceptance receipt.
-- `Amentia` is the product name. Existing `pith-*` crates, targets,
-  environment variables, manifest files, and protocol namespaces remain internal
-  implementation names until a low-risk namespace migration improves clarity
-  more than it risks release stability.
+- `Amentia` is the product, app, package, runtime, crate, environment variable,
+  and plugin manifest namespace. Repository URLs may still contain the original
+  GitHub repository slug until the remote repository is renamed.
 
 ## M12: Public Release
 
-Status: complete for the first public ad-hoc prerelease.
-
 Goal: ship a usable macOS installer from GitHub Releases.
+
+Status: packaging baseline complete; Amentia needs a fresh installed-app
+acceptance pass before the next visible public tag.
 
 Completed:
 
-- Published `v0.1.14` as the current accepted ad-hoc prerelease.
-- Keep the downloaded-asset acceptance receipt at
-  `docs/release/manual-acceptance-receipt-v0.1.14.json` as the release gate.
 - The release exposes exactly the DMG, checksum, `README-FIRST.txt`, and release
   manifest.
 - The GitHub Release page stays concise; detailed install, Gatekeeper,
@@ -146,8 +143,8 @@ Evidence:
 - The GitHub Release exposes exactly the four public assets and final publish
   validation passes against the live release.
 - Release plan, release manifest, `README-FIRST.txt`, release notes, packaged
-  smoke proof, manual acceptance receipt, and downloaded-asset rehearsal
-  describe the same user path.
+  smoke proof, manual acceptance receipt, and downloaded-asset rehearsal must
+  describe the same user path for each visible release.
 - CI stays fast, split, strict, and understandable enough to block release
   contract drift.
 
@@ -175,7 +172,7 @@ Completed baseline:
 - Keep execution reliable: long work is observable, cancellable, resumable when
   appropriate, receipt-backed, and CI-verified through shared scripts instead of
   repeated workflow shell blocks.
-- Finish product identity around a refined blue lowercase `p` mark, keep the
+- Finish product identity around a refined blue Amentia monogram mark, keep the
   vector source and PNG candidate aligned, require transparent outer icon
   corners, and ship it through the native macOS icon package contract.
 - Keep extension management understandable: plugin installation is the bundle
@@ -189,6 +186,11 @@ Completed baseline:
   surfaces; paths and protocol fields stay secondary.
 - Keep support diagnostics available without letting them dominate the default
   inspector path.
+- Treat Amentia as a fresh app identity: app-owned data lives under `Amentia`,
+  Reset Amentia deletes only Amentia-owned files, and legacy product data is not
+  migrated or cleaned implicitly.
+- Keep release and settings copy product-first: internal package filenames and
+  schema details stay out of normal user-facing explanations.
 
 Remaining quality bar:
 
