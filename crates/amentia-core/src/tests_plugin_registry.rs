@@ -99,8 +99,7 @@ fn plugin_command_registry_surfaces_invalid_command_manifests() {
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root"))
-    .expect("cleanup plugin source");
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
