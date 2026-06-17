@@ -551,6 +551,25 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(commandDetail.contains("connectors"))
   }
 
+  func testPluginDashboardDoesNotCountStaleConnectionMarkersAsAuthorized() {
+    let snapshot = pluginDashboardSnapshot(
+      connectors: [
+        pluginConnectorSummary(
+          id: "notion::main",
+          displayName: "Notion",
+          status: "needsAuth",
+          authStatus: "needsAuth",
+          credentialPresent: true
+        )
+      ]
+    )
+
+    let summary = PluginDashboardPresenter.connectorCountSummary(snapshot)
+
+    XCTAssertEqual(summary, "1 connection | 1 need sign in")
+    XCTAssertFalse(summary.contains("authorized"))
+  }
+
   func testPluginValidationFallbackAvoidsUnknownErrorCopy() {
     let snapshot = pluginDashboardSnapshot(
       plugins: [

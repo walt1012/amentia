@@ -36,7 +36,10 @@ pub(super) fn build_command_connector_refs(
       continue;
     }
     let Some(credential) = plugin_state.connector_credential(&connector.connector_id) else {
-      return Err(missing_connector_credential(command, &connector.connector_id));
+      return Err(missing_connector_credential(
+        command,
+        &connector.connector_id,
+      ));
     };
     if connector_requires_local_secret(&connector) && credential.credential_secret.is_none() {
       return Err(missing_connector_credential_secret(

@@ -174,7 +174,7 @@ enum PluginDashboardPresenter {
 
     let readyCount = snapshot.connectors.filter { $0.status == "ready" }.count
     let needsAuthCount = snapshot.connectors.filter { $0.authStatus == "needsAuth" }.count
-    let authorizedCount = snapshot.connectors.filter { $0.credentialPresent }.count
+    let authorizedCount = snapshot.connectors.filter { $0.authStatus == "authorized" }.count
     var parts = [
       "\(snapshot.connectors.count) connection\(snapshot.connectors.count == 1 ? "" : "s")"
     ]
