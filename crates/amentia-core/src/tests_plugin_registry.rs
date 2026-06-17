@@ -5,6 +5,7 @@ use super::test_support::{
 };
 use super::*;
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
+use crate::runtime_plugins::PluginConnectorCredentialState;
 use amentia_plugin_host::PluginCatalogEntry;
 use amentia_protocol::methods;
 use amentia_storage::RuntimeStore;
@@ -894,6 +895,144 @@ printf '{"content":"ok"}\n'
 }
 
 #[test]
+fn api_key_connector_commands_block_when_local_secret_is_missing() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-command-missing-secret",
+    "notion-tools",
+    "Notion Tools",
+  );
+  let plugin_manifest = source_root.join("amentia-plugin.json");
+  let runner_path = source_root.join("runner.sh");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-tools",
+  "version": "0.1.0",
+  "displayName": "Notion Tools",
+  "description": "Notion connector command plugin",
+  "author": { "name": "Amentia" },
+  "capabilities": ["command:notion-tools.sync", "connector:notion"],
+  "permissions": ["network.outbound", "mcp.connect"],
+  "appConnectors": [
+    {
+      "id": "notion",
+      "displayName": "Notion",
+      "service": "notion",
+      "homepage": "https://www.notion.so"
+    }
+  ],
+  "authPolicy": {
+    "type": "api-key",
+    "required": true,
+    "scopes": ["read_content"],
+    "credentialStore": "local"
+  },
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write connector command plugin manifest");
+  fs::write(
+    &runner_path,
+    r#"#!/bin/sh
+printf '{"content":"ok"}\n'
+"#,
+  )
+  .expect("write runner");
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(&runner_path)
+      .expect("runner metadata")
+      .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+  }
+  fs::write(
+    source_root.join("commands").join("notion-tools.sync.json"),
+    r#"{
+  "title": "Sync Notion",
+  "description": "Sync local context to Notion.",
+  "prompt": "Prepare a Notion sync payload.",
+  "execution": {
+    "kind": "stdio.notionSync",
+    "entrypoint": "runner.sh"
+  }
+}"#,
+  )
+  .expect("write connector command manifest");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-tools".to_string(),
+      name: "notion-tools".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Tools".to_string(),
+      status: "ready".to_string(),
+      description: "Notion connector command plugin".to_string(),
+      author_name: Some("Amentia".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec![
+        "command:notion-tools.sync".to_string(),
+        "connector:notion".to_string(),
+      ],
+      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+  context
+    .plugin_state
+    .set_connector_credential(PluginConnectorCredentialState {
+      connector_id: "notion-tools::notion".to_string(),
+      plugin_id: "notion-tools".to_string(),
+      credential_store: "local".to_string(),
+      credential_label: "Missing local secret".to_string(),
+      credential_secret: None,
+      authorized_at: 1,
+      updated_at: 1,
+    });
+
+  let registry_response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_COMMAND_REGISTRY, None),
+  );
+  let blocked_response = handle_request(
+    &mut context,
+    request(
+      methods::PLUGIN_COMMAND_RUN,
+      Some(json!({
+        "threadId": "thread-1",
+        "commandId": "notion-tools::notion-tools.sync"
+      })),
+    ),
+  );
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(registry_response.error.is_none());
+  let registry = registry_response
+    .result
+    .expect("missing secret registry result");
+  let command = &registry["commands"][0];
+  assert_eq!(command["runStatus"], "needsConnectorAuth");
+  assert_eq!(command["approvalRequired"], false);
+  assert!(command["runBlocker"]
+    .as_str()
+    .expect("run blocker")
+    .contains("with a local secret first"));
+  let blocked_error = blocked_response.error.expect("missing secret blocker");
+  assert_eq!(blocked_error.code, -32058);
+  let blocked_data = blocked_error.data.expect("missing secret data");
+  assert_eq!(blocked_data["runStatus"], "needsConnectorAuth");
+  assert_eq!(blocked_data["connectorId"], "notion-tools::notion");
+}
+
+#[test]
 fn connector_backed_plugin_commands_report_runner_setup_before_connector_auth() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
@@ -1648,6 +1787,47 @@ fn plugin_connector_auth_lifecycle_updates_connector_registry() {
   assert_eq!(cleared_connector["credentialSecretPresent"], false);
   assert!(cleared_connector["credentialProvider"].is_null());
   assert!(cleared_connector["credentialHandle"].is_null());
+}
+
+#[test]
+fn plugin_connector_registry_marks_missing_api_key_secret_as_needing_auth() {
+  let mut context = RuntimeContext::new_in_memory();
+  replace_plugin_catalog(
+    &mut context,
+    vec![bundled_manifest_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      true,
+      false,
+      &["mcp_server:notion", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+    )],
+  );
+  context
+    .plugin_state
+    .set_connector_credential(PluginConnectorCredentialState {
+      connector_id: "notion-connector::notion".to_string(),
+      plugin_id: "notion-connector".to_string(),
+      credential_store: "local".to_string(),
+      credential_label: "Notion authorization marker".to_string(),
+      credential_secret: None,
+      authorized_at: 1,
+      updated_at: 1,
+    });
+
+  let response = handle_request(
+    &mut context,
+    request(methods::PLUGIN_CONNECTOR_REGISTRY, None),
+  );
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("connector registry result");
+  let connector = &result["connectors"][0];
+  assert_eq!(connector["status"], "needsAuth");
+  assert_eq!(connector["authStatus"], "needsAuth");
+  assert_eq!(connector["credentialPresent"], true);
+  assert_eq!(connector["credentialSecretPresent"], false);
+  assert_eq!(connector["credentialLabel"], "Notion authorization marker");
 }
 
 #[test]

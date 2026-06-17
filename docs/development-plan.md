@@ -252,6 +252,8 @@ Completed:
 - Connector authorization receipts use product language, and runtime secret
   enforcement accepts common API-key spelling variants from third-party
   manifests.
+- Connector registries and command readiness fail closed when an authorization
+  marker exists but a required local API key secret is unavailable.
 
 Next:
 

@@ -238,15 +238,15 @@ enum PluginStatusDisplay {
     _ status: String,
     credentialPresent: Bool
   ) -> String {
-    if credentialPresent {
-      return "authorized locally"
-    }
-
     switch status {
+    case "authorized":
+      return "authorized locally"
     case "ready":
-      return "ready"
+      return credentialPresent ? "authorized locally" : "ready"
     case "needsAuth":
       return "needs sign in"
+    case "disabled":
+      return "disabled"
     default:
       return "not authorized"
     }

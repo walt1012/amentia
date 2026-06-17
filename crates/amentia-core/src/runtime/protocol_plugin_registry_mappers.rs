@@ -15,6 +15,7 @@ use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_R
 use crate::plugins::plugin_command_execution::is_supported_plugin_command_execution;
 use crate::plugins::plugin_command_readiness::PluginCommandReadiness;
 use crate::plugins::plugin_command_recovery_hints::plugin_definition_manifest_repair_hint;
+use crate::plugins::plugin_connector_requirements::connector_requires_local_secret;
 use crate::runtime_plugins::PluginConnectorCredentialState;
 
 const LOCAL_CREDENTIAL_PROVIDER: &str = "amentia.localCredentialProvider";
@@ -128,8 +129,10 @@ pub(super) fn to_protocol_plugin_connector(
   let credential_secret_present = credential
     .and_then(|state| state.credential_secret.as_ref())
     .is_some();
-  let auth_status = connector_auth_status(&connector, credential_present);
-  let status = connector_status(&connector, credential_present);
+  let credential_ready =
+    connector_credential_ready(&connector, credential_present, credential_secret_present);
+  let auth_status = connector_auth_status(&connector, credential_ready);
+  let status = connector_status(&connector, credential_ready);
   PluginConnectorSummary {
     connector_id: connector.connector_id,
     display_name: connector.display_name,
@@ -171,24 +174,38 @@ pub(super) fn to_protocol_plugin_connector(
   }
 }
 
-fn connector_status(connector: &HostPluginConnectorEntry, credential_present: bool) -> String {
+fn connector_credential_ready(
+  connector: &HostPluginConnectorEntry,
+  credential_present: bool,
+  credential_secret_present: bool,
+) -> bool {
+  if !connector.auth_required {
+    return true;
+  }
+  if connector_requires_local_secret(connector) {
+    return credential_present && credential_secret_present;
+  }
+  credential_present
+}
+
+fn connector_status(connector: &HostPluginConnectorEntry, credential_ready: bool) -> String {
   if !connector.enabled {
     return "disabled".to_string();
   }
-  if connector.auth_required && !credential_present {
+  if connector.auth_required && !credential_ready {
     return "needsAuth".to_string();
   }
   "ready".to_string()
 }
 
-fn connector_auth_status(connector: &HostPluginConnectorEntry, credential_present: bool) -> String {
+fn connector_auth_status(connector: &HostPluginConnectorEntry, credential_ready: bool) -> String {
   if !connector.enabled {
     return "disabled".to_string();
   }
   if !connector.auth_required {
     return "notRequired".to_string();
   }
-  if credential_present {
+  if credential_ready {
     return "authorized".to_string();
   }
   "needsAuth".to_string()

@@ -866,6 +866,17 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(entry.body.contains("credentialStore"))
   }
 
+  func testAuthorizationStatusPrioritizesNeedsAuthOverStoredMarker() {
+    XCTAssertEqual(
+      PluginStatusDisplay.authorizationStatus("needsAuth", credentialPresent: true),
+      "needs sign in"
+    )
+    XCTAssertEqual(
+      PluginStatusDisplay.authorizationStatus("authorized", credentialPresent: true),
+      "authorized locally"
+    )
+  }
+
   func testConnectionClearReceiptExplainsLocalCleanup() {
     let connector = runtimePluginConnector(
       authStatus: "needsAuth",

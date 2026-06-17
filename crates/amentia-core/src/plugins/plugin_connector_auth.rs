@@ -7,6 +7,7 @@ use amentia_protocol::{
 };
 use serde_json::{json, Value};
 
+use super::plugin_connector_requirements::connector_requires_local_secret;
 use crate::protocol_adapters::build_protocol_connector_registry;
 use crate::request_params::parse_required_params;
 use crate::runtime_plugins::PluginConnectorCredentialState;
@@ -90,7 +91,7 @@ pub(crate) fn handle_plugin_connector_authorize(
     }
   };
   let credential_secret = normalized_credential_secret(params.credential_secret.as_deref());
-  if credential_secret.is_none() && connector_requires_secret(&connector) {
+  if credential_secret.is_none() && connector_requires_local_secret(&connector) {
     return connector_error_response(
       request.id,
       -32058,
@@ -277,66 +278,4 @@ fn normalized_credential_secret(secret: Option<&str>) -> Option<String> {
     .map(str::trim)
     .filter(|secret| !secret.is_empty())
     .map(str::to_string)
-}
-
-fn connector_requires_secret(connector: &PluginConnectorEntry) -> bool {
-  if !connector.auth_required {
-    return false;
-  }
-
-  let Some(auth_type) = connector.auth_type.as_deref() else {
-    return false;
-  };
-  let normalized = normalized_auth_type(auth_type);
-  normalized == "api_key" || normalized == "apikey"
-}
-
-fn normalized_auth_type(auth_type: &str) -> String {
-  auth_type
-    .trim()
-    .to_ascii_lowercase()
-    .replace(['-', ' '], "_")
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn api_key_spelling_variants_require_secret() {
-    for auth_type in ["api_key", "apiKey", "api-key", " API_KEY "] {
-      let connector = connector(Some(auth_type), true);
-      assert!(connector_requires_secret(&connector));
-    }
-  }
-
-  #[test]
-  fn non_api_key_or_optional_connectors_do_not_require_secret() {
-    assert!(!connector_requires_secret(&connector(Some("oauth2"), true)));
-    assert!(!connector_requires_secret(&connector(
-      Some("api_key"),
-      false
-    )));
-    assert!(!connector_requires_secret(&connector(None, true)));
-  }
-
-  fn connector(auth_type: Option<&str>, auth_required: bool) -> PluginConnectorEntry {
-    PluginConnectorEntry {
-      connector_id: "notion-connector::notion".to_string(),
-      display_name: "Notion".to_string(),
-      service: "notion".to_string(),
-      plugin_id: "notion-connector".to_string(),
-      plugin_display_name: "Notion Connector".to_string(),
-      enabled: true,
-      status: "ready".to_string(),
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: "/tmp/notion/amentia-plugin.json".to_string(),
-      homepage: None,
-      auth_type: auth_type.map(str::to_string),
-      auth_required,
-      auth_scopes: vec![],
-      credential_store: Some("local".to_string()),
-      workflows: vec![],
-    }
-  }
 }

@@ -5,7 +5,9 @@ use super::plugin_command_mcp_runner::mcp_runner_setup_blocker;
 use super::plugin_command_permission_gate::plugin_command_permission_blocker;
 use super::plugin_command_recovery_hints::readiness_repair_hint;
 use super::plugin_command_runner_setup::stdio_runner_setup_blocker;
-use super::plugin_connector_requirements::command_connector_requirements;
+use super::plugin_connector_requirements::{
+  command_connector_requirements, connector_requires_local_secret,
+};
 use crate::runtime_plugins::RuntimePluginState;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,14 +149,15 @@ pub(crate) fn command_readiness(
   }
 
   if let Some(connector) = required_connectors.iter().find(|connector| {
-    plugin_state
-      .connector_credential(&connector.connector_id)
-      .is_none()
+    let Some(credential) = plugin_state.connector_credential(&connector.connector_id) else {
+      return true;
+    };
+    connector_requires_local_secret(connector) && credential.credential_secret.is_none()
   }) {
     return PluginCommandReadiness::blocked(
       "needsConnectorAuth",
       format!(
-        "Plugin command `{}` requires authorizing connector `{}` first.",
+        "Plugin command `{}` requires authorizing connector `{}` with a local secret first.",
         command.command_id, connector.connector_id
       ),
       declared_connector_ids,

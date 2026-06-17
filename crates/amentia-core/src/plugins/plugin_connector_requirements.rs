@@ -90,3 +90,68 @@ fn qualified_connector_id(plugin_id: &str, connector_id: &str) -> String {
     format!("{plugin_id}::{connector_id}")
   }
 }
+
+pub(crate) fn connector_requires_local_secret(connector: &HostPluginConnectorEntry) -> bool {
+  if !connector.auth_required {
+    return false;
+  }
+
+  let Some(auth_type) = connector.auth_type.as_deref() else {
+    return false;
+  };
+  let normalized = normalized_connector_auth_type(auth_type);
+  normalized == "api_key" || normalized == "apikey"
+}
+
+fn normalized_connector_auth_type(auth_type: &str) -> String {
+  auth_type
+    .trim()
+    .to_ascii_lowercase()
+    .replace(['-', ' '], "_")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn api_key_spelling_variants_require_local_secret() {
+    for auth_type in ["api_key", "apiKey", "api-key", " API_KEY "] {
+      let connector = connector(Some(auth_type), true);
+      assert!(connector_requires_local_secret(&connector));
+    }
+  }
+
+  #[test]
+  fn non_api_key_or_optional_connectors_do_not_require_local_secret() {
+    assert!(!connector_requires_local_secret(&connector(
+      Some("oauth2"),
+      true
+    )));
+    assert!(!connector_requires_local_secret(&connector(
+      Some("api_key"),
+      false
+    )));
+    assert!(!connector_requires_local_secret(&connector(None, true)));
+  }
+
+  fn connector(auth_type: Option<&str>, auth_required: bool) -> HostPluginConnectorEntry {
+    HostPluginConnectorEntry {
+      connector_id: "notion-connector::notion".to_string(),
+      display_name: "Notion".to_string(),
+      service: "notion".to_string(),
+      plugin_id: "notion-connector".to_string(),
+      plugin_display_name: "Notion Connector".to_string(),
+      enabled: true,
+      status: "ready".to_string(),
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: "/tmp/notion/amentia-plugin.json".to_string(),
+      homepage: None,
+      auth_type: auth_type.map(str::to_string),
+      auth_required,
+      auth_scopes: vec![],
+      credential_store: Some("local".to_string()),
+      workflows: vec![],
+    }
+  }
+}

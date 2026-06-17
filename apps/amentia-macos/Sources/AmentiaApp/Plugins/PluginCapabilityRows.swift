@@ -283,7 +283,13 @@ struct PluginConnectorRow: View {
       .font(.caption2)
       .disabled(!canEnablePlugin)
     } else if connector.authRequired {
-      if connector.credentialPresent {
+      if connector.authStatus == "needsAuth" {
+        Button("Authorize") {
+          onAuthorize()
+        }
+        .font(.caption2)
+        .disabled(!canAuthorize)
+      } else if connector.credentialPresent {
         Button("Clear") {
           onClearCredential()
         }
@@ -302,6 +308,10 @@ struct PluginConnectorRow: View {
   private var actionBlocker: String? {
     guard connector.authRequired else {
       return nil
+    }
+
+    if connector.authStatus == "needsAuth" {
+      return authorizeDisabledReason
     }
 
     if connector.credentialPresent {
