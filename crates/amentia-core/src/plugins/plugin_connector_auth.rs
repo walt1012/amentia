@@ -284,22 +284,17 @@ fn connector_requires_secret(connector: &PluginConnectorEntry) -> bool {
     return false;
   }
 
-  matches!(
-    connector
-      .auth_type
-      .as_deref()
-      .map(normalized_auth_type)
-      .as_deref(),
-    Some("api_key" | "apikey")
-  )
+  let Some(auth_type) = connector.auth_type.as_deref() else {
+    return false;
+  };
+  matches!(normalized_auth_type(auth_type).as_str(), "api_key" | "apikey")
 }
 
 fn normalized_auth_type(auth_type: &str) -> String {
   auth_type
     .trim()
     .to_ascii_lowercase()
-    .replace('-', "_")
-    .replace(' ', "_")
+    .replace(['-', ' '], "_")
 }
 
 #[cfg(test)]

@@ -477,7 +477,7 @@ enum TimelineEventPresenter {
       "Any saved local secret is no longer available to plugin actions.",
     ].joined(separator: "\n")
 
-    TimelineEntryFactory.system(
+    return TimelineEntryFactory.system(
       title: "Connection Credential Cleared",
       body: body,
       attributes: pluginConnectorCredentialAttributes(connector)
