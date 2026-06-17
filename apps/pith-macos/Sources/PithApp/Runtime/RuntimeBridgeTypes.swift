@@ -26,15 +26,15 @@ extension RuntimeBridge {
       switch self {
       case .runtimePathMissing:
         return
-          "Pith could not find its local helper. " +
-          "Reinstall Pith or download a fresh installer, then try again."
+          "Amentia could not find its local helper. " +
+          "Reinstall Amentia or download a fresh installer, then try again."
       case .runtimePipeUnavailable:
-        return "Pith is not available."
+        return "Amentia is not available."
       case .invalidResponse:
-        return "Pith returned an invalid response."
+        return "Amentia returned an invalid response."
       case .requestTimedOut(let method, let seconds):
         return
-          "Pith request \(method) timed out after \(seconds) seconds. " +
+          "Amentia request \(method) timed out after \(seconds) seconds. " +
           "The request did not finish in time."
       case .rpc(let message):
         return message

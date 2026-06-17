@@ -19,7 +19,7 @@ env:
   SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
   RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
   LLAMA_ARTIFACT: internal-llama-cli-x86_64
-  MACOS_APP_ARTIFACT: Pith-installer-x86_64
+  MACOS_APP_ARTIFACT: Amentia-installer-x86_64
 
 defaults:
   run:
@@ -181,7 +181,7 @@ jobs:
       - name: Create internal macOS disk image
         run: |
           python3 scripts/create_macos_dmg.py \
-            artifacts/macos/Pith.app \
+            artifacts/macos/Amentia.app \
             "artifacts/macos/$MACOS_DMG_NAME" \
             --readme-file artifacts/macos/README-FIRST.txt \
             --smoke-launch-script scripts/smoke_launch_macos_app.py \
@@ -193,7 +193,7 @@ jobs:
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
-            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
             --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
@@ -217,7 +217,7 @@ jobs:
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
-            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc
       - name: Upload macOS installer artifact
@@ -320,9 +320,9 @@ jobs:
         run: bash scripts/build_macos_llama_backend.sh
       - name: Create release DMG
         run: |
-          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          dmg_path="artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg"
           python3 scripts/create_macos_dmg.py \
-            artifacts/macos/Pith.app \
+            artifacts/macos/Amentia.app \
             "$dmg_path" \
             --readme-file artifacts/macos/README-FIRST.txt \
             --smoke-launch-script scripts/smoke_launch_macos_app.py \
@@ -334,24 +334,24 @@ jobs:
             --source-commit "$PITH_RELEASE_SHA" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --install-guide artifacts/macos/README-FIRST.txt \
-            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
             --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
+            --manifest-output "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json"
       - name: Validate installer artifact contract
         run: |
-          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          dmg_path="artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg"
           python3 scripts/installer_artifact_contract.py \
             --tag "$RELEASE_TAG" \
             --asset "$dmg_path" \
             --asset "$dmg_path.sha256" \
             --asset artifacts/macos/README-FIRST.txt \
-            --asset "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"
+            --asset "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json"
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
-            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
             --source-commit "$PITH_RELEASE_SHA" \
             --signing-mode "$PITH_RELEASE_SIGNING_MODE" \
             --bundle-version "$PITH_RELEASE_VERSION"
@@ -359,13 +359,13 @@ jobs:
         if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
           python3 scripts/sign_macos_app_for_distribution.py \
-            artifacts/macos/Pith.app \
+            artifacts/macos/Amentia.app \
             --identity "$MACOS_DEVELOPER_ID_APPLICATION"
-          python3 scripts/validate_macos_distribution.py artifacts/macos/Pith.app
+          python3 scripts/validate_macos_distribution.py artifacts/macos/Amentia.app
       - name: Notarize and staple DMG
         if: env.PITH_RELEASE_SIGNING_MODE == 'developer-id'
         run: |
-          dmg_path="artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg"
+          dmg_path="artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg"
           xcrun notarytool submit "$dmg_path" \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
@@ -373,11 +373,11 @@ jobs:
             --wait
           xcrun stapler staple "$dmg_path"
           python3 scripts/validate_macos_distribution.py \
-            artifacts/macos/Pith.app \
+            artifacts/macos/Amentia.app \
             --dmg-path "$dmg_path"
       - name: Plan GitHub Release state
         run: |
-          release_title="Pith $RELEASE_TAG"
+          release_title="Amentia $RELEASE_TAG"
           python3 scripts/release_state.py
           --title "$release_title"
           --tag "$RELEASE_TAG"
@@ -419,10 +419,10 @@ jobs:
           python3 scripts/release_evidence_contract.py \\
             --mode dry-run \\
             --tag "$RELEASE_TAG" \\
-            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \\
-            --evidence "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
+            --evidence "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg" \\
+            --evidence "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
             --evidence artifacts/macos/README-FIRST.txt \\
-            --evidence "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \\
+            --evidence "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json" \\
             --evidence release-readiness.md \\
             --evidence release-readiness.json \\
             --evidence release-plan.md \\
@@ -436,10 +436,10 @@ jobs:
         with:
           name: release-dry-run-${{ env.RELEASE_TAG }}
           path: |
-            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg
-            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256
+            artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-macos-x86_64.dmg
+            artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256
             artifacts/macos/README-FIRST.txt
-            artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json
+            artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-release-manifest.json
             release-readiness.md
             release-readiness.json
             release-plan.md
@@ -451,12 +451,12 @@ jobs:
       - name: Upload GitHub Release draft assets
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
-          release_title="Pith $RELEASE_TAG"
+          release_title="Amentia $RELEASE_TAG"
           gh release upload "$RELEASE_TAG" \\
-            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg" \\
-            "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
+            "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg" \\
+            "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
             "artifacts/macos/README-FIRST.txt" \\
-            "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json" \\
+            "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json" \\
             --clobber
       - name: Rehearse downloaded GitHub Release assets
         if: env.RELEASE_DRY_RUN != 'true'
@@ -778,7 +778,7 @@ def main() -> int:
       root,
       ci=VALID_CI.replace(
         "            artifacts/macos/${{ env.MACOS_DMG_NAME }}",
-        "            artifacts/macos/Pith-macos-x86_64.zip\n"
+        "            artifacts/macos/Amentia-macos-x86_64.zip\n"
         "            artifacts/macos/${{ env.MACOS_DMG_NAME }}",
       ),
     )
@@ -971,7 +971,7 @@ def main() -> int:
     root = Path(directory)
     write_workflows(
       root,
-      release=VALID_RELEASE.replace('          release_title="Pith $RELEASE_TAG"', ""),
+      release=VALID_RELEASE.replace('          release_title="Amentia $RELEASE_TAG"', ""),
     )
     assert_issue(issue_messages(root), "Release title")
 
@@ -1418,7 +1418,7 @@ def main() -> int:
     write_workflows(
       root,
       ci=VALID_CI.replace(
-        "--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json",
+        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json",
         "",
       ),
     )
@@ -1554,7 +1554,7 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        "--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json",
+        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json",
         "",
       ),
     )
@@ -1587,11 +1587,11 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '            --manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"\n',
+        '            --manifest-output "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json"\n',
         "",
       ),
     )
-    assert_issue(issue_messages(root), "Pith-$RELEASE_TAG-release-manifest.json")
+    assert_issue(issue_messages(root), "Amentia-$RELEASE_TAG-release-manifest.json")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

@@ -39,7 +39,7 @@ final class AppSupportDirectoriesTests: XCTestCase {
 
   func testDeleteLocalDataRemovesOnlyAppOwnedRootAndLeavesNoAppFolders() throws {
     let parentURL = try temporaryDirectory()
-    let rootURL = parentURL.appendingPathComponent("Pith", isDirectory: true)
+    let rootURL = parentURL.appendingPathComponent("Amentia", isDirectory: true)
     let outsideURL = parentURL.appendingPathComponent("workspace", isDirectory: true)
     defer {
       try? FileManager.default.removeItem(at: parentURL)

@@ -10,7 +10,7 @@ struct WorkspaceSearchPanel: View {
           Text(viewModel.workspaceDisplayName())
             .font(.headline.weight(.semibold))
             .lineLimit(1)
-          Text("Search the open project before asking Pith to act.")
+          Text("Search the open project before asking Amentia to act.")
             .font(.caption2)
             .foregroundColor(.secondary)
         }

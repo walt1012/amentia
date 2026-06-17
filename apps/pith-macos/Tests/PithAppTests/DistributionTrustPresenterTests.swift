@@ -14,20 +14,20 @@ final class DistributionTrustPresenterTests: XCTestCase {
     XCTAssertFalse(summary.detail.contains("package size budget"))
     XCTAssertFalse(summary.detail.contains("source:"))
     XCTAssertTrue(summary.advancedDetail.contains("model weights are not bundled"))
-    XCTAssertTrue(summary.advancedDetail.contains("no Pith account required"))
+    XCTAssertTrue(summary.advancedDetail.contains("no Amentia account required"))
     XCTAssertTrue(summary.advancedDetail.contains("action safety mode: ask-before-change"))
     XCTAssertTrue(summary.advancedDetail.contains("package size budget"))
     XCTAssertTrue(summary.advancedDetail.contains("app <= 250 MiB"))
     XCTAssertTrue(summary.advancedDetail.contains("installer artifact <= 150 MiB"))
     XCTAssertTrue(summary.advancedDetail.contains("process-only fallback"))
     XCTAssertTrue(summary.advancedDetail.contains("daily-driver next action"))
-    XCTAssertTrue(summary.advancedDetail.contains("Pith status"))
+    XCTAssertTrue(summary.advancedDetail.contains("Amentia status"))
     XCTAssertFalse(summary.advancedDetail.contains("runtime readiness"))
     XCTAssertTrue(summary.advancedDetail.contains("Understand Project"))
     XCTAssertTrue(summary.advancedDetail.contains("Pick Next Step"))
     XCTAssertTrue(summary.advancedDetail.contains("short cowork prompt"))
     XCTAssertTrue(summary.advancedDetail.contains("source: 0123456789ab"))
-    XCTAssertTrue(summary.setupDetail?.contains("Control-click Pith.app") == true)
+    XCTAssertTrue(summary.setupDetail?.contains("Control-click Amentia.app") == true)
   }
 
   func testDeveloperIDBuildAvoidsManualGatekeeperCopy() throws {

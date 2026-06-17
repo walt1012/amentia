@@ -41,7 +41,7 @@ enum PluginDashboardPresenter {
     let diagnostics = pluginLoadDiagnostics(snapshot)
     guard !snapshot.plugins.isEmpty else {
       return diagnostics
-        ?? "Pith discovers plugins from the app and your plugin folder."
+        ?? "Amentia discovers plugins from the app and your plugin folder."
     }
 
     let pluginDetails = snapshot.plugins
@@ -85,7 +85,7 @@ enum PluginDashboardPresenter {
     let readyPlugins = readyPluginList(snapshot)
 
     guard !readyPlugins.isEmpty else {
-      return "Plugin permissions appear here after Pith loads local plugins."
+      return "Plugin permissions appear here after Amentia loads local plugins."
     }
 
     let uniquePermissions = Set(readyPlugins.flatMap(\.permissions))

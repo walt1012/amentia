@@ -22,11 +22,11 @@ enum RuntimeHeaderPresenter {
   static func statusSummary(_ snapshot: RuntimeHeaderSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start Pith to restore model, project, connections, and memory."
+      return "Start Amentia to restore model, project, connections, and memory."
     case .launching:
-      return "Starting Pith and reconnecting local state..."
+      return "Starting Amentia and reconnecting local state..."
     case .failed:
-      return "Pith stopped. Restart to recover the session."
+      return "Amentia stopped. Restart to recover the session."
     case .ready:
       if !snapshot.isLocalModelReady {
         return snapshot.modelSetupSummary
@@ -35,13 +35,13 @@ enum RuntimeHeaderPresenter {
         return DailyDriverStagePresenter.summary(
           stage: snapshot.dailyDriverStage,
           nextAction: snapshot.dailyDriverNextAction
-        ) ?? "Model is ready. Open a project so Pith can inspect and edit files safely."
+        ) ?? "Model is ready. Open a project so Amentia can inspect and edit files safely."
       }
       if snapshot.hasActiveTurn {
         return DailyDriverStagePresenter.summary(
           stage: snapshot.dailyDriverStage,
           nextAction: snapshot.dailyDriverNextAction
-        ) ?? "Pith is working. Cancel only if the request is no longer useful."
+        ) ?? "Amentia is working. Cancel only if the request is no longer useful."
       }
       if !snapshot.hasRuntimeThreadSelection {
         return DailyDriverStagePresenter.summary(
@@ -105,7 +105,7 @@ enum RuntimeHeaderPresenter {
 
     switch snapshot.runtimeState {
     case .disconnected:
-      return snapshot.runtimeDetail != "Pith not started"
+      return snapshot.runtimeDetail != "Amentia not started"
     case .launching, .failed:
       return true
     case .ready:

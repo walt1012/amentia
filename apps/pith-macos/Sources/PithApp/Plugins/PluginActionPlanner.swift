@@ -54,7 +54,7 @@ enum PluginActionPlanner {
     }
 
     if snapshot.runtimeState != .ready {
-      return "Pith is not ready."
+      return "Amentia is not ready."
     }
     if !connector.enabled {
       return "Connection is disabled."
@@ -91,7 +91,7 @@ enum PluginActionPlanner {
     }
 
     if snapshot.runtimeState != .ready {
-      return "Pith is not ready."
+      return "Amentia is not ready."
     }
     if !connector.credentialPresent {
       return "Connection has no stored credential."
@@ -195,7 +195,7 @@ enum PluginActionPlanner {
       return "Action requires connection input, but no connection is declared."
     }
     if snapshot.runtimeState != .ready {
-      return "Pith is not ready."
+      return "Amentia is not ready."
     }
     if command.requiresWorkspaceInput && !snapshot.hasRuntimeThreadSelection {
       return "Action requires a project-bound session."

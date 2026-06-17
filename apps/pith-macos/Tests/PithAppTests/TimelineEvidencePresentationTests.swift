@@ -118,7 +118,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       Mode: ask-before-change
       Boundary: project
       Approval: read-only allowed
-      Pith account required: no
+      Amentia account required: no
       Tool: read_file
       Project: Pith
       """
@@ -446,7 +446,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(sections[0].body.contains("Project: Pith"))
     XCTAssertTrue(sections[1].body.contains("Saved source proof: yes"))
     XCTAssertTrue(
-      sections[1].body.contains("Why Pith searched: fresh public information was useful")
+      sections[1].body.contains("Why Amentia searched: fresh public information was useful")
     )
     XCTAssertTrue(sections[2].body.contains("Approval: requires enabled plugin permission"))
     XCTAssertTrue(sections[3].body.contains("Titles: Project rule"))
@@ -586,7 +586,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       Search mode: search result sources
       Opened source pages: no
       Saved source proof: yes
-      Why Pith searched: fresh public information was useful
+      Why Amentia searched: fresh public information was useful
       Sources: Pith
       Links: https://example.com/pith
       Proof type: saved search results

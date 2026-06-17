@@ -308,7 +308,7 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(runtimeState: .failed)
     )
 
-    XCTAssertTrue(summary.contains("Restart Pith"))
+    XCTAssertTrue(summary.contains("Restart Amentia"))
     XCTAssertTrue(summary.contains("selected model choices remain local"))
   }
 
@@ -394,7 +394,7 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
     XCTAssertEqual(presentation.timelineKind, .warning)
     XCTAssertTrue(presentation.runtimeDetail.contains("Re-download the model"))
-    XCTAssertTrue(presentation.runtimeDetail.contains("restart Pith"))
+    XCTAssertTrue(presentation.runtimeDetail.contains("restart Amentia"))
     XCTAssertNil(presentation.attributes["sample"])
   }
 

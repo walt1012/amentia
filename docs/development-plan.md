@@ -1,10 +1,10 @@
-# Pith Development Plan
+# Amentia Development Plan
 
 ## North Star
 
-Pith is a small, strong, local-first macOS cowork agent for real daily work.
+Amentia is a small, strong, local-first macOS cowork agent for real daily work.
 
-- Product: native `Pith` app, macOS 12+, `x86_64` only.
+- Product: native `Amentia` app, macOS 12+, `x86_64` only.
 - Purpose: cowork first; coding is one workflow, not the product boundary.
 - Intelligence: local model by default, no required hosted model API, one active
   local model at a time.
@@ -19,11 +19,11 @@ Pith is a small, strong, local-first macOS cowork agent for real daily work.
 
 ## Product Contract
 
-Pith learns from Codex and Claude Code at durable boundaries: workspace context,
+Amentia learns from Codex and Claude Code at durable boundaries: workspace context,
 bounded tools, Web Search, approvals, sandbox visibility, session continuity,
 reviewable evidence, and MCP-style local connections.
 
-Pith also learns from Hermes Agent, but only where it supports the local macOS
+Amentia also learns from Hermes Agent, but only where it supports the local macOS
 cowork goal:
 
 - Keep the core narrow and move optional capability to plugins, tools,
@@ -34,7 +34,7 @@ cowork goal:
 - Do not copy server-first messaging sprawl, multi-agent orchestration, or
   provider complexity before the single local cowork loop is excellent.
 
-Pith stays intentionally different where it matters: local-first inference, no
+Amentia stays intentionally different where it matters: local-first inference, no
 account requirement, small-model constraints, cowork-first tasks, and a
 lightweight app that downloads model weights after install.
 
@@ -82,7 +82,7 @@ Current capabilities:
 - Local model setup: in-app download, verification, activation, pause, resume,
   cancel, recovery, backend launch probing, reliable relaunch after model
   selection, automatic post-selection self-check, file-backed bounded inference,
-  in-app model self-check, Reset Pith, curated model choice, and one active
+  in-app model self-check, Reset Amentia, curated model choice, and one active
   model.
 - Cowork loop: project-scoped tools, Web Search retrieval, approvals, sandbox
   diagnostics, bounded subprocesses, human receipts, session delete, and
@@ -105,7 +105,7 @@ Current constraints:
 
 - Installed-app blockers beat platform expansion: first-run model download and
   activation, packaged backend launch, human default UI, visible session
-  deletion, and Reset Pith must stay reliable before more M14 connector surface
+  deletion, and Reset Amentia must stay reliable before more M14 connector surface
   area.
 - Treat M13 as the installed-app quality baseline; only return to product polish
   when real use exposes confusing copy, stale UI, or release blockers.
@@ -117,6 +117,10 @@ Current constraints:
 - Release assets stay limited to the DMG, checksum, `README-FIRST.txt`, and
   release manifest.
 - Visible ad-hoc prereleases require an explicit manual acceptance receipt.
+- `Amentia` is the product name. Existing `pith-*` crates, targets,
+  environment variables, manifest files, and protocol namespaces remain internal
+  implementation names until a low-risk namespace migration improves clarity
+  more than it risks release stability.
 
 ## M12: Public Release
 
@@ -178,7 +182,7 @@ Completed baseline:
   workflow, while capabilities are grouped as Actions, Connections, Skills,
   MCP, Tools, and Checks.
 - Keep plugin management clean enough for real users: confirmation dialogs show
-  what a plugin can do, what access it needs, and what Pith will store without
+  what a plugin can do, what access it needs, and what Amentia will store without
   exposing source paths or manifest capability strings.
 - Keep timeline and inspector evidence product-first: domain presenters own copy
   and proof for runtime, model, session, plugin, connection, and action
@@ -193,13 +197,13 @@ Remaining quality bar:
   packaged backend cannot launch, and generation must use bounded file-backed
   prompt input with an automatic short self-check after model selection plus a
   visible manual check from first-use setup and the model manager.
-- Users can delete a session, review or revert session changes, and Reset Pith
-  from visible UI without learning hidden menus; Reset Pith must remove
+- Users can delete a session, review or revert session changes, and Reset Amentia
+  from visible UI without learning hidden menus; Reset Amentia must remove
   app-owned folders, paused downloads, preferences, caches, saved app state, and
   local connector secrets.
 - The default path avoids raw runtime, manifest, checksum, ID, and backend
   wording; advanced diagnostics remain available only when useful.
-- Pith can run the cowork loop, use Web Search, manage sessions, and recover or
+- Amentia can run the cowork loop, use Web Search, manage sessions, and recover or
   revert approved work without expert context.
 - Extension surfaces use precise ecosystem language: Plugins are installed
   bundles; Actions, Connections, Skills, MCP, Tools, and Checks are capabilities
@@ -252,7 +256,7 @@ Next:
 
 ## M15: Cowork Continuity
 
-Goal: make Pith better over time without turning it into a remote server agent.
+Goal: make Amentia better over time without turning it into a remote server agent.
 
 - Add a local follow-up queue for user-approved next actions.
 - Add scheduled work only after approvals, sandbox policy, and receipts
@@ -277,7 +281,7 @@ Goal: make Pith better over time without turning it into a remote server agent.
 ## Guardrails
 
 - No hosted model dependency.
-- No required Pith login, hosted user session, or subscription gate.
+- No required Amentia login, hosted user session, or subscription gate.
 - No generic local vector database before Web Search and workspace context are
   reliable.
 - No multi-agent orchestration before the single cowork loop is excellent.

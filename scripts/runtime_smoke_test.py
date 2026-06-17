@@ -455,7 +455,7 @@ def main() -> int:
       "displayName": "Workspace Notes",
       "description": "Captures reusable workspace notes and preferences for local threads.",
       "author": {
-        "name": "Pith",
+        "name": "Amentia",
       },
       "capabilities": [
         "command:workspace.capture-note",
@@ -477,7 +477,7 @@ def main() -> int:
       "displayName": "Notion Connector",
       "description": "Declares the Notion connector surface for MCP and local integration-token workspace integrations.",
       "author": {
-        "name": "Pith",
+        "name": "Amentia",
       },
       "capabilities": [],
       "permissions": [
@@ -534,7 +534,7 @@ def main() -> int:
       "displayName": "Shell Recorder",
       "description": "Tracks shell-oriented workspace actions for later inspection and summaries.",
       "author": {
-        "name": "Pith",
+        "name": "Amentia",
       },
       "capabilities": [
         "command:shell.summarize-session",
@@ -551,7 +551,7 @@ def main() -> int:
     plugin_dir / "shell-recorder" / "commands" / "shell.summarize-session.json",
     {
       "title": "Summarize Shell Session",
-      "description": "Ask Pith to explain recent shell work in a compact summary.",
+      "description": "Ask Amentia to explain recent shell work in a compact summary.",
       "prompt": "Summarize the most relevant recent shell activity for this workspace.",
       "execution": {
         "kind": "builtin.shellSessionSummary",
@@ -580,7 +580,7 @@ def main() -> int:
       "displayName": "Review Assistant",
       "description": "Provides review-oriented prompts and metadata for local code inspection flows.",
       "author": {
-        "name": "Pith",
+        "name": "Amentia",
       },
       "capabilities": [
         "command:review.inspect-diff",
@@ -598,7 +598,7 @@ def main() -> int:
     plugin_dir / "review-assistant" / "commands" / "review.inspect-diff.json",
     {
       "title": "Inspect Current Diff",
-      "description": "Ask Pith to review the active workspace diff with a code review mindset.",
+      "description": "Ask Amentia to review the active workspace diff with a code review mindset.",
       "prompt": "Inspect the current workspace diff and review it for bugs, regressions, missing tests, and risky behavior changes. Report findings first with clear severity.",
       "execution": {
         "kind": "builtin.reviewDiffSummary",
@@ -614,7 +614,7 @@ def main() -> int:
       "displayName": "Focus Review",
       "description": "Installs into the local plugin catalog during the runtime smoke test.",
       "author": {
-        "name": "Pith",
+        "name": "Amentia",
       },
       "capabilities": [
         "command:focus.review",
@@ -634,7 +634,7 @@ def main() -> int:
     },
   )
   workspace_dir.mkdir(parents=True, exist_ok=True)
-  (workspace_dir / "README.md").write_text("# Pith\nMilestone 1 smoke test\n", encoding="utf-8")
+  (workspace_dir / "README.md").write_text("# Amentia\nMilestone 1 smoke test\n", encoding="utf-8")
   (workspace_dir / "apps").mkdir()
   (workspace_dir / "notes.txt").write_text("Needle term for search tool\n", encoding="utf-8")
   env = os.environ.copy()

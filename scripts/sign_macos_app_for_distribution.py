@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sign Pith.app for Developer ID distribution."""
+"""Sign Amentia.app for Developer ID distribution."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ MACHO_MAGICS = {
 
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument("app_path", type=Path, help="Path to Pith.app.")
+  parser.add_argument("app_path", type=Path, help="Path to Amentia.app.")
   parser.add_argument(
     "--identity",
     required=True,

@@ -38,7 +38,7 @@ enum TimelineEntryFactory {
         id: "welcome-start-local-setup",
         kind: .system,
         title: "Start Local Setup",
-        body: "Start Pith, choose a local model, open a project, create or select a session, then start a short cowork session.",
+        body: "Start Amentia, choose a local model, open a project, create or select a session, then start a short cowork session.",
         attributes: [
           "path": "pith -> model -> project -> session -> first prompt"
         ]
@@ -48,7 +48,7 @@ enum TimelineEntryFactory {
         kind: .assistantMessage,
         title: "Local-First Work",
         body:
-          "Pith works against local project folders and does not call external model APIs for core responses.",
+          "Amentia works against local project folders and does not call external model APIs for core responses.",
         attributes: [
           "model": "local"
         ]
@@ -62,7 +62,7 @@ enum TimelineEntryFactory {
         id: "default-thread-ready:\(title)",
         kind: .system,
         title: "Session Ready",
-        body: "\(title) is ready after Pith, model, project, and session setup. Send one short cowork prompt to finish first-use setup.",
+        body: "\(title) is ready after Amentia, model, project, and session setup. Send one short cowork prompt to finish first-use setup.",
         attributes: [
           "setup": "pith, model, project, session, first prompt"
         ]

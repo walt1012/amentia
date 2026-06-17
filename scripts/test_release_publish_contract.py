@@ -234,7 +234,7 @@ def main() -> int:
     raise AssertionError("existing release asset preupload guard should reject extras")
 
   expect_failure(release_payload(tag="v9.9.9"), "tag_name")
-  expect_failure({**release_payload(), "name": "Pith wrong"}, "name")
+  expect_failure({**release_payload(), "name": "Amentia wrong"}, "name")
   try:
     validate_published_release(
       release_payload(),
@@ -252,7 +252,7 @@ def main() -> int:
       raise
   else:
     raise AssertionError("final release validation should reject wrong tag commit")
-  expect_failure({**release_payload(), "body": "Install Pith."}, "missing required copy")
+  expect_failure({**release_payload(), "body": "Install Amentia."}, "missing required copy")
   expect_failure(
     release_payload(acceptance_receipt=""),
     "manual acceptance receipt",

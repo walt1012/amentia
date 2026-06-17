@@ -8,8 +8,11 @@ struct AppDataResetResult: Equatable {
 
 enum AppDataResetService {
   private static let connectorCredentialService = "app.pith.plugin-connectors"
-  private static let appBundleIdentifier = "app.pith.Pith"
-  private static let appDisplayName = "Pith"
+  private static let appBundleIdentifier = "app.amentia.Amentia"
+  private static let appDisplayName = "Amentia"
+  private static let legacyAppBundleIdentifier = "app.pith.Pith"
+  private static let legacyAppDisplayName = "Pith"
+  private static let legacyAppSupportDirectoryName = "Pith"
 
   static func deleteLocalData(
     rootDirectory: URL = AppSupportDirectories.rootDirectory(),
@@ -20,6 +23,7 @@ enum AppDataResetService {
     try removeAppSupportRoot(rootDirectory)
     clearKnownPreferences()
     if shouldRemoveSystemResidue(allowsNonDefaultRoot: allowsNonDefaultRoot) {
+      try removeLegacyAppSupportRootIfPresent()
       try removeSystemResidue()
     }
     return AppDataResetResult(
@@ -44,6 +48,25 @@ enum AppDataResetService {
     try manager.removeItem(at: rootDirectory)
   }
 
+  private static func removeLegacyAppSupportRootIfPresent() throws {
+    guard let applicationSupportDirectory = FileManager.default.urls(
+      for: .applicationSupportDirectory,
+      in: .userDomainMask
+    ).first else {
+      return
+    }
+    let legacyRoot = applicationSupportDirectory
+      .appendingPathComponent(legacyAppSupportDirectoryName, isDirectory: true)
+      .standardizedFileURL
+    guard legacyRoot.lastPathComponent == legacyAppSupportDirectoryName else {
+      return
+    }
+    if (try? FileManager.default.destinationOfSymbolicLink(atPath: legacyRoot.path)) != nil {
+      throw AppDataResetError.symbolicLink(path: legacyRoot.path)
+    }
+    try removeIfPresent(legacyRoot)
+  }
+
   private static func shouldRemoveSystemResidue(allowsNonDefaultRoot: Bool) -> Bool {
     let hasOverride = ProcessInfo.processInfo.environment["PITH_APP_SUPPORT_DIR"]?.isEmpty == false
     return !allowsNonDefaultRoot && !hasOverride
@@ -62,19 +85,35 @@ enum AppDataResetService {
   }
 
   static func systemResiduePaths(libraryDirectory: URL) -> [URL] {
+    systemResiduePaths(
+      libraryDirectory: libraryDirectory,
+      bundleIdentifier: appBundleIdentifier,
+      displayName: appDisplayName
+    ) + systemResiduePaths(
+      libraryDirectory: libraryDirectory,
+      bundleIdentifier: legacyAppBundleIdentifier,
+      displayName: legacyAppDisplayName
+    )
+  }
+
+  private static func systemResiduePaths(
+    libraryDirectory: URL,
+    bundleIdentifier: String,
+    displayName: String
+  ) -> [URL] {
     [
       libraryDirectory
         .appendingPathComponent("Preferences", isDirectory: true)
-        .appendingPathComponent("\(appBundleIdentifier).plist", isDirectory: false),
+        .appendingPathComponent("\(bundleIdentifier).plist", isDirectory: false),
       libraryDirectory
         .appendingPathComponent("Caches", isDirectory: true)
-        .appendingPathComponent(appBundleIdentifier, isDirectory: true),
+        .appendingPathComponent(bundleIdentifier, isDirectory: true),
       libraryDirectory
         .appendingPathComponent("Caches", isDirectory: true)
-        .appendingPathComponent(appDisplayName, isDirectory: true),
+        .appendingPathComponent(displayName, isDirectory: true),
       libraryDirectory
         .appendingPathComponent("Saved Application State", isDirectory: true)
-        .appendingPathComponent("\(appBundleIdentifier).savedState", isDirectory: true),
+        .appendingPathComponent("\(bundleIdentifier).savedState", isDirectory: true),
     ]
   }
 
@@ -115,7 +154,7 @@ enum AppDataResetService {
     }
 
     let hasOverride = ProcessInfo.processInfo.environment["PITH_APP_SUPPORT_DIR"]?.isEmpty == false
-    guard allowsNonDefaultRoot || hasOverride || standardized.lastPathComponent == "Pith" else {
+    guard allowsNonDefaultRoot || hasOverride || standardized.lastPathComponent == "Amentia" else {
       throw AppDataResetError.unsafeRoot(path: standardized.path)
     }
   }

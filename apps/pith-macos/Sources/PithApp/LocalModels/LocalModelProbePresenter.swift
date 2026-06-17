@@ -62,7 +62,7 @@ enum LocalModelProbePresenter {
   ) -> LocalModelProbePresentation {
     LocalModelProbePresentation(
       runtimeDetail:
-        "Local model check failed. Re-download the model or restart Pith, then check again.",
+        "Local model check failed. Re-download the model or restart Amentia, then check again.",
       timelineTitle: "Local Model Check Failed",
       timelineBody: probe.detail,
       timelineKind: .warning,

@@ -115,7 +115,7 @@ def write_package_manifest(
     json.dumps(
       {
         "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
-        "appName": "Pith",
+        "appName": "Amentia",
         "bundleVersion": bundle_version,
         "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
         "architecture": SUPPORTED_ARCH,
@@ -166,7 +166,7 @@ def assert_raises(action, message: str) -> None:
 def main() -> int:
   with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
     root_path = Path(root)
-    artifact = root_path / "Pith-v0.1.0-macos-x86_64.dmg"
+    artifact = root_path / "Amentia-v0.1.0-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
     package_manifest = write_package_manifest(root_path / "PithPackage.json")
     smoke_receipt = write_smoke_receipt(
@@ -254,7 +254,7 @@ def main() -> int:
     if manifest["verification"]["assetNames"] != list(release_installer_asset_names("v0.1.0")):
       raise AssertionError("release manifest should record the exact installer asset names")
     if manifest["verification"]["checksumCommand"] != (
-      "shasum -a 256 -c Pith-v0.1.0-macos-x86_64.dmg.sha256"
+      "shasum -a 256 -c Amentia-v0.1.0-macos-x86_64.dmg.sha256"
     ):
       raise AssertionError("release manifest should record the exact checksum command")
     if manifest["appPackage"]["sourceCommit"] != SOURCE_COMMIT:
@@ -315,7 +315,7 @@ def main() -> int:
       install_guide_path=install_guide,
       package_manifest_path=package_manifest,
       smoke_receipt_path=smoke_receipt,
-      output_path=root_path / "Pith-v0.1.0-release-manifest.json",
+      output_path=root_path / "Amentia-v0.1.0-release-manifest.json",
     )
     validate_release_manifest(
       manifest_path,
@@ -621,7 +621,7 @@ def main() -> int:
     )
     manifest_path.write_text(manifest_data, encoding="utf-8")
 
-    wrong_artifact = root_path / "Pith-wrong-macos-x86_64.dmg"
+    wrong_artifact = root_path / "Amentia-wrong-macos-x86_64.dmg"
     wrong_artifact.write_bytes(b"pith release artifact\n")
     wrong_checksum_path = write_checksum_file(wrong_artifact)
     assert_raises(
@@ -636,7 +636,7 @@ def main() -> int:
       "public release DMG names should match the release tag",
     )
 
-    wrong_checksum = root_path / "Pith-v0.1.0-macos-x86_64.checksum"
+    wrong_checksum = root_path / "Amentia-v0.1.0-macos-x86_64.checksum"
     wrong_checksum.write_text(checksum_text(artifact), encoding="utf-8")
     assert_raises(
       lambda: release_manifest(
@@ -743,8 +743,8 @@ def main() -> int:
 
     install_guide.write_text(
       release_install_guide("v0.1.0", "ad-hoc").replace(
-        "Pith-v0.1.0-macos-x86_64.dmg.sha256",
-        "Pith-v0.2.0-macos-x86_64.dmg.sha256",
+        "Amentia-v0.1.0-macos-x86_64.dmg.sha256",
+        "Amentia-v0.2.0-macos-x86_64.dmg.sha256",
       ),
       encoding="utf-8",
     )
@@ -759,8 +759,8 @@ def main() -> int:
 
     install_guide.write_text(
       release_install_guide("v0.1.0", "ad-hoc").replace(
-        "Pith-v0.1.0-release-manifest.json",
-        "Pith-v0.2.0-release-manifest.json",
+        "Amentia-v0.1.0-release-manifest.json",
+        "Amentia-v0.2.0-release-manifest.json",
       ),
       encoding="utf-8",
     )
@@ -909,7 +909,7 @@ def main() -> int:
 
   with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
     root_path = Path(root)
-    artifact = root_path / "Pith-macos-x86_64.dmg"
+    artifact = root_path / "Amentia-macos-x86_64.dmg"
     install_guide = root_path / "README-FIRST.txt"
     package_manifest = write_package_manifest(root_path / "PithPackage.json")
     artifact.write_bytes(b"pith internal ci artifact\n")
@@ -946,14 +946,14 @@ def main() -> int:
     if manifest["verification"]["assetNames"] != expected_internal_assets:
       raise AssertionError("internal release manifests should record internal asset names")
     if manifest["verification"]["checksumCommand"] != (
-      "shasum -a 256 -c Pith-macos-x86_64.dmg.sha256"
+      "shasum -a 256 -c Amentia-macos-x86_64.dmg.sha256"
     ):
       raise AssertionError("internal release manifests should record the checksum command")
 
   with tempfile.TemporaryDirectory(prefix="pith-release-artifacts-") as root:
     root_path = Path(root)
     weak_guide = root_path / "README-FIRST.txt"
-    weak_guide.write_text("Install Pith from this DMG.\n", encoding="utf-8")
+    weak_guide.write_text("Install Amentia from this DMG.\n", encoding="utf-8")
     assert_raises(
       lambda: validate_install_guide(weak_guide),
       "weak install guide should fail release guidance validation",

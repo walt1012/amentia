@@ -8,7 +8,7 @@ enum AppFilePicker {
     panel.canChooseFiles = false
     panel.allowsMultipleSelection = false
     panel.prompt = "Open Project"
-    panel.message = "Choose a local project folder for Pith to inspect."
+    panel.message = "Choose a local project folder for Amentia to inspect."
 
     guard panel.runModal() == .OK else {
       return nil

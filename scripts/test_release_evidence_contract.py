@@ -253,7 +253,7 @@ def release_plan_payload(mode: str = "dry-run") -> dict[str, object]:
   planned_draft = True
   return {
     "tag": TAG,
-    "title": f"Pith {TAG}",
+    "title": f"Amentia {TAG}",
     "sourceCommit": SOURCE_COMMIT,
     "successfulCiRunUrl": "https://github.com/walt1012/pith/actions/runs/1",
     "releaseWorkflowRunUrl": "https://github.com/walt1012/pith/actions/runs/2",
@@ -332,7 +332,7 @@ def release_rehearsal_payload() -> dict[str, object]:
     "tag": TAG,
     "result": "passed",
     "assetNames": list(release_installer_asset_names(TAG)),
-    "checksumCommand": "shasum -a 256 Pith-v0.1.0-macos-x86_64.dmg",
+    "checksumCommand": "shasum -a 256 Amentia-v0.1.0-macos-x86_64.dmg",
     "sourceCommit": SOURCE_COMMIT,
     "signingMode": "ad-hoc",
     "trust": {
@@ -353,7 +353,7 @@ def release_rehearsal_payload() -> dict[str, object]:
       "publishGate": "do-not-publish-visible-ad-hoc-until-manual-acceptance-passes",
     },
     "firstAppOpenChecks": [
-      "Launch Pith from Applications after handling Gatekeeper if needed.",
+      "Launch Amentia from Applications after handling Gatekeeper if needed.",
       f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
       "Open a project folder.",
       "Check that Web Search and project safety are ready.",
@@ -364,9 +364,9 @@ def release_rehearsal_payload() -> dict[str, object]:
       "Verify the downloaded DMG with the SHA-256 sidecar before opening it.",
       (
         "Open the release manifest and confirm macOS x86_64, "
-        "in-app model delivery, no bundled model weights, and no Pith login."
+        "in-app model delivery, no bundled model weights, and no Amentia login."
       ),
-      "Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.",
+      "Install Amentia from the DMG and handle Gatekeeper according to the manifest guidance.",
       f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
       (
         "Open a real project folder and confirm the header or inspector "
@@ -379,7 +379,7 @@ def release_rehearsal_payload() -> dict[str, object]:
       "Let the model use Web Search when useful and inspect the source proof in the timeline.",
       "Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.",
       (
-        "Restart Pith and confirm Pith status, selected project, "
+        "Restart Amentia and confirm Amentia status, selected project, "
         "model state, and recent proof recover."
       ),
     ],
@@ -395,12 +395,12 @@ def release_rehearsal_payload() -> dict[str, object]:
 
 
 def release_rehearsal_markdown() -> str:
-  return f"""# Pith {TAG} Release Rehearsal
+  return f"""# Amentia {TAG} Release Rehearsal
 
 Result: `passed`
 
 ## Assets
-- `Pith-{TAG}-macos-x86_64.dmg`
+- `Amentia-{TAG}-macos-x86_64.dmg`
 
 ## Verification
 - Default model: `{DEFAULT_MODEL_ID}`
@@ -418,22 +418,22 @@ Result: `passed`
 
 
 def manual_acceptance_markdown() -> str:
-  return f"""# Pith {TAG} Manual Release Acceptance
+  return f"""# Amentia {TAG} Manual Release Acceptance
 
 Decision:
 - [ ] Accept this build for visible ad-hoc prerelease.
 - [ ] Keep this build draft-only and fix issues before publishing.
 
 ## Downloaded Assets
-- [ ] Download `Pith-{TAG}-macos-x86_64.dmg`
+- [ ] Download `Amentia-{TAG}-macos-x86_64.dmg`
 
 ## Required Manual Checks
 - [ ] Verify the downloaded DMG with the SHA-256 sidecar before opening it.
-- [ ] Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.
+- [ ] Install Amentia from the DMG and handle Gatekeeper according to the manifest guidance.
 - [ ] Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.
 - [ ] Let the model use Web Search when useful and inspect the source proof in the timeline.
 - [ ] Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.
-- [ ] Restart Pith and confirm Pith status, selected project, model state, and recent proof recover.
+- [ ] Restart Amentia and confirm Amentia status, selected project, model state, and recent proof recover.
 
 ## Evidence To Record
 - Approval and diff receipt inspected.
@@ -566,8 +566,8 @@ def assert_rejects_invalid_dry_run_installer_asset_evidence() -> None:
   with TemporaryDirectory(prefix="pith-release-evidence-") as directory:
     root = Path(directory)
     paths = write_evidence_set(root, "dry-run")
-    (root / f"Pith-{TAG}-macos-x86_64.dmg.sha256").write_text(
-      "0" * 64 + f"  Pith-{TAG}-macos-x86_64.dmg\n",
+    (root / f"Amentia-{TAG}-macos-x86_64.dmg.sha256").write_text(
+      "0" * 64 + f"  Amentia-{TAG}-macos-x86_64.dmg\n",
       encoding="utf-8",
     )
     expect_failure(
@@ -977,7 +977,7 @@ def assert_rejects_stale_release_rehearsal_evidence() -> None:
     stale["manualPrereleaseChecks"] = [
       check
       for check in stale["manualPrereleaseChecks"]
-      if "Restart Pith" not in check
+      if "Restart Amentia" not in check
     ]
     rehearsal_path.write_text(json.dumps(stale) + "\n", encoding="utf-8")
     expect_failure(

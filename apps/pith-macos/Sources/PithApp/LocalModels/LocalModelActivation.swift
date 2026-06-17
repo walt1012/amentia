@@ -79,20 +79,20 @@ enum LocalModelActivationPlanner {
         "modelPath": model.installPath,
         "result": "selected",
       ],
-      relaunchRunningDetail: "Restarting Pith with \(modelName)...",
-      relaunchIdleDetail: "\(modelName) will be used when Pith starts."
+      relaunchRunningDetail: "Restarting Amentia with \(modelName)...",
+      relaunchIdleDetail: "\(modelName) will be used when Amentia starts."
     )
   }
 
   static func resetPlan() -> LocalModelActivationPlan {
     LocalModelActivationPlan(
       timelineTitle: "Local Model Reset",
-      timelineBody: "Pith will choose the local model automatically.",
+      timelineBody: "Amentia will choose the local model automatically.",
       attributes: [
         "result": "reset"
       ],
-      relaunchRunningDetail: "Restarting Pith with automatic model discovery...",
-      relaunchIdleDetail: "Automatic model discovery will be used when Pith starts."
+      relaunchRunningDetail: "Restarting Amentia with automatic model discovery...",
+      relaunchIdleDetail: "Automatic model discovery will be used when Amentia starts."
     )
   }
 
@@ -106,7 +106,7 @@ enum LocalModelActivationPlanner {
       case .integrityCheckFailed(let underlyingError):
         return LocalModelActivationFailurePlan(
           runtimeDetail:
-            "Model check failed: \(underlyingError.localizedDescription) Pith removed the bad file. Download the model again to repair setup.",
+            "Model check failed: \(underlyingError.localizedDescription) Amentia removed the bad file. Download the model again to repair setup.",
           removesModelFile: true,
           refreshesCatalog: true
         )

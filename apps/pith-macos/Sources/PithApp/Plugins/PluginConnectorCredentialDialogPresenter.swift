@@ -72,8 +72,8 @@ enum PluginConnectorCredentialDialogPresenter {
       ? "No declared scopes."
       : "Scopes: \(connector.authScopes.joined(separator: ", "))."
     let storage = connector.credentialStore == "none"
-      ? "Pith will not save a secret."
-      : "Pith stores the authorization locally."
+      ? "Amentia will not save a secret."
+      : "Amentia stores the authorization locally."
     var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(connector.service). "
       + "\(scopes) \(storage) "
       + "Secrets are passed only to the local plugin runner for each approved run. "
@@ -108,7 +108,7 @@ enum PluginConnectorCredentialDialogPresenter {
     alert.alertStyle = .warning
     alert.messageText = "Authorize \(connector.displayName) Without a Secret?"
     alert.informativeText =
-      "Pith can remember that this connection is allowed without saving a token or API key. "
+      "Amentia can remember that this connection is allowed without saving a token or API key. "
       + "Use this only for connection flows that do not need a local secret."
     alert.addButton(withTitle: "Authorize")
     alert.addButton(withTitle: "Back")
@@ -130,7 +130,7 @@ enum PluginConnectorCredentialDialogPresenter {
     }
 
     return "Paste the local token or API key before authorizing this connection. "
-      + "Pith will keep it local and pass it only to the local plugin runner for each approved run."
+      + "Amentia will keep it local and pass it only to the local plugin runner for each approved run."
   }
 
   private static func defaultCredentialLabel(_ connector: PluginConnectorSummary) -> String {

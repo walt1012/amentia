@@ -20,11 +20,11 @@ enum SessionActionPlanner {
   static func runtimeLaunchButtonTitle(_ snapshot: SessionActionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .ready, .failed:
-      return "Restart Pith"
+      return "Restart Amentia"
     case .launching:
-      return "Starting Pith"
+      return "Starting Amentia"
     case .disconnected:
-      return "Start Pith"
+      return "Start Amentia"
     }
   }
 

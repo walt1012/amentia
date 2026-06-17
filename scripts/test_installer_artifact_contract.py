@@ -140,16 +140,16 @@ def main() -> int:
     missing_manifest = [
       asset
       for asset in assets
-      if asset.name != "Pith-v0.1.0-release-manifest.json"
+      if asset.name != "Amentia-v0.1.0-release-manifest.json"
     ]
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", missing_manifest),
-      "missing Pith-v0.1.0-release-manifest.json",
+      "missing Amentia-v0.1.0-release-manifest.json",
     )
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
-    assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "Pith-v0.1.0-macos-x86_64.zip")]
+    assets = valid_assets(root, "v0.1.0") + [write_bytes(root / "Amentia-v0.1.0-macos-x86_64.zip")]
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "must not include .zip payloads",
@@ -174,10 +174,10 @@ def main() -> int:
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
-    assets[0] = write_bytes(root / "Pith-v0.2.0-macos-x86_64.dmg")
+    assets[0] = write_bytes(root / "Amentia-v0.2.0-macos-x86_64.dmg")
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
-      "missing Pith-v0.1.0-macos-x86_64.dmg",
+      "missing Amentia-v0.1.0-macos-x86_64.dmg",
     )
 
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
@@ -201,7 +201,7 @@ def main() -> int:
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
-    (root / "Pith-v0.1.0-macos-x86_64.dmg").write_bytes(b"tampered dmg\n")
+    (root / "Amentia-v0.1.0-macos-x86_64.dmg").write_bytes(b"tampered dmg\n")
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "Release checksum does not match artifact",
@@ -210,7 +210,7 @@ def main() -> int:
   with TemporaryDirectory(prefix="pith-installer-assets-") as directory:
     root = Path(directory)
     assets = valid_assets(root, "v0.1.0")
-    (root / "README-FIRST.txt").write_text("Install Pith.\n", encoding="utf-8")
+    (root / "README-FIRST.txt").write_text("Install Amentia.\n", encoding="utf-8")
     assert_raises(
       lambda: validate_installer_asset_set("v0.1.0", assets),
       "Release manifest install guide size does not match",

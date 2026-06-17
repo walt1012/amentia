@@ -67,16 +67,16 @@ enum RuntimeStateLoader {
       || rawDetail.contains("backend")
       || rawDetail.contains("llama")
     {
-      return "Pith could not start its local model runner. Reinstall Pith from the latest release, then reopen the app."
+      return "Amentia could not start its local model runner. Reinstall Amentia from the latest release, then reopen the app."
     }
 
     if rawDetail.contains("checksum")
       || rawDetail.contains("integrity")
       || rawDetail.contains("sha")
     {
-      return "The selected model did not pass verification. Re-download the model from Pith before using it."
+      return "The selected model did not pass verification. Re-download the model from Amentia before using it."
     }
 
-    return "Pith could not verify local model setup. Re-download the selected model or restart Pith."
+    return "Amentia could not verify local model setup. Re-download the selected model or restart Amentia."
   }
 }

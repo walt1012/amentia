@@ -6,10 +6,10 @@ Use this maintainer-only flow before making an ad-hoc prerelease visible.
 
 - A successful release workflow run for the candidate tag.
 - The four downloaded release assets in one local folder:
-  - `Pith-<tag>-macos-x86_64.dmg`
-  - `Pith-<tag>-macos-x86_64.dmg.sha256`
+  - `Amentia-<tag>-macos-x86_64.dmg`
+  - `Amentia-<tag>-macos-x86_64.dmg.sha256`
   - `README-FIRST.txt`
-  - `Pith-<tag>-release-manifest.json`
+  - `Amentia-<tag>-release-manifest.json`
 - A fresh Mac or clean macOS user profile.
 
 ## Generate Receipt
@@ -28,15 +28,15 @@ running the app from the downloaded DMG.
 
 - Verify the DMG checksum from the download folder.
 - Review the release manifest.
-- Open the DMG and move `Pith.app` to Applications.
+- Open the DMG and move `Amentia.app` to Applications.
 - Complete the unsigned Gatekeeper path when Developer ID signing is absent.
 - Download and activate the default local model.
 - Open a workspace.
 - Complete one cowork turn.
 - Inspect Web Search proof.
 - Approve one safe local action after reviewing the diff receipt.
-- Restart Pith and confirm recovery.
-- Confirm no Pith login is required.
+- Restart Amentia and confirm recovery.
+- Confirm no Amentia login is required.
 
 ## Validate Receipt
 

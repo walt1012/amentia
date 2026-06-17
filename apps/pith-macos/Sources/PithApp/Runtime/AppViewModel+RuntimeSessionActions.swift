@@ -46,7 +46,7 @@ extension AppViewModel {
       pluginManagerSection = .commands
       runtimeDetail = "Open Advanced > Plugins to enable a ready action."
     case .inspectSandboxStatus:
-      runtimeDetail = "Native sandbox status is shown with Pith status and action receipts."
+      runtimeDetail = "Native sandbox status is shown with Amentia status and action receipts."
     }
   }
 

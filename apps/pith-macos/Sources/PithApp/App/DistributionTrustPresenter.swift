@@ -246,7 +246,7 @@ enum DistributionTrustPresenter {
       return DistributionTrustSummary(
         title: "Verified Installer",
         summary: "Signed and notarized for \(platform).",
-        detail: "Install from the DMG, launch normally, then choose one verified local model. Pith does not require a Pith account.",
+        detail: "Install from the DMG, launch normally, then choose one verified local model. Amentia does not require an Amentia account.",
         advancedDetail: "Distribution proof: Developer ID signed and notarized; \(releaseProof).",
         setupDetail: nil
       )
@@ -254,9 +254,9 @@ enum DistributionTrustPresenter {
       return DistributionTrustSummary(
         title: "Manual Open Required",
         summary: "This prerelease may need one extra macOS approval before first launch.",
-        detail: "If macOS blocks Pith, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Pith.app and choose Open. After that, setup continues in app.",
+        detail: "If macOS blocks Amentia, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Amentia.app and choose Open. After that, setup continues in app.",
         advancedDetail: "Distribution proof: ad-hoc signed and not notarized for \(platform); \(releaseProof).",
-        setupDetail: "Installer trust: if macOS blocks Pith, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Pith.app and choose Open."
+        setupDetail: "Installer trust: if macOS blocks Amentia, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Amentia.app and choose Open."
       )
     case "unsigned-local-build":
       return DistributionTrustSummary(
@@ -285,7 +285,7 @@ enum DistributionTrustPresenter {
   }
 
   private static func identitySummary(_ metadata: DistributionPackageMetadata) -> String {
-    metadata.pithAccountRequired ? "Pith account required" : "no Pith account required"
+    metadata.pithAccountRequired ? "Amentia account required" : "no Amentia account required"
   }
 
   private static func localExecutionSummary(_ metadata: DistributionPackageMetadata) -> String {
@@ -308,7 +308,7 @@ enum DistributionTrustPresenter {
     let network = metadata.sandboxNetworkDefault == "disabled"
       ? "network off by default"
       : "network default: \(metadata.sandboxNetworkDefault)"
-    return "project sandbox checks run when Pith starts; \(fallback); \(network)"
+    return "project sandbox checks run when Amentia starts; \(fallback); \(network)"
   }
 
   private static func packageSizeSummary(_ metadata: DistributionPackageMetadata) -> String {
@@ -337,7 +337,7 @@ enum DistributionTrustPresenter {
     let presentation = metadata.dailyDriverPresentation == "app-header-inspector"
       ? "shown in app header and inspector"
       : "presentation: \(metadata.dailyDriverPresentation)"
-    return "daily-driver next action comes from Pith status and is \(presentation)"
+    return "daily-driver next action comes from Amentia status and is \(presentation)"
   }
 
   private static func firstAppOpenSummary(_ metadata: DistributionPackageMetadata) -> String {

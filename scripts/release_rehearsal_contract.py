@@ -11,6 +11,7 @@ from pathlib import Path
 from installer_artifact_contract import installer_asset_paths_from_directory
 from installer_artifact_contract import validate_installer_asset_set
 from package_contract import (
+  APP_NAME,
   DAILY_DRIVER_CONTRACT,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
@@ -35,7 +36,7 @@ from release_copy_contract import (
 
 
 FIRST_APP_OPEN_CHECKS = (
-  "Launch Pith from Applications after handling Gatekeeper if needed.",
+  f"Launch {APP_NAME} from Applications after handling Gatekeeper if needed.",
   f"Download one verified local model; {DEFAULT_MODEL_ID} is the default.",
   "Open a project folder.",
   "Check that Web Search and project safety are ready.",
@@ -44,14 +45,14 @@ FIRST_APP_OPEN_CHECKS = (
 )
 MANUAL_PRERELEASE_CHECKS = (
   "Verify the downloaded DMG with the SHA-256 sidecar before opening it.",
-  "Open the release manifest and confirm macOS x86_64, in-app model delivery, no bundled model weights, and no Pith login.",
-  "Install Pith from the DMG and handle Gatekeeper according to the manifest guidance.",
+  f"Open the release manifest and confirm macOS x86_64, in-app model delivery, no bundled model weights, and no {APP_NAME} login.",
+  f"Install {APP_NAME} from the DMG and handle Gatekeeper according to the manifest guidance.",
   f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
   "Open a real project folder and confirm the header or inspector reports project readiness.",
   "Run Understand Project, Pick Next Step, or a short cowork prompt from the first app-open surface.",
   "Let the model use Web Search when useful and inspect the source proof in the timeline.",
   "Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.",
-  "Restart Pith and confirm Pith status, selected project, model state, and recent proof recover.",
+  f"Restart {APP_NAME} and confirm {APP_NAME} status, selected project, model state, and recent proof recover.",
 )
 RELEASE_DECISION = {
   "automatedRehearsal": "passed",
@@ -89,8 +90,8 @@ def load_release_manifest(tag: str, asset_dir: Path) -> dict:
 def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
   if manifest.get("tag") != tag:
     raise RuntimeError("Downloaded release manifest tag must match the rehearsal tag")
-  if manifest.get("product") != "Pith":
-    raise RuntimeError("Downloaded release manifest product must be Pith")
+  if manifest.get("product") != APP_NAME:
+    raise RuntimeError(f"Downloaded release manifest product must be {APP_NAME}")
   platform = manifest.get("platform")
   if not isinstance(platform, dict) or platform.get("architecture") != SUPPORTED_ARCH:
     raise RuntimeError("Downloaded release manifest must target the supported architecture")
@@ -105,7 +106,7 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
     raise RuntimeError("Downloaded release manifest must not bundle model weights")
   identity = manifest.get("identity")
   if not isinstance(identity, dict) or identity.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
-    raise RuntimeError("Downloaded release manifest must keep Pith account-free")
+    raise RuntimeError(f"Downloaded release manifest must keep {APP_NAME} account-free")
   local_execution = manifest.get("localExecution")
   if (
     not isinstance(local_execution, dict)
@@ -134,7 +135,7 @@ def validate_rehearsal_manifest(manifest: dict, *, tag: str) -> None:
   if app_package.get("modelWeightsBundled") is not MODEL_WEIGHTS_BUNDLED:
     raise RuntimeError("Downloaded release app package must not bundle model weights")
   if app_package.get("pithAccountRequired") is not PITH_ACCOUNT_REQUIRED:
-    raise RuntimeError("Downloaded release app package must keep Pith account-free")
+    raise RuntimeError(f"Downloaded release app package must keep {APP_NAME} account-free")
   if app_package.get("firstAppOpenActionContract") != FIRST_APP_OPEN_CONTRACT_ID:
     raise RuntimeError("Downloaded release app package first app-open contract is wrong")
   if app_package.get("sandboxMode") != SANDBOX_CONTRACT["mode"]:
@@ -223,7 +224,7 @@ def acceptance_markdown(summary: dict) -> str:
   manual_acceptance = "\n".join(
     f"- [ ] {check}" for check in summary["manualPrereleaseChecks"]
   )
-  return f"""# Pith {summary["tag"]} Manual Release Acceptance
+  return f"""# Amentia {summary["tag"]} Manual Release Acceptance
 
 Use this acceptance worksheet only after automated release rehearsal passes.
 
@@ -276,7 +277,7 @@ def summary_markdown(summary: dict) -> str:
     f"- {stage['title']}: {', '.join(stage['checkIds'])}"
     for stage in summary["packagedSmokeReceipt"]["journey"]
   )
-  return f"""# Pith {summary["tag"]} Release Rehearsal
+  return f"""# Amentia {summary["tag"]} Release Rehearsal
 
 Result: `{summary["result"]}`
 

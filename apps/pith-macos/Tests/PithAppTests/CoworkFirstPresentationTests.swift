@@ -17,11 +17,11 @@ final class CoworkFirstPresentationTests: XCTestCase {
         hasDraftMessage: false,
         isWaitingForFirstMessage: false,
         dailyDriverStage: "ready",
-        dailyDriverNextAction: "Ask Pith for the next cowork task."
+        dailyDriverNextAction: "Ask Amentia for the next cowork task."
       )
     )
 
-    XCTAssertEqual(summary, "Ask Pith for the next cowork task.")
+    XCTAssertEqual(summary, "Ask Amentia for the next cowork task.")
   }
 
   func testRuntimeHeaderShowsDetailForToolReadinessIssue() {
@@ -45,7 +45,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(
       summary,
-      "Enable Web Search so Pith can retrieve current information when needed."
+      "Enable Web Search so Amentia can retrieve current information when needed."
     )
   }
 
@@ -65,14 +65,14 @@ final class CoworkFirstPresentationTests: XCTestCase {
         isWaitingForFirstMessage: false,
         runtimeReadinessStatus: "ready",
         dailyDriverStage: "ready",
-        dailyDriverNextAction: "Ask Pith for the next cowork task.",
+        dailyDriverNextAction: "Ask Amentia for the next cowork task.",
         runtimeReadinessChecks: [],
         runtimeReadinessMetrics: localExecutionMetrics,
         selectedLocalExecutionSafetyMode: "askBeforeChange"
       )
     )
 
-    XCTAssertTrue(summary.contains("Ask Pith for the next cowork task."))
+    XCTAssertTrue(summary.contains("Ask Amentia for the next cowork task."))
     XCTAssertTrue(summary.contains("Safety Ask, no account"))
     XCTAssertTrue(summary.contains("Mode Ask"))
   }
@@ -105,7 +105,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let runtimeStep = RuntimeReadinessPresenter.steps(readinessSnapshotForFirstRequest())
       .first { $0.id == "runtime" }
 
-    XCTAssertEqual(runtimeStep?.label, "Pith")
+    XCTAssertEqual(runtimeStep?.label, "Amentia")
     XCTAssertNotEqual(runtimeStep?.label, "Service")
     XCTAssertNotEqual(runtimeStep?.label, "Engine")
   }
@@ -426,13 +426,13 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     XCTAssertEqual(
       ComposerStatusPresenter.placeholder(composer),
-      "Pith is working. Cancel to stop it."
+      "Amentia is working. Cancel to stop it."
     )
     XCTAssertEqual(
       ComposerStatusPresenter.statusSummary(composer),
-      "Pith is working. Cancel the request if it is no longer useful."
+      "Amentia is working. Cancel the request if it is no longer useful."
     )
-    XCTAssertEqual(InspectorSessionPresenter.title(inspector), "Pith Is Working")
+    XCTAssertEqual(InspectorSessionPresenter.title(inspector), "Amentia Is Working")
     XCTAssertFalse(ComposerStatusPresenter.placeholder(composer).contains("local execution"))
     XCTAssertFalse(InspectorSessionPresenter.title(inspector).contains("Execution"))
   }
@@ -662,7 +662,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let text = PluginInstallDialogPresenter.installInformativeText(preview: preview)
 
     XCTAssertTrue(text.contains("Source: Local folder you selected"))
-    XCTAssertTrue(text.contains("Installed: Stored in Pith support data"))
+    XCTAssertTrue(text.contains("Installed: Stored in Amentia support data"))
     XCTAssertTrue(text.contains("Capabilities: 1 action | 1 connection | 1 MCP server"))
     XCTAssertTrue(text.contains("Permissions: MCP access, Network access"))
     XCTAssertFalse(text.contains("/Users/example"))
@@ -921,7 +921,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasDraftMessage: hasDraftMessage,
       runtimeReadinessChecks: checks,
       canEnableWebSearchPlugin: canEnableWebSearchPlugin,
-      runtimeLaunchButtonTitle: "Start Pith",
+      runtimeLaunchButtonTitle: "Start Amentia",
       modelSetupActionTitle: nil
     )
   }

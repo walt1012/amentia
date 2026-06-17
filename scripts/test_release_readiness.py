@@ -53,7 +53,7 @@ def assert_ready_dry_run_report() -> None:
     f"--commit {VALID_COMMIT}",
     f'select(.headSha == "{VALID_COMMIT}"',
     "## Expected Dry-Run Evidence",
-    "Pith-v0.1.0-macos-x86_64.dmg",
+    "Amentia-v0.1.0-macos-x86_64.dmg",
     "release-dry-run-rehearsal.json",
     "gh workflow run release.yml",
     "-f dry_run=true",
@@ -104,7 +104,7 @@ def assert_ready_dry_run_report() -> None:
   checklist = payload.get("preDispatchChecklist")
   if not isinstance(checklist, list) or len(checklist) < 5:
     raise AssertionError("readiness JSON should include the pre-dispatch checklist")
-  if "Pith-v0.1.0-macos-x86_64.dmg" not in payload.get("expectedPublicAssets", []):
+  if "Amentia-v0.1.0-macos-x86_64.dmg" not in payload.get("expectedPublicAssets", []):
     raise AssertionError("readiness JSON should include expected public assets")
   if "release-dry-run-rehearsal.json" not in payload.get("expectedDryRunEvidence", []):
     raise AssertionError("readiness JSON should include expected dry-run evidence")
@@ -156,7 +156,7 @@ def assert_ready_dry_run_report() -> None:
     "python3 scripts/release_evidence_contract.py",
     "--mode dry-run",
     "--tag v0.1.0",
-    "release-dry-run-v0.1.0/Pith-v0.1.0-macos-x86_64.dmg",
+    "release-dry-run-v0.1.0/Amentia-v0.1.0-macos-x86_64.dmg",
     "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
   ):
     if phrase not in validation_command:

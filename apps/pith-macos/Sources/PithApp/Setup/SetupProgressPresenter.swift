@@ -17,10 +17,10 @@ struct SetupProgressSnapshot {
 enum SetupProgressPresenter {
   static func summary(_ snapshot: SetupProgressSnapshot) -> String {
     if snapshot.readyStepCount == snapshot.stepCount {
-      return "Pith setup complete"
+      return "Amentia setup complete"
     }
 
-    return "Pith setup \(snapshot.readyStepCount)/\(snapshot.stepCount)"
+    return "Amentia setup \(snapshot.readyStepCount)/\(snapshot.stepCount)"
   }
 
   static func detail(_ snapshot: SetupProgressSnapshot) -> String {
@@ -59,11 +59,11 @@ enum SetupProgressPresenter {
   private static func nextStep(_ snapshot: SetupProgressSnapshot) -> String? {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start Pith"
+      return "Start Amentia"
     case .launching:
-      return "Starting Pith"
+      return "Starting Amentia"
     case .failed:
-      return "Restart Pith"
+      return "Restart Amentia"
     case .ready:
       if !snapshot.isLocalModelReady {
         return modelNextStep(snapshot.modelReadinessDetail)

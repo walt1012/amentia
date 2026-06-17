@@ -301,7 +301,7 @@ enum PluginStatusDisplay {
 
     switch execution.kind {
     case "builtin":
-      return "built-in Pith action"
+      return "built-in Amentia action"
     case "mcp":
       return "MCP action"
     default:

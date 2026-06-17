@@ -8,7 +8,7 @@ enum FileRevealService {
     successDetail: String
   ) -> String {
     guard let value = modelHealth?.metrics[metricKey], !value.isEmpty else {
-      return "Local model guidance is unavailable until Pith finishes checking the selected model."
+      return "Local model guidance is unavailable until Amentia finishes checking the selected model."
     }
 
     let targetURL = URL(fileURLWithPath: value)
@@ -24,7 +24,7 @@ enum FileRevealService {
           withIntermediateDirectories: true
         )
       } catch {
-        return "Pith could not prepare the requested folder: \(error.localizedDescription)"
+        return "Amentia could not prepare the requested folder: \(error.localizedDescription)"
       }
     }
 
@@ -32,7 +32,7 @@ enum FileRevealService {
       return successDetail
     }
 
-    return "Pith could not open the requested folder."
+    return "Amentia could not open the requested folder."
   }
 
   static func hasSuggestedPath(metricKey: String, modelHealth: ModelHealthSummary?) -> Bool {
@@ -61,6 +61,6 @@ enum FileRevealService {
       return "Revealed the closest available folder."
     }
 
-    return "Pith could not locate the requested file."
+    return "Amentia could not locate the requested file."
   }
 }

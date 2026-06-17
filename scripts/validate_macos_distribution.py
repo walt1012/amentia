@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 from package_contract import (
+  APP_NAME,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   bundled_model_weight_files,
   directory_size_bytes,
@@ -21,13 +22,13 @@ from package_contract import (
 
 DEVELOPER_ID_MARKER = "Authority=Developer ID Application:"
 PACKAGE_MANIFEST_RELATIVE_PATH = Path("Contents/Resources/PithPackage.json")
-APP_ICON_RELATIVE_PATH = Path("Contents/Resources/Pith.icns")
+APP_ICON_RELATIVE_PATH = Path(f"Contents/Resources/{APP_NAME}.icns")
 SOURCE_COMMIT_HEX_LENGTH = 40
 
 
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument("app_path", type=Path, help="Path to Pith.app.")
+  parser.add_argument("app_path", type=Path, help=f"Path to {APP_NAME}.app.")
   parser.add_argument(
     "--dmg-path",
     type=Path,
@@ -49,7 +50,7 @@ def main() -> int:
     signature = run(["codesign", "-dv", "--verbose=4", str(app_path)])
     if DEVELOPER_ID_MARKER not in signature:
       raise RuntimeError(
-        "Pith.app is not signed with a Developer ID Application identity. "
+        f"{APP_NAME}.app is not signed with a Developer ID Application identity. "
         "Ad-hoc signed builds are valid for CI only, not public distribution."
       )
     run(["spctl", "--assess", "--type", "execute", "--verbose=4", str(app_path)])
@@ -93,15 +94,15 @@ def validate_dmg(dmg_path: Path) -> None:
 
 def validate_app_icon(app_path: Path) -> None:
   icon_path = app_path / APP_ICON_RELATIVE_PATH
-  require_file(icon_path, "Pith.icns")
+  require_file(icon_path, f"{APP_NAME}.icns")
   data = icon_path.read_bytes()
   if len(data) < 8 or data[:4] != b"icns":
-    raise RuntimeError(f"Pith.icns must be an ICNS file: {icon_path}")
+    raise RuntimeError(f"{APP_NAME}.icns must be an ICNS file: {icon_path}")
   declared_size = struct.unpack(">I", data[4:8])[0]
   actual_size = icon_path.stat().st_size
   if declared_size != actual_size:
     raise RuntimeError(
-      f"Pith.icns size header must match file size: {icon_path}: "
+      f"{APP_NAME}.icns size header must match file size: {icon_path}: "
       f"{declared_size} != {actual_size}"
     )
 

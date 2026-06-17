@@ -18,7 +18,7 @@ enum LocalModelDisplayPresenter {
 
   static func setupFitSummary(_ model: LocalModelSummary, defaultModelID: String) -> String {
     if model.id == defaultModelID {
-      return "Fastest first setup for getting Pith running quickly."
+      return "Fastest first setup for getting Amentia running quickly."
     }
 
     if model.tags.contains("recommended") {

@@ -25,7 +25,7 @@ enum SetupCalloutPresenter {
       return "Create Session"
     }
 
-    return "Pith Ready"
+    return "Amentia Ready"
   }
 
   static func summary(_ snapshot: SetupCalloutSnapshot) -> String {
@@ -33,13 +33,13 @@ enum SetupCalloutPresenter {
       return snapshot.modelGuidance.summary
     }
     if !snapshot.hasWorkspace {
-      return "Choose the project folder Pith should inspect, search, and edit locally."
+      return "Choose the project folder Amentia should inspect, search, and edit locally."
     }
     if !snapshot.hasRuntimeThreadSelection {
       return "Create or select a session before starting the first cowork task."
     }
 
-    return "Pith is ready to work."
+    return "Amentia is ready to work."
   }
 
   static func detail(_ snapshot: SetupCalloutSnapshot) -> String {
@@ -50,7 +50,7 @@ enum SetupCalloutPresenter {
       )
     }
     if !snapshot.hasWorkspace {
-      return "Pith keeps file reads, search, shell actions, diffs, and memory inside the project you choose."
+      return "Amentia keeps file reads, search, shell actions, diffs, and memory inside the project you choose."
     }
     if !snapshot.hasRuntimeThreadSelection {
       return "Sessions keep messages, approvals, cancellation, and useful memory together."

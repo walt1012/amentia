@@ -106,7 +106,7 @@ enum TimelineContextReceiptPresenter {
       "Saved source proof: \(yesNo(snapshotAvailable))",
     ]
     if let reason = entry.attributes["routingReason"] {
-      lines.append("Why Pith searched: \(readableRoutingReason(reason))")
+      lines.append("Why Amentia searched: \(readableRoutingReason(reason))")
     }
     if let sourceTitles = entry.attributes["sourceTitles"] {
       lines.append("Sources: \(sourceTitles)")
@@ -145,7 +145,7 @@ enum TimelineContextReceiptPresenter {
       "Mode: \(mode)",
       "Boundary: \(boundary)",
       "Approval: \(policy)",
-      "Pith account required: \(account)",
+      "Amentia account required: \(account)",
     ]
     if let tool {
       lines.append("Tool: \(tool)")
@@ -280,7 +280,7 @@ enum TimelineContextReceiptPresenter {
     case "localPlugin":
       return "local plugin"
     case "localRuntime":
-      return "Pith"
+      return "Amentia"
     default:
       return value ?? "unknown"
     }

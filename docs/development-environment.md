@@ -1,6 +1,6 @@
 # Development Environment
 
-This document describes the CI-first development baseline for `Pith`.
+This document describes the CI-first development baseline for `Amentia`.
 
 ## Required Local Tools
 
@@ -109,7 +109,7 @@ CI runs this on `macos-15-intel`. The Swift app executable, Swift logic tests,
 and `pith-runtime-bin` build or run in parallel cached jobs. The packaging job
 starts from change detection, restores cached app/runtime/llama executables
 directly, builds missing app/runtime cache entries concurrently, assembles
-`Pith.app`, places executables under `Contents/MacOS`, bundles model metadata
+`Amentia.app`, places executables under `Contents/MacOS`, bundles model metadata
 and bundled plugin manifests under `Contents/Resources`, validates the app
 bundle, creates the DMG installer, and uploads one user-facing installer
 artifact with bounded retention. Internal executable artifacts stay separate,
@@ -140,8 +140,8 @@ Trusted Developer ID distribution builds must pass:
 
 ```bash
 python3 scripts/validate_macos_distribution.py \
-  artifacts/macos/Pith.app \
-  --dmg-path artifacts/macos/Pith-v0.1.0-macos-x86_64.dmg
+  artifacts/macos/Amentia.app \
+  --dmg-path artifacts/macos/Amentia-v0.1.0-macos-x86_64.dmg
 ```
 
 This gate requires Developer ID signing, Gatekeeper assessment, notarization
@@ -152,8 +152,8 @@ shape and user guidance, but they are not trusted macOS installers.
 
 ## GitHub Release Distribution
 
-Users should download `Pith-<tag>-macos-x86_64.dmg` from the GitHub Release
-page, open it, and drag `Pith.app` to Applications. The release workflow
+Users should download `Amentia-<tag>-macos-x86_64.dmg` from the GitHub Release
+page, open it, and drag `Amentia.app` to Applications. The release workflow
 publishes only strict `vX.Y.Z` product versions and supports two distribution
 modes:
 
@@ -253,12 +253,12 @@ a time by writing a local `model-pack.json`. Activation stores selected model
 paths in app preferences, injects `PITH_MODEL_PACK_MANIFEST` and
 `PITH_MODEL_PATH` for the local service, and restarts the runtime so health
 checks report the selected model. Normal app installs set `PITH_DATA_DIR` to
-`~/Library/Application Support/Pith/storage`, so downloaded GGUF files live under
-`~/Library/Application Support/Pith/storage/models`. Removing `Pith.app` does not
-delete that user data; Settings > Storage can reveal data or Reset Pith without
+`~/Library/Application Support/Amentia/storage`, so downloaded GGUF files live under
+`~/Library/Application Support/Amentia/storage/models`. Removing `Amentia.app` does not
+delete that user data; Settings > Storage can reveal data or Reset Amentia without
 deleting workspace folders.
 
-If either path is missing, Pith reports the local model as unavailable and
+If either path is missing, Amentia reports the local model as unavailable and
 blocks agent work until a verified local model is selected. A development-only
 setup example is:
 

@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from package_contract import (
+  APP_NAME,
   DAILY_DRIVER_CONTRACT,
   DEFAULT_MODEL_ID,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
@@ -41,7 +42,7 @@ from release_identity import validate_public_release_tag
 SOURCE_COMMIT_HEX_LENGTH = 40
 INTERNAL_CI_TAG_PATTERN = re.compile(r"^ci-[0-9a-f]{12,40}$")
 INSTALL_GUIDE_NAME = "README-FIRST.txt"
-INTERNAL_CI_DMG_NAME = "Pith-macos-x86_64.dmg"
+INTERNAL_CI_DMG_NAME = f"{APP_NAME}-macos-x86_64.dmg"
 VERIFICATION_CONTRACT = {
   "ciGate": "successful-ci-required-for-source-commit",
   "packagedSmoke": "mounted-dmg-before-upload",
@@ -118,7 +119,7 @@ def release_manifest(
     "tag": tag,
     "releaseKind": release_kind(tag),
     "sourceCommit": source_commit,
-    "product": "Pith",
+    "product": APP_NAME,
     "platform": {
       "os": "macOS",
       "minimumVersion": MINIMUM_SYSTEM_VERSION,
@@ -458,13 +459,13 @@ def validate_release_manifest_name(tag: str, manifest_path: Path) -> None:
 def release_dmg_name(tag: str) -> str:
   if release_kind(tag) == "internal-ci":
     return INTERNAL_CI_DMG_NAME
-  return f"Pith-{tag}-macos-x86_64.dmg"
+  return f"{APP_NAME}-{tag}-macos-x86_64.dmg"
 
 
 def release_manifest_name(tag: str) -> str:
   if release_kind(tag) == "internal-ci":
     return "internal-release-manifest.json"
-  return f"Pith-{tag}-release-manifest.json"
+  return f"{APP_NAME}-{tag}-release-manifest.json"
 
 
 def release_installer_asset_names(tag: str) -> tuple[str, str, str, str]:
@@ -501,8 +502,8 @@ def validate_manifest_identity(
   if not isinstance(source_commit, str):
     raise RuntimeError("Release manifest source commit is required")
   validate_source_commit(source_commit)
-  if manifest.get("product") != "Pith":
-    raise RuntimeError("Release manifest product must be Pith")
+  if manifest.get("product") != APP_NAME:
+    raise RuntimeError(f"Release manifest product must be {APP_NAME}")
   platform = manifest.get("platform")
   if not isinstance(platform, dict):
     raise RuntimeError("Release manifest platform must be an object")
@@ -809,7 +810,7 @@ def validate_install_guide(install_guide_path: Path) -> None:
 def validate_install_guide_for_tag(install_guide_path: Path, tag: str) -> None:
   validate_install_guide(install_guide_path)
   text = install_guide_path.read_text(encoding="utf-8")
-  if f"Pith {tag}" not in text:
+  if f"{APP_NAME} {tag}" not in text:
     raise RuntimeError("Release install guide tag does not match the release manifest")
   dmg_name, checksum_name, _guide_name, manifest_name = release_installer_asset_names(tag)
   required_tag_phrases = (

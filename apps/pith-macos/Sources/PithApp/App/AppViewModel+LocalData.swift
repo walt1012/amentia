@@ -28,7 +28,7 @@ extension AppViewModel {
   func revealLocalDataFolder() {
     runtimeDetail = FileRevealService.revealFilePath(
       localDataFolderPath(),
-      successDetail: "Revealed Pith local data."
+      successDetail: "Revealed Amentia local data."
     )
   }
 
@@ -42,7 +42,7 @@ extension AppViewModel {
     defer {
       localDataResetInProgress = false
     }
-    runtimeBridge.stopRuntime(detail: "Pith reset. Restart Pith to continue.")
+    runtimeBridge.stopRuntime(detail: "Amentia reset. Restart Amentia to continue.")
     runtimeLaunchCoordinator.cancel()
     workspaceOpenCoordinator.cancel()
     threadCreationCoordinator.cancel()
@@ -61,11 +61,11 @@ extension AppViewModel {
       let result = try AppDataResetService.deleteLocalData()
       applyLocalDataResetSuccess(result)
     } catch {
-      runtimeDetail = "Pith reset failed: \(error.localizedDescription)"
+      runtimeDetail = "Amentia reset failed: \(error.localizedDescription)"
       appendEntry(
         to: selectedThreadID,
         TimelineEntryFactory.warning(
-          title: "Pith Reset Failed",
+          title: "Amentia Reset Failed",
           body: error.localizedDescription
         )
       )

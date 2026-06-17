@@ -25,7 +25,7 @@ final class PithAppDelegate: NSObject, NSApplicationDelegate {
   static func registerMainWindow(_ window: NSWindow) {
     window.identifier = mainWindowIdentifier
     window.tabbingMode = .disallowed
-    window.title = "Pith"
+    window.title = "Amentia"
 
     if let existingWindow = mainWindow,
        existingWindow !== window,

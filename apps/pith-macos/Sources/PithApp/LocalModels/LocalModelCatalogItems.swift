@@ -6,7 +6,7 @@ extension LocalModelCatalog {
       LocalModelCatalogItem(
         id: defaultFirstUseModelID,
         displayName: "LFM2.5-350M Q4_K_M",
-        description: "Default tiny local model for the first Pith setup.",
+        description: "Default tiny local model for the first Amentia setup.",
         fileName: "LFM2.5-350M-Q4_K_M.gguf",
         downloadURL: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
         homepage: "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF",

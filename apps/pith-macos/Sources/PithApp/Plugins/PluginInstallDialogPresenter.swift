@@ -17,7 +17,7 @@ enum PluginInstallDialogPresenter {
       Plugin: \(preview.displayName) \(preview.version)
       Author: \(preview.authorName ?? "Unknown")
       Source: Local folder you selected
-      Installed: Stored in Pith support data
+      Installed: Stored in Amentia support data
       Starts Enabled: \(preview.defaultEnabled ? "Yes" : "No")
       Capabilities: \(capabilitySummary(preview.capabilities))
       Permissions: \(PluginPermissionDisplay.summary(preview.permissions, empty: "No extra local permissions"))

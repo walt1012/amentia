@@ -30,15 +30,15 @@ final class SetupCalloutPresenterTests: XCTestCase {
       hasWorkspace: false,
       hasRuntimeThreadSelection: false,
       modelGuidance: LocalModelSetupGuidance(
-        title: "Start Pith",
-        summary: "Start Pith before choosing or running a model.",
+        title: "Start Amentia",
+        summary: "Start Amentia before choosing or running a model.",
         detail: "The model catalog, downloads, and selected model state stay local on this Mac.",
-        actionSummary: "Start Pith to inspect model setup.",
+        actionSummary: "Start Amentia to inspect model setup.",
         readinessDetail: "Launch",
         tone: .warning
       ),
       modelProgressDetail: nil,
-      runtimeLaunchActionTitle: "Start Pith",
+      runtimeLaunchActionTitle: "Start Amentia",
       modelPrimaryActionTitle: nil,
       modelSecondaryActionTitle: nil,
       distributionTrustSetupDetail: distributionTrustSetupDetail

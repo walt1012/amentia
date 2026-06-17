@@ -52,7 +52,7 @@ enum LocalExecutionSafetyModePresenter {
     case "explore":
       return "Read-only exploration. Writes and shell commands are blocked."
     case "askBeforeChange":
-      return "Default. Pith asks before file writes and shell commands."
+      return "Default. Amentia asks before file writes and shell commands."
     case "approvedWorkspaceExecution":
       return "Runs permitted project writes and shell commands without another approval."
     default:

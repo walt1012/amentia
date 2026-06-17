@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the final GitHub Release state after publishing Pith assets."""
+"""Validate the final GitHub Release state after publishing Amentia assets."""
 
 from __future__ import annotations
 

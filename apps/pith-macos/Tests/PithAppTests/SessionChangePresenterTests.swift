@@ -21,7 +21,7 @@ final class SessionChangePresenterTests: XCTestCase {
     XCTAssertEqual(prompt.title, "Revert Session Changes?")
     XCTAssertEqual(prompt.confirmButtonTitle, "Revert Changes")
     XCTAssertTrue(prompt.allowsRevert)
-    XCTAssertTrue(prompt.message.contains("Pith can review 2 files"))
+    XCTAssertTrue(prompt.message.contains("Amentia can review 2 files"))
     XCTAssertTrue(prompt.message.contains("- Sources/App.swift"))
     XCTAssertTrue(prompt.message.contains("The session itself will stay"))
   }
@@ -37,7 +37,7 @@ final class SessionChangePresenterTests: XCTestCase {
 
     XCTAssertEqual(prompt.title, "Review Session Changes")
     XCTAssertFalse(prompt.allowsRevert)
-    XCTAssertTrue(prompt.message.contains("changed after Pith saved it"))
+    XCTAssertTrue(prompt.message.contains("changed after Amentia saved it"))
     XCTAssertTrue(prompt.message.contains("leave everything untouched for now"))
   }
 

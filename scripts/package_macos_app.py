@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a signed-ready x86_64 macOS app bundle for Pith."""
+"""Build a signed-ready x86_64 macOS app bundle for Amentia."""
 
 from __future__ import annotations
 
@@ -51,10 +51,10 @@ from package_contract import (
 from release_identity import normalize_product_version
 
 
-APP_EXECUTABLE_NAME = "Pith"
+APP_EXECUTABLE_NAME = APP_NAME
 SWIFT_EXECUTABLE_NAME = "PithApp"
 RUNTIME_EXECUTABLE_NAME = "pith-runtime-bin"
-APP_ICON_FILE_NAME = "Pith.icns"
+APP_ICON_FILE_NAME = f"{APP_NAME}.icns"
 APP_ICON_SOURCE_RELATIVE_PATH = Path("docs/brand/pith-blue-p-icon-candidate.png")
 APP_ICON_MIN_SOURCE_SIZE = 1024
 APP_ICONSET_RENDITIONS = (
@@ -70,7 +70,7 @@ APP_ICONSET_RENDITIONS = (
   (512, 2),
 )
 LLAMA_BACKEND_RELATIVE_PARENT = Path("tools/llama.cpp")
-DEFAULT_BUNDLE_ID = "app.pith.Pith"
+DEFAULT_BUNDLE_ID = "app.amentia.Amentia"
 DEFAULT_VERSION = "0.1.0"
 DEFAULT_SOURCE_COMMIT = (
   os.environ.get("PITH_SOURCE_COMMIT")
@@ -83,11 +83,11 @@ DAILY_DRIVER_NEXT_ACTION_SOURCE = DAILY_DRIVER_CONTRACT["nextActionSource"]
 DAILY_DRIVER_PRESENTATION = DAILY_DRIVER_CONTRACT["presentation"]
 FIRST_APP_OPEN_ACTION_CONTRACT = FIRST_APP_OPEN_CONTRACT_ID
 REQUIRED_ZIP_BASE_ENTRIES = {
-  "Pith.app/Contents/Info.plist",
-  "Pith.app/Contents/MacOS/Pith",
-  "Pith.app/Contents/MacOS/pith-runtime-bin",
-  "Pith.app/Contents/Resources/Pith.icns",
-  "Pith.app/Contents/Resources/PithPackage.json",
+  f"{APP_NAME}.app/Contents/Info.plist",
+  f"{APP_NAME}.app/Contents/MacOS/{APP_EXECUTABLE_NAME}",
+  f"{APP_NAME}.app/Contents/MacOS/{RUNTIME_EXECUTABLE_NAME}",
+  f"{APP_NAME}.app/Contents/Resources/{APP_ICON_FILE_NAME}",
+  f"{APP_NAME}.app/Contents/Resources/PithPackage.json",
 }
 REQUIRED_PACKAGED_MODEL_FIELDS = {
   "id",
@@ -136,7 +136,7 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
   "workspace-notes": {"command:workspace.capture-note"},
 }
 REQUIRED_APP_COPY_SNIPPETS = (
-  "Start Pith to restore model choices",
+  f"Start {APP_NAME} to restore model choices",
   "paused downloads",
   "selected model choices remain local",
   "to keep resume data",
@@ -146,8 +146,8 @@ REQUIRED_APP_COPY_SNIPPETS = (
   "Download Local Model",
   "Repair Model Setup",
   "Open Anyway",
-  "Control-click Pith.app",
-  "no Pith account required",
+  f"Control-click {APP_NAME}.app",
+  f"no {APP_NAME} account required",
   "action safety mode",
   "package size budget",
 )
@@ -181,7 +181,7 @@ def parse_args() -> argparse.Namespace:
     "--dist-dir",
     type=Path,
     default=Path("artifacts/macos"),
-    help="Output directory for Pith.app and the zip artifact.",
+    help=f"Output directory for {APP_NAME}.app and the zip artifact.",
   )
   parser.add_argument(
     "--configuration",
@@ -193,7 +193,7 @@ def parse_args() -> argparse.Namespace:
     "--arch",
     default=SUPPORTED_ARCH,
     choices=(SUPPORTED_ARCH,),
-    help="Swift build architecture. Pith ships x86_64 macOS artifacts.",
+    help=f"Swift build architecture. {APP_NAME} ships x86_64 macOS artifacts.",
   )
   parser.add_argument(
     "--runtime-binary",
@@ -233,7 +233,7 @@ def parse_args() -> argparse.Namespace:
   parser.add_argument(
     "--source-commit",
     default=DEFAULT_SOURCE_COMMIT,
-    help="Source commit recorded in PithPackage.json.",
+    help="Source commit recorded in package metadata.",
   )
   parser.add_argument(
     "--signing-mode",
@@ -1315,15 +1315,15 @@ def assert_zip_artifact(zip_path: Path) -> None:
 def required_zip_entries() -> set[str]:
   entries = set(REQUIRED_ZIP_BASE_ENTRIES)
   entries.add(
-    f"Pith.app/Contents/Resources/{DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()}"
+    f"{APP_NAME}.app/Contents/Resources/{DEFAULT_MODEL_MANIFEST_RELATIVE_PATH.as_posix()}"
   )
   entries.add(
-    "Pith.app/Contents/Resources/"
+    f"{APP_NAME}.app/Contents/Resources/"
     f"{(LLAMA_BACKEND_RELATIVE_PARENT / LLAMA_BACKEND_EXECUTABLE_NAME).as_posix()}"
   )
   for plugin_id in REQUIRED_BUNDLED_PLUGIN_CAPABILITIES:
     entries.add(
-      f"Pith.app/Contents/Resources/plugins/bundled/{plugin_id}/pith-plugin.json"
+      f"{APP_NAME}.app/Contents/Resources/plugins/bundled/{plugin_id}/pith-plugin.json"
     )
   return entries
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate release notes and DMG install guidance for Pith builds."""
+"""Generate release notes and DMG install guidance for Amentia builds."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 
 from package_contract import (
+  APP_NAME,
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
   LOCAL_EXECUTION_SAFETY_MODES,
@@ -49,7 +50,7 @@ def installer_assets_copy(tag: str) -> str:
 def local_execution_copy() -> str:
   modes = ", ".join(LOCAL_EXECUTION_SAFETY_MODES)
   return (
-    "No Pith login is required; action safety mode defaults to "
+    f"No {APP_NAME} login is required; action safety mode defaults to "
     f"{DEFAULT_LOCAL_EXECUTION_SAFETY_MODE}; available modes are {modes}."
   )
 
@@ -110,7 +111,7 @@ def release_trust_note(
     return (
       "Untrusted ad-hoc prerelease. This DMG is not notarized; macOS Gatekeeper "
       "will block first launch until the user manually chooses Open Anyway in "
-      "Privacy & Security or Control-clicks Pith.app and chooses Open."
+      f"Privacy & Security or Control-clicks {APP_NAME}.app and chooses Open."
     )
   return (
     "Draft ad-hoc build. Public releases need Developer ID signing and "
@@ -122,13 +123,13 @@ def install_trust_section(signing_mode: str) -> tuple[str, str]:
   if signing_mode == "developer-id":
     return (
       "This build is Developer ID signed and notarized for normal Gatekeeper launch.",
-      "Open the DMG, drag Pith.app to Applications, then launch Pith.",
+      f"Open the DMG, drag {APP_NAME}.app to Applications, then launch {APP_NAME}.",
     )
   return (
     "This build is ad-hoc signed and not notarized.",
-    "After dragging Pith.app to Applications, macOS Gatekeeper may block first launch. "
+    f"After dragging {APP_NAME}.app to Applications, macOS Gatekeeper may block first launch. "
     "Open System Settings > Privacy & Security and choose Open Anyway, or "
-    "Control-click Pith.app and choose Open.",
+    f"Control-click {APP_NAME}.app and choose Open.",
   )
 
 
@@ -140,7 +141,7 @@ def release_notes(
 ) -> str:
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
   installer_assets = installer_assets_copy(tag)
-  return f"""Pith {tag}
+  return f"""{APP_NAME} {tag}
 
 - {platform_label()} DMG installer.
 - {installer_assets}
@@ -160,7 +161,7 @@ def validate_release_notes(
   allow_untrusted_ad_hoc: bool,
   draft: bool,
 ) -> None:
-  require_release_copy(text, (f"Pith {tag}",), "release notes")
+  require_release_copy(text, (f"{APP_NAME} {tag}",), "release notes")
   require_release_notes_copy(text)
   trust_note = release_trust_note(signing_mode, allow_untrusted_ad_hoc, draft)
   require_release_copy(text, (trust_note,), "release notes")
@@ -176,17 +177,17 @@ def install_guide(tag: str, signing_mode: str) -> str:
   first_run_path = first_run_path_copy()
   verification = checksum_verification_copy(tag)
   first_run_proof = first_run_proof_copy()
-  return f"""Pith {tag}
+  return f"""{APP_NAME} {tag}
 
 Install
 1. Open this DMG.
-2. Drag Pith.app to Applications.
-3. Launch Pith and download one verified local model when prompted; {DEFAULT_MODEL_ID} is the default.
+2. Drag {APP_NAME}.app to Applications.
+3. Launch {APP_NAME} and download one verified local model when prompted; {DEFAULT_MODEL_ID} is the default.
 4. Open a project folder.
 5. Check that Web Search and project safety are ready.
 6. {FIRST_APP_OPEN_INSTALL_STEP}
 7. Approve a safe local change only after reviewing it, then inspect the proof in the timeline.
-8. Follow the next action shown by Pith; it comes from Pith status, not a static setup checklist.
+8. Follow the next action shown by {APP_NAME}; it comes from {APP_NAME} status, not a static setup checklist.
 
 Trust
 {trust_note}
@@ -199,14 +200,14 @@ Notes
 - {installer_assets}
 - {local_execution}
 - {first_run_path}
-- Pith runs local model work on this Mac.
+- {APP_NAME} runs local model work on this Mac.
 - Model weights are not bundled in the app package.
-- Downloaded models and Pith sessions stay in local app data. Use Settings > Storage to reveal data or Reset Pith without deleting project folders.
+- Downloaded models and {APP_NAME} sessions stay in local app data. Use Settings > Storage to reveal data or Reset {APP_NAME} without deleting project folders.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
 - The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, app package metadata, smoke package metadata, and first-run contract.
 - {first_run_proof}
 - The release manifest records the {size_budget} that CI enforces before upload.
-- Pith reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.
+- {APP_NAME} reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.
 - Only one local model runs at a time.
 - Short, specific first prompts work best with the default small local model.
 """
@@ -223,7 +224,7 @@ def validate_install_guide(text: str, *, tag: str, signing_mode: str) -> None:
   trust_note, open_note = install_trust_section(signing_mode)
   require_release_copy(
     text,
-    (f"Pith {tag}", *INSTALL_GUIDE_REQUIRED_PHRASES, trust_note, open_note),
+    (f"{APP_NAME} {tag}", *INSTALL_GUIDE_REQUIRED_PHRASES, trust_note, open_note),
     "install guide",
   )
 

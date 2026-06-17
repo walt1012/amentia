@@ -233,7 +233,7 @@ private struct LocalModelRow: View {
       }
 
       if model.needsVerification {
-        Text("Pith found this file on your Mac. Verify it before use, or replace it with a fresh download.")
+        Text("Amentia found this file on your Mac. Verify it before use, or replace it with a fresh download.")
           .font(.caption2)
           .foregroundColor(.secondary)
           .fixedSize(horizontal: false, vertical: true)

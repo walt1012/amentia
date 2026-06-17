@@ -530,7 +530,7 @@ def validate_release_plan_json(
 ) -> None:
   expected_workflow_mode = expected_workflow_mode_for_evidence(mode)
   require_equal(data, "tag", tag)
-  require_equal(data, "title", f"Pith {tag}")
+  require_equal(data, "title", f"Amentia {tag}")
   require_equal(data, "workflowMode", expected_workflow_mode)
   require_equal(
     data,
@@ -659,7 +659,7 @@ def validate_first_app_open_checks(data: dict[str, object]) -> None:
     data,
     "firstAppOpenChecks",
     (
-      "Launch Pith",
+      "Launch Amentia",
       "Gatekeeper",
       DEFAULT_MODEL_ID,
       "Open a project folder",
@@ -680,7 +680,7 @@ def validate_manual_prerelease_checks(data: dict[str, object]) -> None:
       "macOS x86_64",
       "in-app model delivery",
       "no bundled model weights",
-      "no Pith login",
+      "no Amentia login",
       "Gatekeeper",
       DEFAULT_MODEL_ID,
       "real project folder",
@@ -688,8 +688,8 @@ def validate_manual_prerelease_checks(data: dict[str, object]) -> None:
       "Pick Next Step",
       "Web Search",
       "reviewing the diff",
-      "Restart Pith",
-      "Pith status",
+      "Restart Amentia",
+      "Amentia status",
       "model state",
       "recent proof recover",
     ),

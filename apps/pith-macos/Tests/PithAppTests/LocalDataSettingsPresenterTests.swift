@@ -37,12 +37,12 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(summary.ownershipDetail.contains("caches"))
     XCTAssertTrue(summary.ownershipDetail.contains("window state"))
     XCTAssertTrue(summary.ownershipDetail.contains("Project folders are never deleted"))
-    XCTAssertTrue(summary.uninstallDetail.contains("Removing Pith.app does not remove this data"))
-    XCTAssertTrue(summary.uninstallDetail.contains("Reset Pith"))
+    XCTAssertTrue(summary.uninstallDetail.contains("Removing Amentia.app does not remove this data"))
+    XCTAssertTrue(summary.uninstallDetail.contains("Reset Amentia"))
     XCTAssertNil(summary.blockedDetail)
-    XCTAssertEqual(summary.revealButtonTitle, "Show Pith Data")
-    XCTAssertEqual(summary.deleteButtonTitle, "Delete All Pith Data...")
-    XCTAssertTrue(summary.confirmationTitle.contains("Delete All Pith Data"))
+    XCTAssertEqual(summary.revealButtonTitle, "Show Amentia Data")
+    XCTAssertEqual(summary.deleteButtonTitle, "Delete All Amentia Data...")
+    XCTAssertTrue(summary.confirmationTitle.contains("Delete All Amentia Data"))
   }
 
   func testSummaryExplainsDownloadedModelStorage() {
@@ -79,7 +79,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertFalse(summary.canDeleteLocalData)
     XCTAssertTrue(summary.blockedDetail?.contains("Finish active work") == true)
-    XCTAssertTrue(summary.blockedDetail?.contains("resetting Pith") == true)
+    XCTAssertTrue(summary.blockedDetail?.contains("resetting Amentia") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("plugin and connection operations") == true)
   }
 
@@ -93,7 +93,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       reset.runtimeDetail,
-      "Reset Pith. Restart Pith to set up again."
+      "Reset Amentia. Restart Amentia to set up again."
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
     XCTAssertTrue(reset.timelineBody.contains("all app-owned local data"))
@@ -111,7 +111,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertEqual(reset.attributes["remainingAppOwnedDirectoryCount"], "0")
   }
 
-  func testSystemResiduePathsAreScopedToPithBundle() {
+  func testSystemResiduePathsIncludeCurrentAndLegacyBundles() {
     let libraryURL = URL(fileURLWithPath: "/Users/example/Library", isDirectory: true)
     let paths = AppDataResetService.systemResiduePaths(libraryDirectory: libraryURL)
       .map(\.path)
@@ -119,6 +119,10 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertEqual(
       paths,
       [
+        "/Users/example/Library/Preferences/app.amentia.Amentia.plist",
+        "/Users/example/Library/Caches/app.amentia.Amentia",
+        "/Users/example/Library/Caches/Amentia",
+        "/Users/example/Library/Saved Application State/app.amentia.Amentia.savedState",
         "/Users/example/Library/Preferences/app.pith.Pith.plist",
         "/Users/example/Library/Caches/app.pith.Pith",
         "/Users/example/Library/Caches/Pith",

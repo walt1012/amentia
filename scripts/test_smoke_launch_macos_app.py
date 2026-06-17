@@ -41,7 +41,7 @@ def web_search_items(attributes: dict[str, str]) -> list[dict]:
   return [
     {
       "kind": "assistantMessage",
-      "title": "Pith",
+      "title": "Amentia",
       "content": "Packaged smoke local response.",
       "attributes": {
         "handoffKind": "webSearchSources",
@@ -61,14 +61,14 @@ def valid_web_search_attributes() -> dict[str, str]:
     "sourceSnapshotHash": "0123456789abcdef",
     "sourceSnapshot": "\n".join(
       [
-        "1. Pith packaged web search fixture",
-        "URL: https://example.com/pith-packaged-smoke",
+        "1. Amentia packaged web search fixture",
+        "URL: https://example.com/amentia-packaged-smoke",
         "Snippet: Deterministic packaged web search result.",
         "Provider: fixture",
       ]
     ),
-    "sourceUrls": "https://example.com/pith-packaged-smoke",
-    "sourceTitles": "Pith packaged web search fixture",
+    "sourceUrls": "https://example.com/amentia-packaged-smoke",
+    "sourceTitles": "Amentia packaged web search fixture",
   }
 
 

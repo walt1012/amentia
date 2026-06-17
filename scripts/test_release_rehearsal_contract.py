@@ -50,7 +50,7 @@ WORKFLOW_RUN_URL = "https://github.com/walt1012/pith/actions/runs/123456789"
 def package_manifest_data(tag: str, signing: str = "ad-hoc") -> dict:
   return {
     "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
-    "appName": "Pith",
+    "appName": "Amentia",
     "bundleVersion": tag.removeprefix("v"),
     "minimumSystemVersion": MINIMUM_SYSTEM_VERSION,
     "architecture": SUPPORTED_ARCH,
@@ -169,12 +169,12 @@ def main() -> int:
       "project readiness",
       "Web Search",
       "reviewing the diff",
-      "Pith status",
+      "Amentia status",
     ):
       if phrase not in manual_checks:
         raise AssertionError(f"manual prerelease checks should include {phrase}")
     if "runtime readiness" in manual_checks or "local service status" in manual_checks:
-      raise AssertionError("manual prerelease checks should use Pith status language")
+      raise AssertionError("manual prerelease checks should use Amentia status language")
     if FIRST_APP_OPEN_ACTION_COPY not in summary["firstAppOpenChecks"]:
       raise AssertionError("release rehearsal summary should name the first cowork prompts")
     first_app_open_checks = "\n".join(summary["firstAppOpenChecks"])
@@ -183,7 +183,7 @@ def main() -> int:
     if "Web Search readiness" in first_app_open_checks:
       raise AssertionError("first app-open checks should not use internal readiness wording")
     markdown = summary_markdown(summary)
-    if "Pith v0.1.0 Release Rehearsal" not in markdown:
+    if "Amentia v0.1.0 Release Rehearsal" not in markdown:
       raise AssertionError("release rehearsal markdown should name the tag")
     if "## First App Open" not in markdown:
       raise AssertionError("release rehearsal markdown should include first app open checks")
@@ -350,7 +350,7 @@ def main() -> int:
   with TemporaryDirectory(prefix="pith-release-rehearsal-") as directory:
     root = Path(directory)
     write_downloaded_assets(root)
-    (root / "Pith-v0.1.0-macos-x86_64.dmg").write_bytes(b"tampered artifact\n")
+    (root / "Amentia-v0.1.0-macos-x86_64.dmg").write_bytes(b"tampered artifact\n")
     expect_failure(
       lambda: validate_release_rehearsal("v0.1.0", root),
       "Release checksum does not match artifact",

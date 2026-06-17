@@ -1,7 +1,7 @@
 import Foundation
 
 enum TimelineEventPresenter {
-  static let generatingLocalResponseDetail = "Pith is preparing a response..."
+  static let generatingLocalResponseDetail = "Amentia is preparing a response..."
   static let pendingTurnCancelledDetail = "Request cancelled."
   static let runningPluginCommandDetail = "Running plugin action..."
   static let pluginCommandNeedsExecutionContractDetail =
@@ -161,7 +161,7 @@ enum TimelineEventPresenter {
     TimelineEntryFactory.system(
       title: "Cowork Session Ready",
       body:
-        "Pith, the local model, project, and session are ready. Send one short cowork prompt to finish first-use setup.",
+        "Amentia, the local model, project, and session are ready. Send one short cowork prompt to finish first-use setup.",
       attributes: [
         "setup": "first-request"
       ]
@@ -170,8 +170,8 @@ enum TimelineEventPresenter {
 
   static func runtimeDisconnected(detail: String) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Pith Disconnected",
-      body: "\(detail) Use Restart Pith to recover the session.",
+      title: "Amentia Disconnected",
+      body: "\(detail) Use Restart Amentia to recover the session.",
       attributes: [
         "recovery": "relaunch-runtime"
       ]
@@ -180,7 +180,7 @@ enum TimelineEventPresenter {
 
   static func runtimeLaunchFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
-      title: "Pith Launch Failed",
+      title: "Amentia Launch Failed",
       body: error.localizedDescription,
       attributes: [:]
     )

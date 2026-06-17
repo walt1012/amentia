@@ -37,13 +37,13 @@ enum RuntimeReadinessPresenter {
   private static func runtimeStep(_ snapshot: RuntimeReadinessSnapshot) -> ReadinessStepSummary {
     switch snapshot.runtimeState {
     case .ready:
-      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Ready", tone: .ready)
+      return ReadinessStepSummary(id: "runtime", label: "Amentia", detail: "Ready", tone: .ready)
     case .launching:
-      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Starting", tone: .active)
+      return ReadinessStepSummary(id: "runtime", label: "Amentia", detail: "Starting", tone: .active)
     case .failed:
-      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Restart", tone: .danger)
+      return ReadinessStepSummary(id: "runtime", label: "Amentia", detail: "Restart", tone: .danger)
     case .disconnected:
-      return ReadinessStepSummary(id: "runtime", label: "Pith", detail: "Start", tone: .warning)
+      return ReadinessStepSummary(id: "runtime", label: "Amentia", detail: "Start", tone: .warning)
     }
   }
 
@@ -197,7 +197,7 @@ enum DailyDriverStagePresenter {
     case "thread_setup":
       return "Create or select a project-bound session."
     case "retrieval_setup":
-      return "Enable Web Search so Pith can retrieve current information when needed."
+      return "Enable Web Search so Amentia can retrieve current information when needed."
     case "approval_review":
       return "Review the pending approval before work continues."
     case "local_execution":
@@ -205,7 +205,7 @@ enum DailyDriverStagePresenter {
     case "first_request":
       return "Send the first cowork prompt."
     case "ready":
-      return "Ask Pith for the next cowork task."
+      return "Ask Amentia for the next cowork task."
     default:
       return nil
     }

@@ -17,13 +17,13 @@ enum TimelineApprovalOutcomePresenter {
     case "approved":
       return TimelineApprovalOutcomeSummary(
         title: "Approval accepted",
-        detail: "Pith is executing \(target). Review the proof that follows.",
+        detail: "Amentia is executing \(target). Review the proof that follows.",
         tone: .ready
       )
     case "denied":
       return TimelineApprovalOutcomeSummary(
         title: "Approval denied",
-        detail: "No local change was made. Adjust the request or ask Pith for a safer version.",
+        detail: "No local change was made. Adjust the request or ask Amentia for a safer version.",
         tone: .warning
       )
     default:

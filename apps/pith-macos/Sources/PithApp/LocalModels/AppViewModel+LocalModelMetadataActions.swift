@@ -10,7 +10,7 @@ extension AppViewModel {
 
   func bootstrapModelPackMetadata() {
     guard runtimeState == .ready else {
-      runtimeDetail = "Start Pith before refreshing model setup."
+      runtimeDetail = "Start Amentia before refreshing model setup."
       return
     }
     guard !modelDownloadCoordinator.isDownloading else {

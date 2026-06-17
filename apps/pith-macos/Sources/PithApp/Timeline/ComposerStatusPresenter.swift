@@ -17,11 +17,11 @@ enum ComposerStatusPresenter {
   static func placeholder(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start Pith to begin"
+      return "Start Amentia to begin"
     case .launching:
-      return "Pith is starting..."
+      return "Amentia is starting..."
     case .failed:
-      return "Restart Pith to recover"
+      return "Restart Amentia to recover"
     case .ready:
       break
     }
@@ -39,7 +39,7 @@ enum ComposerStatusPresenter {
     }
 
     if snapshot.hasActiveTurn {
-      return "Pith is working. Cancel to stop it."
+      return "Amentia is working. Cancel to stop it."
     }
 
     if snapshot.hasRestoredLocalExecutionDraft {
@@ -52,24 +52,24 @@ enum ComposerStatusPresenter {
         : "Choose a starter prompt or type the first cowork prompt"
     }
 
-    return "Ask Pith to inspect files, review diffs, or make a safe change"
+    return "Ask Amentia to inspect files, review diffs, or make a safe change"
   }
 
   static func statusSummary(_ snapshot: ComposerStatusSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start Pith to begin."
+      return "Start Amentia to begin."
     case .launching:
-      return "Starting Pith..."
+      return "Starting Amentia..."
     case .failed:
-      return "Restart Pith to recover."
+      return "Restart Amentia to recover."
     case .ready:
       if !snapshot.isLocalModelReady {
         return "\(snapshot.modelSetupSummary) Continue model setup to run locally."
       }
 
       if !snapshot.hasWorkspace {
-        return "Open a project so Pith can safely inspect and edit files."
+        return "Open a project so Amentia can safely inspect and edit files."
       }
 
       if !snapshot.hasRuntimeThreadSelection {
@@ -77,7 +77,7 @@ enum ComposerStatusPresenter {
       }
 
       if snapshot.hasActiveTurn {
-        return "Pith is working. Cancel the request if it is no longer useful."
+        return "Amentia is working. Cancel the request if it is no longer useful."
       }
 
       if snapshot.hasRestoredLocalExecutionDraft {

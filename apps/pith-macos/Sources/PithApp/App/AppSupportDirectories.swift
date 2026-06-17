@@ -2,6 +2,8 @@ import Foundation
 
 enum AppSupportDirectories {
   private static let supportRootOverrideKey = "PITH_APP_SUPPORT_DIR"
+  private static let currentSupportDirectoryName = "Amentia"
+  private static let legacySupportDirectoryName = "Pith"
   static let appOwnedDirectoryCount = 5
 
   static func rootDirectory() -> URL {
@@ -11,8 +13,7 @@ enum AppSupportDirectories {
       return URL(fileURLWithPath: overridePath, isDirectory: true)
     }
 
-    return defaultApplicationSupportBase()
-      .appendingPathComponent("Pith", isDirectory: true)
+    return defaultRootDirectory()
   }
 
   static func storageDirectory() -> URL {
@@ -33,6 +34,7 @@ enum AppSupportDirectories {
 
   static func prepareAppOwnedDirectories() -> String? {
     do {
+      try migrateLegacyRootIfNeeded()
       try prepareAppOwnedDirectories(rootDirectory: rootDirectory())
       return nil
     } catch {
@@ -79,6 +81,36 @@ enum AppSupportDirectories {
   private static func defaultApplicationSupportBase() -> URL {
     FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
       ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+  }
+
+  private static func defaultRootDirectory() -> URL {
+    defaultApplicationSupportBase()
+      .appendingPathComponent(currentSupportDirectoryName, isDirectory: true)
+  }
+
+  private static func legacyRootDirectory() -> URL {
+    defaultApplicationSupportBase()
+      .appendingPathComponent(legacySupportDirectoryName, isDirectory: true)
+  }
+
+  private static func migrateLegacyRootIfNeeded() throws {
+    let hasOverride = ProcessInfo.processInfo.environment[supportRootOverrideKey]?.isEmpty == false
+    guard !hasOverride else {
+      return
+    }
+
+    let manager = FileManager.default
+    let currentRoot = defaultRootDirectory()
+    let legacyRoot = legacyRootDirectory()
+    guard manager.fileExists(atPath: legacyRoot.path),
+          !manager.fileExists(atPath: currentRoot.path)
+    else {
+      return
+    }
+    if (try? manager.destinationOfSymbolicLink(atPath: legacyRoot.path)) != nil {
+      throw AppSupportDirectoryError.symbolicLink(path: legacyRoot.path)
+    }
+    try manager.moveItem(at: legacyRoot, to: currentRoot)
   }
 }
 

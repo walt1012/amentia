@@ -44,10 +44,10 @@ enum SessionChangePresenter {
     SessionDeletePrompt(
       title: "Delete Session?",
       message: """
-      Pith will delete this session's messages, timeline, and pending approvals.
+      Amentia will delete this session's messages, timeline, and pending approvals.
 
       Project files and repositories will not be deleted or reverted.
-      If you want to undo files Pith saved, use Review Session Changes before deleting the session.
+      If you want to undo files Amentia saved, use Review Session Changes before deleting the session.
       """,
       confirmButtonTitle: "Delete Session"
     )
@@ -57,8 +57,8 @@ enum SessionChangePresenter {
     let hasConflicts = preview.changes.contains { !$0.canRevert }
     let title = hasConflicts ? "Review Session Changes" : "Revert Session Changes?"
     let actionLine = hasConflicts
-      ? "Some files changed after Pith saved them, so Pith will leave everything untouched for now."
-      : "Pith will only revert files that still match what it saved."
+      ? "Some files changed after Amentia saved them, so Amentia will leave everything untouched for now."
+      : "Amentia will only revert files that still match what it saved."
 
     return SessionRevertPrompt(
       title: title,
@@ -77,9 +77,9 @@ enum SessionChangePresenter {
   private static func countLine(_ count: Int) -> String {
     switch count {
     case 1:
-      return "Pith can review 1 file saved by this session."
+      return "Amentia can review 1 file saved by this session."
     default:
-      return "Pith can review \(count) files saved by this session."
+      return "Amentia can review \(count) files saved by this session."
     }
   }
 
@@ -102,12 +102,12 @@ enum SessionChangePresenter {
   }
 
   private static func conflictDetail(_ reason: String) -> String {
-    if reason.contains("changed after Pith wrote it") {
-      return "changed after Pith saved it"
+    if reason.contains("changed after Amentia wrote it") || reason.contains("changed after Pith wrote it") {
+      return "changed after Amentia saved it"
     }
     if reason.contains("failed to read current file content") {
       return "is no longer available"
     }
-    return "needs review before Pith can revert it"
+    return "needs review before Amentia can revert it"
   }
 }

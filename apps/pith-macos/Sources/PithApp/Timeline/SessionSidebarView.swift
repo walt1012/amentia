@@ -92,7 +92,7 @@ struct SessionSidebarView: View {
       )
     }
     .alert(resetSummary.confirmationTitle, isPresented: $confirmsResetPith) {
-      Button("Delete All Pith Data", role: .destructive) {
+      Button("Delete All Amentia Data", role: .destructive) {
         viewModel.deleteLocalData()
       }
       Button("Cancel", role: .cancel) {}

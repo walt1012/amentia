@@ -141,7 +141,7 @@ extension AppViewModel {
 
   func activateRecommendedModel(modelID: String) {
     guard runtimeState != .launching else {
-      runtimeDetail = "Wait for Pith to finish starting before switching models."
+      runtimeDetail = "Wait for Amentia to finish starting before switching models."
       return
     }
     guard !hasActiveOrPendingTurn() else {
@@ -213,7 +213,7 @@ extension AppViewModel {
   func resetActiveLocalModel() {
     guard canResetActiveLocalModel() else {
       runtimeDetail =
-        "Finish Pith startup, model download, model selection check, or active work before resetting model selection."
+        "Finish Amentia startup, model download, model selection check, or active work before resetting model selection."
       return
     }
 

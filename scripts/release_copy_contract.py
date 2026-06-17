@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from package_contract import (
+  APP_NAME,
   DEFAULT_MODEL_ID,
   FIRST_APP_OPEN_CONTRACT_ID,
   PACKAGED_SMOKE_PROOF_SCOPE,
@@ -33,12 +34,12 @@ RELEASE_NOTES_REQUIRED_PHRASES = (
 
 
 INSTALL_GUIDE_REQUIRED_PHRASES = (
-  "Drag Pith.app to Applications.",
+  f"Drag {APP_NAME}.app to Applications.",
   "Installer assets:",
   "download one verified local model",
   "Settings > Storage",
   "First-run path:",
-  "No Pith login is required",
+  f"No {APP_NAME} login is required",
   "action safety mode",
   DEFAULT_MODEL_ID,
   "Gatekeeper",
@@ -51,7 +52,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Understand Project",
   "Pick Next Step",
   "Follow the next action",
-  "Pith status",
+  f"{APP_NAME} status",
   "sandbox status",
   "process-only fallback",
   "SHA-256 `.sha256` file",

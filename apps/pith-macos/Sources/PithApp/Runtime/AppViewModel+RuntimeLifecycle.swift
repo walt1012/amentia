@@ -7,16 +7,16 @@ extension AppViewModel {
       return
     }
 
-    launchRuntime(launchDetail: "Preparing Pith for daily use")
+    launchRuntime(launchDetail: "Preparing Amentia for daily use")
   }
 
-  func launchRuntime(launchDetail: String = "Starting Pith") {
+  func launchRuntime(launchDetail: String = "Starting Amentia") {
     guard runtimeState != .launching else {
       return
     }
 
     if runtimeState == .ready {
-      runtimeBridge.stopRuntime(detail: "Restarting Pith...")
+      runtimeBridge.stopRuntime(detail: "Restarting Amentia...")
     }
 
     runtimeState = .launching

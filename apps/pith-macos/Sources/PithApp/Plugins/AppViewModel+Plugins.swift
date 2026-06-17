@@ -47,7 +47,7 @@ extension AppViewModel {
 
   func pluginRefreshDisabledReason() -> String? {
     if runtimeState != .ready {
-      return "Pith is not ready."
+      return "Amentia is not ready."
     }
     if hasActiveOrPendingTurn() {
       return "Finish or cancel the active task first."

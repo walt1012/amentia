@@ -36,8 +36,8 @@ enum LocalModelDownloadCompletionPlanner {
           ],
           uniquingKeysWith: { _, new in new }
         ),
-        relaunchRunningDetail: "Restarting Pith with \(modelName)...",
-        relaunchIdleDetail: "\(modelName) will be used when Pith starts."
+        relaunchRunningDetail: "Restarting Amentia with \(modelName)...",
+        relaunchIdleDetail: "\(modelName) will be used when Amentia starts."
       )
     }
 

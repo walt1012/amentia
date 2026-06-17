@@ -33,7 +33,7 @@ enum LocalModelIntegrityError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .missingSize:
-      return "Pith could not inspect this local model file. Try downloading it again."
+      return "Amentia could not inspect this local model file. Try downloading it again."
     case .sizeTooSmall(let displayName, _, _):
       return "\(displayName) is incomplete. Cancel or replace it with a fresh download."
     case .invalidMagic(let displayName):

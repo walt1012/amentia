@@ -29,7 +29,7 @@ struct SettingsView: View {
 
   private var settingsHeader: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Pith Settings")
+      Text("Amentia Settings")
         .font(.title3.weight(.semibold))
       Text("Local-first cowork setup, safety, storage, and release trust.")
         .font(.caption)
@@ -63,12 +63,12 @@ struct SettingsView: View {
 
   private var localModelSection: some View {
     SettingsCard(title: "Local Models", systemImage: "cpu", tone: .ready) {
-      Text("Pith downloads and verifies one local model in app.")
+      Text("Amentia downloads and verifies one local model in app.")
         .font(.caption)
       Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
         .font(.caption)
         .foregroundColor(.secondary)
-      Text("Reset Pith removes downloaded models and starts setup fresh.")
+      Text("Reset Amentia removes downloaded models and starts setup fresh.")
         .font(.caption2)
         .foregroundColor(.secondary)
     }
@@ -215,7 +215,7 @@ private struct SettingsStorageSection: View {
       }
     }
     .alert(summary.confirmationTitle, isPresented: $confirmsLocalDataDelete) {
-      Button("Delete All Pith Data", role: .destructive) {
+      Button("Delete All Amentia Data", role: .destructive) {
         delete()
       }
       Button("Cancel", role: .cancel) {}

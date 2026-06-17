@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create and validate the user-facing macOS DMG installer for Pith."""
+"""Create and validate the user-facing macOS DMG installer for Amentia."""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ from pathlib import Path
 
 from release_copy_contract import require_install_guide_copy
 
-APP_NAME = "Pith.app"
+APP_NAME = "Amentia.app"
 APPLICATIONS_LINK_NAME = "Applications"
-DEFAULT_VOLUME_NAME = "Pith"
+DEFAULT_VOLUME_NAME = "Amentia"
 README_NAME = "README-FIRST.txt"
 HDIUTIL_CREATE_ATTEMPTS = 3
 HDIUTIL_CREATE_RETRY_SECONDS = 2
@@ -23,7 +23,7 @@ HDIUTIL_CREATE_RETRY_SECONDS = 2
 
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument("app_path", type=Path, help="Path to Pith.app.")
+  parser.add_argument("app_path", type=Path, help=f"Path to {APP_NAME}.")
   parser.add_argument("dmg_path", type=Path, help="Output DMG path.")
   parser.add_argument(
     "--volume-name",

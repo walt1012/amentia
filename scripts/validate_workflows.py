@@ -34,13 +34,13 @@ REQUIRED_CI_ARTIFACT_CONTRACT = (
   "SWIFT_APP_ARTIFACT: internal-PithApp-x86_64",
   "RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64",
   "LLAMA_ARTIFACT: internal-llama-cli-x86_64",
-  "MACOS_APP_ARTIFACT: Pith-installer-x86_64",
+  "MACOS_APP_ARTIFACT: Amentia-installer-x86_64",
 )
 REQUIRED_RELEASE_ASSETS = (
-  "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg",
-  "artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256",
+  "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg",
+  "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg.sha256",
   "artifacts/macos/README-FIRST.txt",
-  "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json",
+  "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json",
 )
 
 
@@ -284,7 +284,7 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       '--signing-mode ad-hoc',
       '--install-guide artifacts/macos/README-FIRST.txt',
       '--smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json',
-      '--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json',
+      '--package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json',
       '--smoke-receipt artifacts/macos/packaged-smoke-receipt.json',
       '--workflow-run-id "$GITHUB_RUN_ID"',
       '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
@@ -325,7 +325,7 @@ def validate_ci_artifact_uploads(text: str) -> list[WorkflowIssue]:
       validate_upload_retention(block_text, "llama internal artifact", "1", issues)
     if "${{ env.MACOS_APP_ARTIFACT }}" in block_text:
       validate_upload_retention(block_text, "macOS installer artifact", "7", issues)
-      if "artifacts/macos/Pith-macos-x86_64.zip" in block_text:
+      if "artifacts/macos/Amentia-macos-x86_64.zip" in block_text:
         issues.append(
           WorkflowIssue(
             CI_WORKFLOW,
@@ -427,7 +427,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     issues.append(
       WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --tag")
     )
-  if 'release_title="Pith $RELEASE_TAG"' not in release_block:
+  if 'release_title="Amentia $RELEASE_TAG"' not in release_block:
     issues.append(
       WorkflowIssue(
         RELEASE_WORKFLOW,
@@ -485,9 +485,9 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Validate release dry-run evidence",
     "python3 scripts/release_evidence_contract.py",
     "--mode dry-run",
-    "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg",
-    "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256",
-    "artifacts/macos/Pith-${{ env.RELEASE_TAG }}-release-manifest.json",
+    "artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-macos-x86_64.dmg",
+    "artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256",
+    "artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-release-manifest.json",
     "release-readiness.md",
     "release-readiness.json",
     "release-plan.md",
@@ -720,16 +720,16 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--install-guide artifacts/macos/README-FIRST.txt',
     '--smoke-receipt-output artifacts/macos/packaged-smoke-receipt.json',
     'bash scripts/build_macos_llama_backend.sh',
-    '--package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json',
+    '--package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json',
     '--smoke-receipt artifacts/macos/packaged-smoke-receipt.json',
     '--workflow-run-id "$GITHUB_RUN_ID"',
     '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
-    '--manifest-output "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
+    '--manifest-output "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json"',
     'python3 scripts/installer_artifact_contract.py',
     '--asset "$dmg_path"',
     '--asset "$dmg_path.sha256"',
     '--asset artifacts/macos/README-FIRST.txt',
-    '--asset "artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json"',
+    '--asset "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json"',
   )
   for term in required_release_terms:
     if term not in release_block:
@@ -786,10 +786,10 @@ def validate_release_evidence_step_contracts(
       (
         "--mode dry-run",
         '--tag "$RELEASE_TAG"',
-        'artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg',
-        'artifacts/macos/Pith-$RELEASE_TAG-macos-x86_64.dmg.sha256',
+        'artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg',
+        'artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg.sha256',
         "artifacts/macos/README-FIRST.txt",
-        'artifacts/macos/Pith-$RELEASE_TAG-release-manifest.json',
+        'artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json',
         "release-readiness.md",
         "release-readiness.json",
         "release-plan.md",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared package contract for Pith macOS release automation."""
+"""Shared package contract for Amentia macOS release automation."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-APP_NAME = "Pith"
+APP_NAME = "Amentia"
 PACKAGE_MANIFEST_SCHEMA_VERSION = 1
 SUPPORTED_ARCH = "x86_64"
 MINIMUM_SYSTEM_VERSION = "12.0"
@@ -124,7 +124,7 @@ PACKAGED_SMOKE_JOURNEY = (
   },
   {
     "id": "recovery",
-    "title": "Pith recovery",
+    "title": "Amentia recovery",
     "checkIds": (
       "runtimeRecovery",
     ),
@@ -132,7 +132,7 @@ PACKAGED_SMOKE_JOURNEY = (
 )
 PACKAGED_SMOKE_PROOF_SCOPE = (
   "model setup, workspace, first cowork request, Web Search, approval, "
-  "connector, sandbox, and Pith recovery checks"
+  "connector, sandbox, and Amentia recovery checks"
 )
 PACKAGED_SMOKE_PACKAGE_METADATA_FIELDS = (
   "schemaVersion",

@@ -15,7 +15,7 @@ final class RuntimeBridge {
   private let pendingResponses = RuntimeBridgePendingResponses()
   private let requestWriter = RuntimeBridgeRequestWriter()
 
-  func launchAndInitialize(launchDetail: String = "Starting Pith") async throws -> SessionInfo {
+  func launchAndInitialize(launchDetail: String = "Starting Amentia") async throws -> SessionInfo {
     if currentProcessSession()?.isRunning != true {
       resetProcessState()
       let environment = await runtimeEnvironment()
@@ -44,7 +44,7 @@ final class RuntimeBridge {
       }
 
       let detail = stopRuntimeAfterRequestBoundary(
-        detail: "Pith initialization failed: \(error.localizedDescription)"
+        detail: "Amentia initialization failed: \(error.localizedDescription)"
       )
       throw RuntimeError.rpc(detail)
     }
@@ -57,7 +57,7 @@ final class RuntimeBridge {
     )
   }
 
-  func stopRuntime(detail: String = "Pith stopped.") {
+  func stopRuntime(detail: String = "Amentia stopped.") {
     failPendingResponses(with: RuntimeError.rpc(detail))
     resetProcessState()
     updateConnectionState(.disconnected, detail: detail)
@@ -99,7 +99,7 @@ final class RuntimeBridge {
     )
     guard isCurrentProcessSession(session.identifier), session.isRunning else {
       detachProcessSession(matching: session.identifier)?.stop()
-      throw RuntimeError.rpc("Pith exited before initialization.")
+      throw RuntimeError.rpc("Amentia exited before initialization.")
     }
   }
 
@@ -141,7 +141,7 @@ final class RuntimeBridge {
       return
     }
 
-    let detail = "Pith request \(method) was cancelled."
+    let detail = "Amentia request \(method) was cancelled."
     continuation.resume(throwing: RuntimeError.rpc(detail))
     if RuntimeBridgeRequestPolicy.shouldStopRuntimeAfterCancelledRequest(method: method) {
       stopRuntimeAfterRequestCancellation(method: method)
@@ -150,15 +150,15 @@ final class RuntimeBridge {
 
   private func stopRuntimeAfterRequestCancellation(method: String) {
     let detail =
-      "Pith request \(method) was cancelled. " +
-      "Restart Pith to continue."
+      "Amentia request \(method) was cancelled. " +
+      "Restart Amentia to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
   private func stopRuntimeAfterRequestTimeout(method: String, seconds: Int) {
     let detail =
-      "Pith request \(method) timed out after \(seconds) seconds. " +
-      "Restart Pith to continue."
+      "Amentia request \(method) timed out after \(seconds) seconds. " +
+      "Restart Amentia to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
@@ -180,7 +180,7 @@ final class RuntimeBridge {
       return
     }
 
-    let detail = runtimeFailureDetail("Pith disconnected.", session: session)
+    let detail = runtimeFailureDetail("Amentia disconnected.", session: session)
     failPendingResponses(with: RuntimeError.rpc(detail))
     session.stop()
     updateConnectionState(.failed, detail: detail)
@@ -205,7 +205,7 @@ final class RuntimeBridge {
       return detail
     }
 
-    return "\(detail) Pith log: \(summary)"
+    return "\(detail) Amentia log: \(summary)"
   }
 
   private func resetProcessState() {
@@ -343,8 +343,8 @@ final class RuntimeBridge {
 
   private func stopRuntimeAfterRequestWriteFailure(method: String, error: Error) {
     let detail =
-      "Pith request \(method) could not be written: \(error.localizedDescription). " +
-      "Restart Pith to continue."
+      "Amentia request \(method) could not be written: \(error.localizedDescription). " +
+      "Restart Amentia to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 

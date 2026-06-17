@@ -28,28 +28,28 @@ enum LocalModelOperationPresenter {
     switch snapshot.runtimeState {
     case .disconnected:
       return LocalModelSetupGuidance(
-        title: "Start Pith",
-        summary: "Start Pith before choosing or running a model.",
+        title: "Start Amentia",
+        summary: "Start Amentia before choosing or running a model.",
         detail: "Model choices and downloads stay on this Mac.",
-        actionSummary: "Start Pith to continue model setup.",
+        actionSummary: "Start Amentia to continue model setup.",
         readinessDetail: "Launch",
         tone: .warning
       )
     case .launching:
       return LocalModelSetupGuidance(
-        title: "Starting Pith",
-        summary: "Pith is reconnecting your selected local model.",
-        detail: "Your model choices and download progress will appear after Pith is ready.",
-        actionSummary: "Checking Pith setup...",
+        title: "Starting Amentia",
+        summary: "Amentia is reconnecting your selected local model.",
+        detail: "Your model choices and download progress will appear after Amentia is ready.",
+        actionSummary: "Checking Amentia setup...",
         readinessDetail: "Checking",
         tone: .active
       )
     case .failed:
       return LocalModelSetupGuidance(
-        title: "Restart Pith",
-        summary: "Pith stopped before model setup could be completed.",
-        detail: "Restart Pith to restore model choices, downloads, and the active model.",
-        actionSummary: "Restart Pith before changing models.",
+        title: "Restart Amentia",
+        summary: "Amentia stopped before model setup could be completed.",
+        detail: "Restart Amentia to restore model choices, downloads, and the active model.",
+        actionSummary: "Restart Amentia before changing models.",
         readinessDetail: "Relaunch",
         tone: .danger
       )
@@ -67,7 +67,7 @@ enum LocalModelOperationPresenter {
     defaultModelID: String
   ) -> String {
     guard let model = snapshot.selectedSetupModel else {
-      return "Choose one local model for Pith to download and run."
+      return "Choose one local model for Amentia to download and run."
     }
 
     let role = model.id == defaultModelID ? "Default choice" : "Alternative"
@@ -81,7 +81,7 @@ enum LocalModelOperationPresenter {
     }
     let modelName = LocalModelDisplayPresenter.actionName(model)
     let size = LocalModelByteFormatter.string(model.sizeBytes)
-    return "\(role): \(modelName) is \(status). About \(size). Pith runs one verified local model at a time."
+    return "\(role): \(modelName) is \(status). About \(size). Amentia runs one verified local model at a time."
   }
 
   static func isActionBlocking(_ snapshot: LocalModelOperationSnapshot) -> Bool {
@@ -94,7 +94,7 @@ enum LocalModelOperationPresenter {
 
   static func managerSummary(_ snapshot: LocalModelOperationSnapshot) -> String {
     if let model = snapshot.downloadingModel {
-      return "Downloading \(displayName(model)). Pith will run one verified model at a time."
+      return "Downloading \(displayName(model)). Amentia will run one verified model at a time."
     }
     if let model = snapshot.pausedModel {
       return "Paused \(displayName(model)). Continue or cancel before starting another download."
@@ -111,11 +111,11 @@ enum LocalModelOperationPresenter {
   static func recoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start Pith to restore model choices and paused downloads from this Mac."
+      return "Start Amentia to restore model choices and paused downloads from this Mac."
     case .launching:
-      return "Reconnecting Pith before showing the next action."
+      return "Reconnecting Amentia before showing the next action."
     case .failed:
-      return "Restart Pith. Paused downloads and selected model choices remain local."
+      return "Restart Amentia. Paused downloads and selected model choices remain local."
     case .ready:
       return readyRecoverySummary(snapshot)
     }
@@ -127,7 +127,7 @@ enum LocalModelOperationPresenter {
     if let model = snapshot.downloadingModel {
       return LocalModelSetupGuidance(
         title: "Downloading Local Model",
-        summary: "\(displayName(model)) is downloading. Pith will unlock local cowork after it is ready.",
+        summary: "\(displayName(model)) is downloading. Amentia will unlock local cowork after it is ready.",
         detail: modelDetail(model),
         actionSummary: "Downloading \(displayName(model)). You can pause or cancel without losing control.",
         readinessDetail: "Downloading",
@@ -149,7 +149,7 @@ enum LocalModelOperationPresenter {
     if snapshot.hasActiveTurn {
       return LocalModelSetupGuidance(
         title: "Local Model Working",
-        summary: "Pith is using the active local model for current work.",
+        summary: "Amentia is using the active local model for current work.",
         detail: "Finish or stop the current work before switching the active model.",
         actionSummary: "Finish or stop the current work before switching the active model.",
         readinessDetail: "Working",
@@ -162,7 +162,7 @@ enum LocalModelOperationPresenter {
       return LocalModelSetupGuidance(
         title: "Local Model Ready",
         summary: "\(activeModel) is ready for local cowork.",
-        detail: "Pith will use one active local model at a time for generation.",
+        detail: "Amentia will use one active local model at a time for generation.",
         actionSummary: "Local model is ready for cowork.",
         readinessDetail: "Ready",
         tone: .ready
@@ -184,7 +184,7 @@ enum LocalModelOperationPresenter {
       return LocalModelSetupGuidance(
         title: "Verify Local Model",
         summary: "\(displayName(model)) is already on this Mac. Verify it to finish first-use setup.",
-        detail: "Pith checks the file before using it. You can replace it with a fresh download if verification fails.",
+        detail: "Amentia checks the file before using it. You can replace it with a fresh download if verification fails.",
         actionSummary: "Verify the selected local model or replace it with a fresh download.",
         readinessDetail: "Verify",
         tone: .warning
@@ -207,7 +207,7 @@ enum LocalModelOperationPresenter {
     if let model = snapshot.selectedSetupModel {
       return LocalModelSetupGuidance(
         title: "Download Local Model",
-        summary: "Fresh installs need one curated local model before Pith can answer locally. \(LocalModelDisplayPresenter.actionName(model)) is selected.",
+        summary: "Fresh installs need one curated local model before Amentia can answer locally. \(LocalModelDisplayPresenter.actionName(model)) is selected.",
         detail: modelDetail(model),
         actionSummary: "Choose the fast default, balanced tiny model, or stronger small model.",
         readinessDetail: "Download",
@@ -218,7 +218,7 @@ enum LocalModelOperationPresenter {
     return LocalModelSetupGuidance(
       title: "Repair Model Setup",
       summary: "Local model choices are unavailable until setup is refreshed.",
-      detail: "Refresh local model setup or restart Pith to restore model choices.",
+      detail: "Refresh local model setup or restart Amentia to restore model choices.",
       actionSummary: "Refresh local model setup before choosing a model.",
       readinessDetail: snapshot.totalModelCount == 0 ? "Repair" : "Choose",
       tone: .warning
@@ -227,7 +227,7 @@ enum LocalModelOperationPresenter {
 
   private static func modelDetail(_ model: LocalModelSummary) -> String {
     let size = LocalModelByteFormatter.string(model.sizeBytes)
-    return "Download size: \(size). License: \(model.license). Pith verifies the file before it can run."
+    return "Download size: \(size). License: \(model.license). Amentia verifies the file before it can run."
   }
 
   private static func readyRecoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
@@ -245,7 +245,7 @@ enum LocalModelOperationPresenter {
 
     if snapshot.isLocalModelReady {
       let activeModel = snapshot.activeModelDisplayName ?? "the active model"
-      return "\(activeModel) is selected. Restarting Pith will reuse this model."
+      return "\(activeModel) is selected. Restarting Amentia will reuse this model."
     }
 
     if let model = snapshot.selectedSetupModel, model.downloaded {
@@ -264,7 +264,7 @@ enum LocalModelOperationPresenter {
       return "Download \(displayName(model)). Paused downloads can continue; cancelled downloads clear partial files."
     }
 
-    return "Refresh local model setup or restart Pith to restore model choices."
+    return "Refresh local model setup or restart Amentia to restore model choices."
   }
 
   private static func displayName(_ model: LocalModelSummary) -> String {

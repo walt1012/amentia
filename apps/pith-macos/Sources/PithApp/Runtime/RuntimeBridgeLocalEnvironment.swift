@@ -139,7 +139,7 @@ enum RuntimeBridgeLocalEnvironment {
     ) else {
       let verificationDetail =
         "The saved active local model was reset because its setup file and model file no longer "
-        + "match Pith's verified catalog. Choose or download a model to continue."
+        + "match Amentia's verified catalog. Choose or download a model to continue."
       clearActiveLocalModel(
         invalidationDetail: verificationDetail
       )

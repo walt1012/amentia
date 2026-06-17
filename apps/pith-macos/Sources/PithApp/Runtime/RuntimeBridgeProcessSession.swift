@@ -64,12 +64,12 @@ final class RuntimeBridgeProcessSession {
   ) {
     let processIdentifier = identifier
     process.terminationHandler = { [processIdentifier] process in
-      let detail = "Pith exited with status \(process.terminationStatus)."
+      let detail = "Amentia exited with status \(process.terminationStatus)."
       onTermination(processIdentifier, detail)
     }
 
     guard process.isRunning else {
-      onTermination(processIdentifier, "Pith exited with status \(process.terminationStatus).")
+      onTermination(processIdentifier, "Amentia exited with status \(process.terminationStatus).")
       return
     }
 

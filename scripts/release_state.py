@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plan GitHub Release state for Pith distribution builds."""
+"""Plan GitHub Release state for Amentia distribution builds."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class ReleaseState:
 
 
 def expected_release_title(tag: str) -> str:
-  return f"Pith {tag}"
+  return f"Amentia {tag}"
 
 
 def validate_release_title(title: str, tag: str) -> None:

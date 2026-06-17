@@ -40,7 +40,7 @@ enum TimelineLocalExecutionRecoveryPresenter {
   }
 
   private static func recoveryDetail(action: String, retryMessage: String?) -> String {
-    let base = "Ask mode will let Pith request approval before it tries to \(action)."
+    let base = "Ask mode will let Amentia request approval before it tries to \(action)."
     guard retryMessage != nil else {
       return base
     }

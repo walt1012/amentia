@@ -145,7 +145,7 @@ def main() -> int:
       lambda: png_dimensions(invalid_png_path),
       "non-PNG icon source should fail",
     )
-    icns_path = root_path / "Pith.icns"
+    icns_path = root_path / "Amentia.icns"
     write_icns_header(icns_path, 12, b"abcd")
     assert_macos_icon_packaged(icns_path)
     broken_icns_path = root_path / "Broken.icns"
@@ -215,7 +215,7 @@ def main() -> int:
   )
 
   assert_equal(
-    parse_lipo_architectures("Non-fat file: Pith is architecture: x86_64"),
+    parse_lipo_architectures("Non-fat file: Amentia is architecture: x86_64"),
     {"x86_64"},
   )
   assert_equal(
@@ -305,12 +305,12 @@ def main() -> int:
 
   with tempfile.TemporaryDirectory(prefix="pith-package-copy-") as root:
     root_path = Path(root)
-    executable = root_path / "Pith.app" / "Contents" / "MacOS" / "Pith"
+    executable = root_path / "Amentia.app" / "Contents" / "MacOS" / "Amentia"
     executable.parent.mkdir(parents=True)
     executable.write_text(
       "\n".join(
         [
-          "Start Pith to restore model choices",
+          "Start Amentia to restore model choices",
           "paused downloads",
           "selected model choices remain local",
           "to keep resume data",
@@ -320,43 +320,43 @@ def main() -> int:
           "Download Local Model",
           "Repair Model Setup",
           "Open Anyway",
-          "Control-click Pith.app",
-          "no Pith account required",
+          "Control-click Amentia.app",
+          "no Amentia account required",
           "action safety mode",
           "package size budget",
         ]
       ),
       encoding="utf-8",
     )
-    assert_packaged_app_copy_is_present(root_path / "Pith.app")
-    executable.write_text("Start Pith to restore model choices\n", encoding="utf-8")
+    assert_packaged_app_copy_is_present(root_path / "Amentia.app")
+    executable.write_text("Start Amentia to restore model choices\n", encoding="utf-8")
     assert_raises(
-      lambda: assert_packaged_app_copy_is_present(root_path / "Pith.app"),
+      lambda: assert_packaged_app_copy_is_present(root_path / "Amentia.app"),
       "missing packaged recovery copy should fail package validation",
     )
 
   assert_zip_entries_are_safe(
-    Path("Pith-macos-x86_64.zip"),
-    [zipfile.ZipInfo("Pith.app/Contents/Resources/models/builtin/model-pack.json")],
+    Path("Amentia-macos-x86_64.zip"),
+    [zipfile.ZipInfo("Amentia.app/Contents/Resources/models/builtin/model-pack.json")],
   )
   assert_raises(
     lambda: assert_zip_entries_are_safe(
-      Path("Pith-macos-x86_64.zip"),
-      [zipfile.ZipInfo("Pith.app/Contents/Resources/models/builtin/local.gguf")],
+      Path("Amentia-macos-x86_64.zip"),
+      [zipfile.ZipInfo("Amentia.app/Contents/Resources/models/builtin/local.gguf")],
     ),
     "zip model weights should be rejected",
   )
   assert_raises(
     lambda: assert_zip_entries_are_safe(
-      Path("Pith-macos-x86_64.zip"),
-      [zipfile.ZipInfo("../Pith.app/Contents/Info.plist")],
+      Path("Amentia-macos-x86_64.zip"),
+      [zipfile.ZipInfo("../Amentia.app/Contents/Info.plist")],
     ),
     "zip path traversal should be rejected",
   )
-  symlink_entry = zipfile.ZipInfo("Pith.app/Contents/Resources/link")
+  symlink_entry = zipfile.ZipInfo("Amentia.app/Contents/Resources/link")
   symlink_entry.external_attr = (stat.S_IFLNK | 0o777) << 16
   assert_raises(
-    lambda: assert_zip_entries_are_safe(Path("Pith-macos-x86_64.zip"), [symlink_entry]),
+    lambda: assert_zip_entries_are_safe(Path("Amentia-macos-x86_64.zip"), [symlink_entry]),
     "zip symlinks should be rejected",
   )
 

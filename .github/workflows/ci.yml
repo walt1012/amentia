@@ -26,8 +26,8 @@ env:
   SWIFT_APP_ARTIFACT: internal-PithApp-x86_64
   RUNTIME_ARTIFACT: internal-pith-runtime-bin-x86_64
   LLAMA_ARTIFACT: internal-llama-cli-x86_64
-  MACOS_APP_ARTIFACT: Pith-installer-x86_64
-  MACOS_DMG_NAME: Pith-macos-x86_64.dmg
+  MACOS_APP_ARTIFACT: Amentia-installer-x86_64
+  MACOS_DMG_NAME: Amentia-macos-x86_64.dmg
 
 defaults:
   run:
@@ -744,7 +744,7 @@ jobs:
       - name: Validate package contract
         run: |
           python3 scripts/package_contract.py \
-            --manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc
 
@@ -763,7 +763,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/create_macos_dmg.py \
-            artifacts/macos/Pith.app \
+            artifacts/macos/Amentia.app \
             "artifacts/macos/$MACOS_DMG_NAME" \
             --readme-file artifacts/macos/README-FIRST.txt \
             --smoke-launch-script scripts/smoke_launch_macos_app.py \
@@ -779,7 +779,7 @@ jobs:
             --source-commit "$GITHUB_SHA" \
             --signing-mode ad-hoc \
             --install-guide artifacts/macos/README-FIRST.txt \
-            --package-manifest artifacts/macos/Pith.app/Contents/Resources/PithPackage.json \
+            --package-manifest artifacts/macos/Amentia.app/Contents/Resources/PithPackage.json \
             --smoke-receipt artifacts/macos/packaged-smoke-receipt.json \
             --workflow-run-id "$GITHUB_RUN_ID" \
             --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \

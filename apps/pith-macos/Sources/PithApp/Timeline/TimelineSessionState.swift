@@ -12,7 +12,7 @@ enum TimelineSessionState {
     WelcomeTimelineState(
       thread: ThreadSummary(
         id: welcomeThreadID,
-        title: "Welcome to Pith",
+        title: "Welcome to Amentia",
         preview: "Open a project to begin working.",
         workspaceRootPath: nil,
         workspaceDisplayName: nil

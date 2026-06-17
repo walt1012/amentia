@@ -19,8 +19,8 @@ enum RuntimeLaunchAnnotationFactory {
     if snapshot.shouldAnnotateSetupLaunch {
       entries.append(
         TimelineEntryFactory.system(
-          title: "Pith Ready",
-          body: "Pith reconnected local model, project, session, memory, and connections.",
+          title: "Amentia Ready",
+          body: "Amentia reconnected local model, project, session, memory, and connections.",
           attributes: [:]
         )
       )

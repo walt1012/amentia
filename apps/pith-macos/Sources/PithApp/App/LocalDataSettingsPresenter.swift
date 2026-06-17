@@ -28,32 +28,32 @@ struct LocalDataResetSummary: Equatable {
 
 enum LocalDataSettingsPresenter {
   static let deleteBlockedDetail =
-    "Finish active work, model downloads, model checks, or plugin and connection operations before resetting Pith."
+    "Finish active work, model downloads, model checks, or plugin and connection operations before resetting Amentia."
 
   static func summary(_ snapshot: LocalDataSettingsSnapshot) -> LocalDataSettingsSummary {
     LocalDataSettingsSummary(
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
       ownershipDetail:
-        "Pith keeps downloaded models, sessions, plugins, connection credentials, preferences, caches, and window state on this Mac. Project folders are never deleted here.",
+        "Amentia keeps downloaded models, sessions, plugins, connection credentials, preferences, caches, and window state on this Mac. Project folders are never deleted here.",
       uninstallDetail:
-        "Removing Pith.app does not remove this data. Use Reset Pith when you want a fresh first-run setup.",
+        "Removing Amentia.app does not remove this data. Use Reset Amentia when you want a fresh first-run setup.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
       localDataPath: snapshot.localDataPath,
-      revealButtonTitle: "Show Pith Data",
-      deleteButtonTitle: "Delete All Pith Data...",
-      confirmationTitle: "Delete All Pith Data on This Mac?",
+      revealButtonTitle: "Show Amentia Data",
+      deleteButtonTitle: "Delete All Amentia Data...",
+      confirmationTitle: "Delete All Amentia Data on This Mac?",
       confirmationMessage:
-        "Pith will remove all app-owned local data from this Mac: downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, and saved app state. Your project folders and repositories will not be deleted.",
+        "Amentia will remove all app-owned local data from this Mac: downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, and saved app state. Your project folders and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }
 
   static func resetSummary(_ result: AppDataResetResult) -> LocalDataResetSummary {
     LocalDataResetSummary(
-      runtimeDetail: "Reset Pith. Restart Pith to set up again.",
-      timelineTitle: "Pith Reset",
+      runtimeDetail: "Reset Amentia. Restart Amentia to set up again.",
+      timelineTitle: "Amentia Reset",
       timelineBody:
-        "Pith removed all app-owned local data, including downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, saved app state, and app-owned folders. Project folders on disk were not deleted.",
+        "Amentia removed all app-owned local data, including downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, saved app state, and app-owned folders. Project folders on disk were not deleted.",
       attributes: [
         "appSupportPath": result.appSupportPath,
         "remainingAppOwnedDirectoryCount": "\(result.remainingAppOwnedDirectoryCount)",

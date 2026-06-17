@@ -9,7 +9,7 @@ enum PluginConnectorServiceGuide {
         "",
         "Notion setup: create an internal Notion integration and copy its internal integration token.",
         "Paste that token as the secret, then share every target parent page with the integration before publishing.",
-        "Pith keeps the token local, passes it only to the local Notion plugin runner, and does not claim OAuth yet.",
+        "Amentia keeps the token local, passes it only to the local Notion plugin runner, and does not claim OAuth yet.",
         "Authorization stores the token; the first publish still verifies the token, page sharing, and Notion response proof.",
       ].joined(separator: "\n")
     default:
@@ -23,7 +23,7 @@ enum PluginConnectorServiceGuide {
       return [
         "Paste the Notion internal integration token before authorizing this connection.",
         "If you have not created one yet, create an internal Notion integration first and share the target parent page with it.",
-        "Pith keeps the token local and passes it only to the Notion plugin runner during approved runs.",
+        "Amentia keeps the token local and passes it only to the Notion plugin runner during approved runs.",
       ].joined(separator: " ")
     default:
       return nil
@@ -60,7 +60,7 @@ enum PluginConnectorServiceGuide {
       "If you paste JSON, use parentPageId for the parent page.",
       "You can paste only the parent page URL to use the default title.",
       "The parent page must be shared with the Notion integration before publishing.",
-      "Pith still requests approval before the external action.",
+      "Amentia still requests approval before the external action.",
     ].joined(separator: " ")
   }
 

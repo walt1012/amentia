@@ -25,14 +25,14 @@ def assert_raises(action, message: str) -> None:
 def main() -> int:
   with tempfile.TemporaryDirectory(prefix="pith-signing-helper-") as root:
     root_path = Path(root)
-    app_path = root_path / "Pith.app"
+    app_path = root_path / "Amentia.app"
     contents_path = app_path / "Contents"
     macos_path = contents_path / "MacOS"
     resources_path = contents_path / "Resources"
     macos_path.mkdir(parents=True)
     resources_path.mkdir()
     (contents_path / "Info.plist").write_text("<plist></plist>", encoding="utf-8")
-    executable = macos_path / "Pith"
+    executable = macos_path / "Amentia"
     executable.write_bytes(b"\xcf\xfa\xed\xfe" + b"placeholder")
     resource = resources_path / "data.txt"
     resource.write_text("not executable", encoding="utf-8")
@@ -50,7 +50,7 @@ def main() -> int:
     original_run = signing.run
     try:
       signing.run = lambda command: captured.append(command) or ""
-      entitlements = root_path / "Pith.entitlements"
+      entitlements = root_path / "Amentia.entitlements"
       entitlements.write_text("<plist></plist>", encoding="utf-8")
       signing.sign_path(executable, "Developer ID Application: Example")
       signing.sign_path(app_path, "Developer ID Application: Example", entitlements)

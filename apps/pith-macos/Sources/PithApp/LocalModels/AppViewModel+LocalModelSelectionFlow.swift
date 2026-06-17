@@ -26,7 +26,7 @@ extension AppViewModel {
       return "Finish or stop the current work before switching models."
     }
     if runtimeState == .launching {
-      return "Wait for Pith to finish starting before switching models."
+      return "Wait for Amentia to finish starting before switching models."
     }
     if modelDownloadCoordinator.isDownloading {
       return "Finish, pause, or cancel the current model download before switching models."

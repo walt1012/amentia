@@ -16,7 +16,7 @@ enum MemoryPresenter {
 
   static func detailSummary(_ snapshot: MemorySnapshot) -> String {
     guard let status = snapshot.status else {
-      return "Pith uses built-in local memory. Project notes stay on this Mac."
+      return "Amentia uses built-in local memory. Project notes stay on this Mac."
     }
 
     if snapshot.notes.isEmpty {

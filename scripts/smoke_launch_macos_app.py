@@ -35,7 +35,7 @@ from package_contract import (
 )
 
 
-APP_PROCESS_NAME = "Pith"
+APP_PROCESS_NAME = "Amentia"
 RUNTIME_PROCESS_NAME = "pith-runtime-bin"
 APP_SUPPORT_ENV_KEY = "PITH_APP_SUPPORT_DIR"
 WEB_SEARCH_FIXTURE_NAME = "packaged-web-search-fixture.html"
@@ -85,7 +85,7 @@ REQUIRED_DATABASE_TABLES = {
 }
 REQUIRED_SCHEMA_VERSION = 10
 PACKAGED_SMOKE_PROOF_BY_CHECK_ID = {
-  "mountedDmgAppBundle": "Mounted DMG exposes Pith.app and install guide.",
+  "mountedDmgAppBundle": "Mounted DMG exposes Amentia.app and install guide.",
   "appLaunch": "Packaged app launches and starts pith-runtime-bin.",
   "runtimeProtocol": "Bundled runtime initializes through JSON-RPC.",
   "defaultModelMetadata": "Default model metadata is bundled without weights.",
@@ -203,9 +203,9 @@ class FakeNotionApiServer:
 
 def parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(
-    description="Smoke launch a packaged Pith.app on macOS."
+    description="Smoke launch a packaged Amentia.app on macOS."
   )
-  parser.add_argument("app_path", type=Path, help="Path to the packaged Pith.app bundle.")
+  parser.add_argument("app_path", type=Path, help="Path to the packaged Amentia.app bundle.")
   parser.add_argument(
     "--duration",
     type=float,
@@ -281,7 +281,7 @@ def terminate_processes(process_name: str, process_ids_to_stop: set[int]) -> Non
 
 def validate_app_bundle(app_path: Path) -> dict:
   require_file(app_path / "Contents" / "Info.plist")
-  require_file(app_path / "Contents" / "MacOS" / "Pith")
+  require_file(app_path / "Contents" / "MacOS" / APP_PROCESS_NAME)
   require_file(app_path / "Contents" / "MacOS" / "pith-runtime-bin")
   require_file(app_path / "Contents" / "Resources" / "tools" / "llama.cpp" / "llama-cli")
   require_file(app_path / "Contents" / "Resources" / "PithPackage.json")
@@ -1003,7 +1003,7 @@ def write_web_search_fixture(support_dir: Path) -> Path:
   fixture_path = support_dir / WEB_SEARCH_FIXTURE_NAME
   fixture_path.write_text(
     """
-      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpith-packaged-smoke&amp;rut=abc" class='result-link'>Pith packaged web search fixture</a>
+      <a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Famentia-packaged-smoke&amp;rut=abc" class='result-link'>Amentia packaged web search fixture</a>
       <td class='result-snippet'>Deterministic packaged web search result.</td>
     """,
     encoding="utf-8",
@@ -1018,7 +1018,7 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
     "turn/start",
     {
       "threadId": "thread-1",
-      "message": "Search the web for Pith packaged smoke fixture",
+      "message": "Search the web for Amentia packaged smoke fixture",
     },
   )
   items = web_turn["result"]["items"]
@@ -1035,7 +1035,7 @@ def validate_packaged_web_search_turn(process: subprocess.Popen[str]) -> None:
   )
   if result_item is None:
     raise RuntimeError("Packaged first-run smoke did not produce a web_search result.")
-  if "Pith packaged web search fixture" not in result_item["content"]:
+  if "Amentia packaged web search fixture" not in result_item["content"]:
     raise RuntimeError(
       "Packaged first-run smoke did not use the web search fixture result. "
       f"Result content: {result_item['content'][:500]}"
@@ -1079,8 +1079,8 @@ def validate_packaged_web_search_snapshot(items: list[dict]) -> None:
 
   source_snapshot = attributes.get("sourceSnapshot", "")
   required_snapshot_fragments = [
-    "Pith packaged web search fixture",
-    "https://example.com/pith-packaged-smoke",
+    "Amentia packaged web search fixture",
+    "https://example.com/amentia-packaged-smoke",
     "Deterministic packaged web search result.",
     "fixture",
   ]
@@ -1097,12 +1097,12 @@ def validate_packaged_web_search_snapshot(items: list[dict]) -> None:
       "Packaged web search source snapshot hash had unexpected length: "
       f"{source_hash!r}"
     )
-  if attributes.get("sourceUrls") != "https://example.com/pith-packaged-smoke":
+  if attributes.get("sourceUrls") != "https://example.com/amentia-packaged-smoke":
     raise RuntimeError(
       "Packaged web search source URL was not preserved in the handoff. "
       f"Attributes: {attributes}"
     )
-  if attributes.get("sourceTitles") != "Pith packaged web search fixture":
+  if attributes.get("sourceTitles") != "Amentia packaged web search fixture":
     raise RuntimeError(
       "Packaged web search source title was not preserved in the handoff. "
       f"Attributes: {attributes}"

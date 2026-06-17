@@ -1,6 +1,6 @@
-# Pith
+# Amentia
 
-`Pith` is a local-first macOS agent application for Intel Macs running macOS 12 and above.
+`Amentia` is a local-first macOS agent application for Intel Macs running macOS 12 and above.
 It is intended to be a real daily-use desktop app, not a prototype or a thin
 terminal wrapper.
 
@@ -16,7 +16,7 @@ The repository is intentionally English-only.
 
 ## Product Principles
 
-- Build a native `macOS` application named `Pith` for `macOS 12+` on `x86_64` only.
+- Build a native `macOS` application named `Amentia` for `macOS 12+` on `x86_64` only.
 - Keep the app lightweight and intentionally small while preserving a strong local agent loop.
 - Make the first-run path usable end to end: download a model, open a workspace, start work,
   recover from failures, and keep going without manual setup.
@@ -24,7 +24,7 @@ The repository is intentionally English-only.
 - Favor a calm, premium, minimal UI inspired by high-quality agent tools such as Codex and Claude Code.
 - Keep the default intelligence path fully local with no required external model API.
 - Treat `LFM2.5-350M` as the default first-use model while keeping small GGUF alternatives available.
-- Design plugins as first-class product modules so `Pith` can expand beyond code assistance into a broader local agent platform.
+- Design plugins as first-class product modules so `Amentia` can expand beyond code assistance into a broader local agent platform.
 - Prefer free and open source dependencies, tooling, and model delivery paths.
 
 ## Repository Layout
@@ -53,8 +53,10 @@ The repository is intentionally English-only.
 
 ## Current Status
 
-Pith has a public ad-hoc macOS prerelease:
+The previous public ad-hoc macOS prerelease was shipped under the Pith name:
 [v0.1.14](https://github.com/walt1012/pith/releases/tag/v0.1.14).
+The next release should use Amentia app, DMG, checksum, and release-manifest
+asset names.
 The app has the daily-driver cowork foundation: first-use local model setup,
 workspace flow, Web Search, sandbox visibility, approvals, compact context
 receipts, actionable source/file evidence, session delete and revert safety,
@@ -66,6 +68,13 @@ small, human, and usable from the installed package before expanding the
 connector platform.
 
 Detailed milestone scope lives in [docs/development-plan.md](docs/development-plan.md).
+
+Naming note:
+
+- `Amentia` is the product and app name users see in releases and the macOS app.
+- Existing `pith-*` crate, target, protocol, environment-variable, and plugin
+  namespace names remain internal implementation names until a low-risk
+  repository-wide namespace migration is worth doing.
 
 Model packaging note:
 

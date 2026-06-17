@@ -183,15 +183,15 @@ final class LocalModelFirstUseProofTests: XCTestCase {
   func testRelaunchDuringStartupStillRestartsAfterStartupSettles() {
     let plan = RuntimeRelaunchPlanner.plan(
       runtimeState: .launching,
-      runningDetail: "Restarting Pith with LFM2.5-350M...",
-      idleDetail: "LFM2.5-350M will be used when Pith starts."
+      runningDetail: "Restarting Amentia with LFM2.5-350M...",
+      idleDetail: "LFM2.5-350M will be used when Amentia starts."
     )
 
     guard case .stopAndLaunchAfterCurrentLaunchSettles = plan.action else {
       XCTFail("Expected model setup during launch to request a follow-up relaunch.")
       return
     }
-    XCTAssertEqual(plan.launchDetail, "Restarting Pith with LFM2.5-350M...")
+    XCTAssertEqual(plan.launchDetail, "Restarting Amentia with LFM2.5-350M...")
   }
 
   func testLaunchValidationRejectsReplacedModel() throws {

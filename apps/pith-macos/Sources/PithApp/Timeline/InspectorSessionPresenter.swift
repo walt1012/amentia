@@ -24,14 +24,14 @@ enum InspectorSessionPresenter {
   static func title(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Pith Offline"
+      return "Amentia Offline"
     case .launching:
-      return "Starting Pith"
+      return "Starting Amentia"
     case .failed:
-      return "Pith Needs Restart"
+      return "Amentia Needs Restart"
     case .ready:
       if snapshot.hasActiveTurn {
-        return "Pith Is Working"
+        return "Amentia Is Working"
       }
       if !snapshot.isLocalModelReady {
         return "Model Setup Needed"
@@ -52,14 +52,14 @@ enum InspectorSessionPresenter {
   static func detail(_ snapshot: InspectorSessionSnapshot) -> String {
     switch snapshot.runtimeState {
     case .disconnected:
-      return "Start Pith before inspecting project actions, model state, memory, or connections."
+      return "Start Amentia before inspecting project actions, model state, memory, or connections."
     case .launching:
-      return "Pith is reconnecting the local model, project, session, memory, and connections."
+      return "Amentia is reconnecting the local model, project, session, memory, and connections."
     case .failed:
       return "Use the restart action in the timeline header to recover the session."
     case .ready:
       if snapshot.hasActiveTurn {
-        return "Pith is working locally. Keep review focused on the timeline unless the request should be cancelled."
+        return "Amentia is working locally. Keep review focused on the timeline unless the request should be cancelled."
       }
       if !snapshot.isLocalModelReady {
         return "Complete the model step from the timeline callout before starting agent work."
@@ -106,7 +106,7 @@ enum InspectorSessionPresenter {
   private static func runtimeReadinessSummary(_ status: String) -> String {
     switch status {
     case "ready":
-      return "Pith ready"
+      return "Amentia ready"
     case "running":
       return "Local work running"
     case "needs_approval":
@@ -114,7 +114,7 @@ enum InspectorSessionPresenter {
     case "setup_required":
       return "Setup needed"
     default:
-      return "Pith \(status)"
+      return "Amentia \(status)"
     }
   }
 

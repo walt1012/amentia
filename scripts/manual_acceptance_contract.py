@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate structured manual release acceptance evidence for Pith."""
+"""Validate structured manual release acceptance evidence for Amentia."""
 
 from __future__ import annotations
 

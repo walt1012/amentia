@@ -46,7 +46,7 @@ def write_manifest(app_path: Path, signing: str, source_commit: str) -> None:
     json.dumps(
       {
         "schemaVersion": PACKAGE_MANIFEST_SCHEMA_VERSION,
-        "appName": "Pith",
+        "appName": "Amentia",
         "bundleVersion": "0.1.0",
         "signing": signing,
         "distributionTrust": package_distribution_trust(signing),
@@ -85,32 +85,32 @@ def write_icns(path: Path, declared_size: int, body: bytes = b"") -> None:
 
 def main() -> int:
   with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
-    app_path = Path(root) / "Pith.app"
-    write_icns(app_path / "Contents" / "Resources" / "Pith.icns", 12, b"abcd")
+    app_path = Path(root) / "Amentia.app"
+    write_icns(app_path / "Contents" / "Resources" / "Amentia.icns", 12, b"abcd")
     validate_app_icon(app_path)
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     assert_raises(
       lambda: validate_app_icon(app_path),
       "public distribution should require a packaged app icon",
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-icon-") as root:
-    app_path = Path(root) / "Pith.app"
-    write_icns(app_path / "Contents" / "Resources" / "Pith.icns", 8, b"abcd")
+    app_path = Path(root) / "Amentia.app"
+    write_icns(app_path / "Contents" / "Resources" / "Amentia.icns", 8, b"abcd")
     assert_raises(
       lambda: validate_app_icon(app_path),
       "public distribution should reject invalid ICNS headers",
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     validate_package_manifest(app_path)
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "ad-hoc", SOURCE_COMMIT)
     assert_raises(
       lambda: validate_package_manifest(app_path),
@@ -118,7 +118,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", "development")
     assert_raises(
       lambda: validate_package_manifest(app_path),
@@ -126,7 +126,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -138,7 +138,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -150,7 +150,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -162,7 +162,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -174,7 +174,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -186,7 +186,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -198,7 +198,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -210,7 +210,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     manifest_path = app_path / "Contents" / "Resources" / "PithPackage.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -222,7 +222,7 @@ def main() -> int:
     )
 
   with tempfile.TemporaryDirectory(prefix="pith-distribution-") as root:
-    app_path = Path(root) / "Pith.app"
+    app_path = Path(root) / "Amentia.app"
     write_manifest(app_path, "developer-id", SOURCE_COMMIT)
     model_path = app_path / "Contents" / "Resources" / "models" / "local.gguf"
     model_path.parent.mkdir(parents=True)

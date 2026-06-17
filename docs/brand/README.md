@@ -1,6 +1,6 @@
-# Pith Brand Direction
+# Amentia Brand Direction
 
-Pith's current identity direction is a refined lowercase blue `p` on a clean
+Amentia's current identity direction is a refined lowercase blue `p` on a clean
 white rounded-square tile with transparent outer corners. The baseline blue is
 `#2F82F3`.
 
@@ -17,5 +17,5 @@ Current candidate:
 Next step:
 
 - Keep the vector source and PNG candidate visually aligned. The packaging
-  script derives the macOS `Pith.icns` Dock icon from the PNG candidate and
+  script derives the macOS `Amentia.icns` Dock icon from the PNG candidate and
   rejects opaque square corners during app bundle creation.

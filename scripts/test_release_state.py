@@ -185,7 +185,7 @@ def assert_rejects_tampered_release_notes() -> None:
       sys.argv = [
         "release_state.py",
         "--title",
-        "Pith v0.1.0",
+        "Amentia v0.1.0",
         "--tag",
         "v0.1.0",
         "--notes-file",
@@ -215,7 +215,7 @@ def assert_rejects_tampered_release_notes() -> None:
 
 def assert_rejects_wrong_release_title() -> None:
   try:
-    validate_release_title("Pith latest", "v0.1.0")
+    validate_release_title("Amentia latest", "v0.1.0")
   except ValueError:
     return
   raise AssertionError("release title must match the release tag")
@@ -227,13 +227,13 @@ def assert_rejects_non_release_tag() -> None:
     notes_file = root / "release-notes.md"
     state_file = root / "release-state.json"
     env_file = root / "release-state.env"
-    notes_file.write_text("Pith latest\n", encoding="utf-8")
+    notes_file.write_text("Amentia latest\n", encoding="utf-8")
     original_argv = sys.argv[:]
     try:
       sys.argv = [
         "release_state.py",
         "--title",
-        "Pith latest",
+        "Amentia latest",
         "--tag",
         "latest",
         "--notes-file",
@@ -264,7 +264,7 @@ def assert_rejects_non_release_tag() -> None:
 def assert_release_summary_names_visibility_and_trust() -> None:
   summary = release_state_summary(
     tag="v0.1.0",
-    title="Pith v0.1.0",
+    title="Amentia v0.1.0",
     source_commit="0123456789abcdef0123456789abcdef01234567",
     ci_run_url="https://github.com/walt1012/pith/actions/runs/100",
     workflow_run_url="https://github.com/walt1012/pith/actions/runs/101",
@@ -318,7 +318,7 @@ def assert_release_plan_json_preserves_release_decision() -> None:
   )
   plan = release_plan_json(
     tag="v0.1.0",
-    title="Pith v0.1.0",
+    title="Amentia v0.1.0",
     source_commit="0123456789abcdef0123456789abcdef01234567",
     ci_run_url="https://github.com/walt1012/pith/actions/runs/100",
     workflow_run_url="https://github.com/walt1012/pith/actions/runs/101",
@@ -397,7 +397,7 @@ def assert_main_writes_release_summary() -> None:
       sys.argv = [
         "release_state.py",
         "--title",
-        "Pith v0.1.0",
+        "Amentia v0.1.0",
         "--tag",
         "v0.1.0",
         "--notes-file",
@@ -482,7 +482,7 @@ def assert_main_rejects_unaccepted_visible_ad_hoc_publish() -> None:
       sys.argv = [
         "release_state.py",
         "--title",
-        "Pith v0.1.0",
+        "Amentia v0.1.0",
         "--tag",
         "v0.1.0",
         "--notes-file",
@@ -531,7 +531,7 @@ def assert_main_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
       sys.argv = [
         "release_state.py",
         "--title",
-        "Pith v0.1.0",
+        "Amentia v0.1.0",
         "--tag",
         "v0.1.0",
         "--notes-file",
@@ -580,7 +580,7 @@ def assert_main_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
       sys.argv = [
         "release_state.py",
         "--title",
-        "Pith v0.1.0",
+        "Amentia v0.1.0",
         "--tag",
         "v0.1.0",
         "--notes-file",
@@ -629,7 +629,7 @@ def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
       sys.argv = [
         "release_state.py",
         "--title",
-        "Pith v0.1.0",
+        "Amentia v0.1.0",
         "--tag",
         "v0.1.0",
         "--notes-file",
@@ -688,9 +688,9 @@ def assert_release_next_actions_match_mode() -> None:
     raise AssertionError("visible publish next actions should confirm recorded acceptance")
 
 def main() -> int:
-  if expected_release_title("v0.1.0") != "Pith v0.1.0":
+  if expected_release_title("v0.1.0") != "Amentia v0.1.0":
     raise AssertionError("release title should be derived from the tag")
-  validate_release_title("Pith v0.1.0", "v0.1.0")
+  validate_release_title("Amentia v0.1.0", "v0.1.0")
   assert_state(
     signing_mode="developer-id",
     requested_draft=False,

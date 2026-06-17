@@ -22,11 +22,11 @@ enum LocalModelStatusPresenter {
     guard let modelHealth = snapshot.modelHealth else {
       switch snapshot.runtimeState {
       case .disconnected:
-        return "Start Pith to inspect model setup."
+        return "Start Amentia to inspect model setup."
       case .launching:
-        return "Checking Pith setup..."
+        return "Checking Amentia setup..."
       case .failed:
-        return "Restart Pith to recover model setup."
+        return "Restart Amentia to recover model setup."
       case .ready:
         return "Choose and download one local model to continue."
       }
@@ -56,24 +56,24 @@ enum LocalModelStatusPresenter {
     guard let modelHealth = snapshot.modelHealth else {
       if let model = snapshot.selectedSetupModel {
         if model.downloaded {
-          return "Pith will use \(LocalModelDisplayPresenter.actionName(model)) after it is selected."
+          return "Amentia will use \(LocalModelDisplayPresenter.actionName(model)) after it is selected."
         }
 
-        return "Pith will use \(LocalModelDisplayPresenter.actionName(model)) after it is downloaded and selected."
+        return "Amentia will use \(LocalModelDisplayPresenter.actionName(model)) after it is downloaded and selected."
       }
 
-      return "Pith needs one downloaded local model selected before it can answer."
+      return "Amentia needs one downloaded local model selected before it can answer."
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Choose a verified model from Pith's curated list before running. Removed or external model selections need to be picked again."
+      return "Choose a verified model from Amentia's curated list before running. Removed or external model selections need to be picked again."
     }
 
     if modelHealth.status != "ready" {
       return userFacingModelRepairDetail(snapshot, modelHealth: modelHealth)
     }
 
-    return "The selected local model is ready. Pith will use it for cowork tasks on this Mac."
+    return "The selected local model is ready. Amentia will use it for cowork tasks on this Mac."
   }
 
   static func sourceSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -113,7 +113,7 @@ enum LocalModelStatusPresenter {
 
   static func installHintSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Launch Pith to inspect local model setup."
+      return "Launch Amentia to inspect local model setup."
     }
 
     if modelHealth.status == "ready" {
@@ -134,9 +134,9 @@ enum LocalModelStatusPresenter {
 
     switch readiness {
     case "model_missing", "manifest_only", "unconfigured":
-      return "Download \(selectedModelName) in Pith, then Pith will select and run it automatically."
+      return "Download \(selectedModelName) in Amentia, then Amentia will select and run it automatically."
     case "binary_missing":
-      return "Pith's local model runner is missing from the app package. Reinstall Pith from the latest release."
+      return "Amentia's local model runner is missing from the app package. Reinstall Amentia from the latest release."
     case "misconfigured":
       return "Model setup is incomplete. Use Repair Model, or re-download the selected model."
     default:
@@ -146,7 +146,7 @@ enum LocalModelStatusPresenter {
 
   static func suggestedPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard snapshot.modelHealth != nil else {
-      return "Local folders appear after Pith finishes checking setup."
+      return "Local folders appear after Amentia finishes checking setup."
     }
 
     return "Use the folder buttons below if you need to inspect local model files."
@@ -157,7 +157,7 @@ enum LocalModelStatusPresenter {
       return "No local model is active yet."
     }
 
-    return "Pith is using the selected verified local model."
+    return "Amentia is using the selected verified local model."
   }
 
   static func localModelStatusSummary(
@@ -188,16 +188,16 @@ enum LocalModelStatusPresenter {
 
   static func managerRuleSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     if snapshot.modelDownloadID != nil {
-      return "Downloads can be paused or cancelled. Pith activates only one verified model."
+      return "Downloads can be paused or cancelled. Amentia activates only one verified model."
     }
     if snapshot.pausedModelDownloadID != nil {
       return "Continue the paused download or cancel it before starting another model."
     }
     if let model = snapshot.selectedSetupModel {
-      return "Selected: \(LocalModelDisplayPresenter.actionName(model)). Pith runs one active model at a time."
+      return "Selected: \(LocalModelDisplayPresenter.actionName(model)). Amentia runs one active model at a time."
     }
 
-    return "Choose one curated local model. Pith verifies the file before it can run."
+    return "Choose one curated local model. Amentia verifies the file before it can run."
   }
 
   static func localModelChoiceSummary(

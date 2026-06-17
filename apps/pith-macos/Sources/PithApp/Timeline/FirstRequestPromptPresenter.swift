@@ -22,7 +22,7 @@ enum FirstRequestPromptPresenter {
       return "Choose a project before starting the first cowork session."
     }
 
-    return "Pith will use \(workspaceDisplayName) as the working context. Short, specific cowork prompts work best for the local model."
+    return "Amentia will use \(workspaceDisplayName) as the working context. Short, specific cowork prompts work best for the local model."
   }
 
   static func primaryActionTitle(for suggestion: ComposerSuggestionSummary?) -> String? {
