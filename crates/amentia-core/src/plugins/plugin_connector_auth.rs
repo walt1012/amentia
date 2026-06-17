@@ -305,10 +305,8 @@ mod tests {
   #[test]
   fn api_key_spelling_variants_require_secret() {
     for auth_type in ["api_key", "apiKey", "api-key", " API_KEY "] {
-      assert!(
-        connector_requires_secret(&connector(Some(auth_type), true)),
-        "{auth_type} should require a local secret"
-      );
+      let connector = connector(Some(auth_type), true);
+      assert!(connector_requires_secret(&connector));
     }
   }
 
