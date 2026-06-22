@@ -718,9 +718,10 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertTrue(review.contains("authorization required"))
     XCTAssertTrue(review.contains("auth: OAuth 2.0"))
     XCTAssertTrue(review.contains("access: read content, create content"))
-    XCTAssertTrue(review.contains("secret: stored locally"))
+    XCTAssertTrue(review.contains("token: stored locally"))
     XCTAssertFalse(visibleText.contains("connector:notion"))
     XCTAssertFalse(visibleText.contains("credentialStore"))
+    XCTAssertFalse(visibleText.contains("secret:"))
     XCTAssertFalse(visibleText.contains("read_content"))
     XCTAssertFalse(visibleText.contains("https://www.notion.so"))
     XCTAssertFalse(visibleText.contains("/tmp/notion"))
@@ -1121,9 +1122,9 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
     let entry = TimelineEventPresenter.pluginConnectorCredentialCleared(connector)
 
-    XCTAssertEqual(entry.title, "Connection Credential Cleared")
+    XCTAssertEqual(entry.title, "Connection Authorization Cleared")
     XCTAssertTrue(entry.body.contains("Notion authorization for Notion was cleared"))
-    XCTAssertTrue(entry.body.contains("Any saved local secret is no longer available"))
+    XCTAssertTrue(entry.body.contains("Any saved local token or key is no longer available"))
     XCTAssertFalse(entry.body.contains("local plugin state"))
     XCTAssertFalse(entry.body.contains("keychain"))
     XCTAssertFalse(entry.body.contains("credentialStore"))

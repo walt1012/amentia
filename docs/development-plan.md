@@ -235,9 +235,9 @@ Completed:
 - Connector timeline evidence keeps protocol fields as attributes while default
   summaries translate stages, proofs, tools, retries, and failure reasons into
   product language.
-- Connector credentials are stored as metadata in durable storage and secrets in
-  the secure local store; clear/remove paths forget runtime secrets and attempt
-  full connector cleanup before reporting recoverable failures.
+- Connector authorizations store durable metadata plus local tokens or keys;
+  clear/remove paths forget runtime authorization and attempt full connector
+  cleanup before reporting recoverable failures.
 - Service-specific connector help is isolated behind narrow presenters so the
   common plugin, credential, command-input, and proof paths stay generic.
 - Capability metadata is reviewed through product copy for connections, skills,
@@ -249,25 +249,27 @@ Completed:
 - Connector authorization and capability summaries translate service names,
   access scopes, auth type, and local storage into user-readable language while
   keeping manifest fields out of the default path.
-- Connector authorization receipts use product language, and runtime secret
+- Connector authorization receipts use product language, and runtime token/key
   enforcement accepts common API-key spelling variants from third-party
   manifests.
-- Connector registries and command readiness fail closed when an authorization
-  marker exists but a required local API key secret is unavailable.
+- Connector registries and command readiness fail closed when a durable
+  authorization record exists but a required local API key is unavailable.
 - Runtime smoke covers the restart path where persisted connector metadata
-  remains but the local secret store cannot restore the API key.
+  remains but the local token/key store cannot restore the API key.
 - Plugin removal captures connector cleanup ids before deleting the bundle and
-  also cleans credential-backed ids so local connector secrets do not linger.
-- Clearing a connector authorization forgets runtime and durable credential
-  state even when the local secret store reports a recoverable delete error.
-- Timeline connector receipts and evidence treat stale authorization markers or
-  missing local secrets as needing sign in instead of implying readiness.
+  also cleans authorization-backed ids so local connector tokens do not linger.
+- Clearing a connector authorization forgets runtime and durable authorization
+  state even when the local token/key store reports a recoverable delete error.
+- Timeline connector receipts and evidence treat stale authorization records or
+  missing local tokens as needing sign in instead of implying readiness.
 - Connector dashboards, rows, action affordances, and planners share the same
-  fail-closed authorization state when a local secret is missing.
+  fail-closed authorization state when a local token or key is missing.
 - Timeline connector evidence carries authorization-required context and reuses
   the same sign-in readiness model as the plugin manager.
 - Timeline connector evidence keeps local credential bindings distinct from
   missing credentials, so bound actions do not look unauthenticated.
+- Connector authorization dialogs use user-facing token and key language instead
+  of exposing storage terminology.
 
 Next:
 

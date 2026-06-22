@@ -474,11 +474,11 @@ enum TimelineEventPresenter {
     let service = PluginStatusDisplay.serviceName(connector.service)
     let body = [
       "\(connector.displayName) authorization for \(service) was cleared from Amentia.",
-      "Any saved local secret is no longer available to plugin actions.",
+      "Any saved local token or key is no longer available to plugin actions.",
     ].joined(separator: "\n")
 
     return TimelineEntryFactory.system(
-      title: "Connection Credential Cleared",
+      title: "Connection Authorization Cleared",
       body: body,
       attributes: pluginConnectorCredentialAttributes(connector)
     )
@@ -494,7 +494,7 @@ enum TimelineEventPresenter {
     )
 
     return TimelineEntryFactory.warning(
-      title: "Connection Credential Clear Failed",
+      title: "Connection Authorization Clear Failed",
       body: error.localizedDescription,
       attributes: attributes
     )

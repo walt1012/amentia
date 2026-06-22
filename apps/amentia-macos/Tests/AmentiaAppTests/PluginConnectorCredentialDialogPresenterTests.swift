@@ -5,33 +5,50 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
   func testNotionCredentialPromptExplainsLocalTokenSetup() {
     let connector = notionConnector()
 
-    XCTAssertTrue(PluginConnectorCredentialDialogPresenter.requiresLocalSecret(connector))
+    XCTAssertTrue(PluginConnectorCredentialDialogPresenter.requiresLocalTokenOrKey(connector))
 
     let prompt = PluginConnectorCredentialDialogPresenter.credentialPrompt(connector)
     XCTAssertTrue(prompt.contains("API key access for Notion"))
     XCTAssertTrue(prompt.contains("Access: read content, create content."))
-    XCTAssertTrue(prompt.contains("A local token or API key is required"))
+    XCTAssertTrue(prompt.contains("Paste a local token or API key"))
     XCTAssertTrue(prompt.contains("create an internal Notion integration"))
     XCTAssertTrue(prompt.contains("share every target parent page"))
     XCTAssertTrue(prompt.contains("passes it only to the local Notion plugin runner"))
     XCTAssertTrue(prompt.contains("first publish still verifies"))
     XCTAssertTrue(prompt.contains("does not claim OAuth yet"))
     XCTAssertFalse(prompt.contains("Credential store"))
+    XCTAssertFalse(prompt.contains("Credential label"))
+    XCTAssertFalse(prompt.contains("Secret"))
 
-    let warning = PluginConnectorCredentialDialogPresenter.missingSecretWarningText(connector)
+    let warning = PluginConnectorCredentialDialogPresenter.missingTokenOrKeyWarningText(connector)
     XCTAssertTrue(warning.contains("Notion internal integration token"))
     XCTAssertTrue(warning.contains("share the target parent page"))
     XCTAssertTrue(warning.contains("during approved runs"))
   }
 
-  func testApiKeyAuthSpellingStillRequiresLocalSecret() {
+  func testApiKeyAuthSpellingStillRequiresLocalTokenOrKey() {
     let connector = notionConnector(authType: "apiKey")
 
-    XCTAssertTrue(PluginConnectorCredentialDialogPresenter.requiresLocalSecret(connector))
+    XCTAssertTrue(PluginConnectorCredentialDialogPresenter.requiresLocalTokenOrKey(connector))
     XCTAssertTrue(
       PluginConnectorCredentialDialogPresenter
         .credentialPrompt(connector)
         .contains("API key access for Notion")
+    )
+  }
+
+  func testCredentialDialogCopyUsesUserFacingLabels() {
+    let connector = notionConnector()
+
+    XCTAssertEqual(PluginConnectorCredentialDialogPresenter.labelFieldTitle, "Name")
+    XCTAssertEqual(PluginConnectorCredentialDialogPresenter.tokenOrKeyFieldTitle, "Token or key")
+    XCTAssertEqual(
+      PluginConnectorCredentialDialogPresenter.defaultCredentialLabel(connector),
+      "Local Notion integration token"
+    )
+    XCTAssertEqual(
+      PluginConnectorCredentialDialogPresenter.tokenOrKeyPlaceholder(connector),
+      "Paste the Notion internal integration token"
     )
   }
 
@@ -144,15 +161,20 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
       credentialUpdatedAt: nil
     )
 
-    XCTAssertFalse(PluginConnectorCredentialDialogPresenter.requiresLocalSecret(connector))
+    XCTAssertFalse(PluginConnectorCredentialDialogPresenter.requiresLocalTokenOrKey(connector))
     XCTAssertTrue(
       PluginConnectorCredentialDialogPresenter
         .credentialPrompt(connector)
-        .contains("authorized without a token")
+        .contains("can be approved without a token")
+    )
+    XCTAssertFalse(
+      PluginConnectorCredentialDialogPresenter
+        .credentialPrompt(connector)
+        .contains("secret")
     )
     XCTAssertTrue(
       PluginConnectorCredentialDialogPresenter
-        .missingSecretWarningText(connector)
+        .missingTokenOrKeyWarningText(connector)
         .contains("local token or API key")
     )
   }

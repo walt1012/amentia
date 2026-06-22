@@ -94,7 +94,7 @@ enum PluginActionPlanner {
       return "Amentia is not ready."
     }
     if !connector.credentialPresent {
-      return "Connection has no stored credential."
+      return "Connection has no saved token or key."
     }
     if snapshot.hasActiveOrPendingTurn {
       return "Finish or cancel the active task first."

@@ -312,11 +312,11 @@ enum PluginStatusDisplay {
     case "oauth2":
       return "OAuth 2.0"
     case "none":
-      return "no secret"
+      return "no token needed"
     case let value? where !value.isEmpty:
       return value.replacingOccurrences(of: "_", with: " ")
     default:
-      return "local credential"
+      return "local authorization"
     }
   }
 

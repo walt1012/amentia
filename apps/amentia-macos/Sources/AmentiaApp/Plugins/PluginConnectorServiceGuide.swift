@@ -8,7 +8,7 @@ enum PluginConnectorServiceGuide {
         "",
         "",
         "Notion setup: create an internal Notion integration and copy its internal integration token.",
-        "Paste that token as the secret, then share every target parent page with the integration before publishing.",
+        "Paste that token, then share every target parent page with the integration before publishing.",
         "Amentia keeps the token local, passes it only to the local Notion plugin runner, and does not claim OAuth yet.",
         "Authorization stores the token; the first publish still verifies the token, page sharing, and Notion response proof.",
       ].joined(separator: "\n")
@@ -17,7 +17,7 @@ enum PluginConnectorServiceGuide {
     }
   }
 
-  static func missingSecretWarning(connector: PluginConnectorSummary) -> String? {
+  static func missingTokenOrKeyWarning(connector: PluginConnectorSummary) -> String? {
     switch normalizedService(connector.service) {
     case "notion":
       return [
@@ -39,7 +39,7 @@ enum PluginConnectorServiceGuide {
     }
   }
 
-  static func secretPlaceholder(connector: PluginConnectorSummary) -> String? {
+  static func tokenOrKeyPlaceholder(connector: PluginConnectorSummary) -> String? {
     switch normalizedService(connector.service) {
     case "notion":
       return "Paste the Notion internal integration token"

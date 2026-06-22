@@ -36,7 +36,7 @@ extension AppViewModel {
         let connector = try await runtimeBridge.authorizePluginConnector(
           connectorID: connectorID,
           credentialLabel: credentialInput.label,
-          credentialSecret: credentialInput.secret
+          credentialSecret: credentialInput.tokenOrKey
         )
         guard await refreshPluginStateIfCurrent(operationID: operationID) else {
           return

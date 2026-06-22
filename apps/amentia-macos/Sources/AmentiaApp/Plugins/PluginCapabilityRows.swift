@@ -123,7 +123,7 @@ enum PluginCapabilityPresenter {
       parts.append("access: \(access)")
     }
     if let credentialStore = cleanMetadataValue(capability.metadata["credentialStore"]) {
-      parts.append("secret: \(PluginStatusDisplay.credentialStoreName(credentialStore))")
+      parts.append("token: \(PluginStatusDisplay.credentialStoreName(credentialStore))")
     }
     return parts.isEmpty ? nil : parts.joined(separator: " | ")
   }
