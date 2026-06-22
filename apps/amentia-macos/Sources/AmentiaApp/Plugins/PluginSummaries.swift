@@ -81,8 +81,8 @@ enum PluginCapabilityDisplay {
   }
 
   static func summary(_ counts: [String: Int]) -> String {
-    let knownKindParts = capabilityKindOrder
-      .compactMap { kind in
+    let knownKindParts: [String] = capabilityKindOrder
+      .compactMap { kind -> String? in
         guard let count = counts[kind], count > 0 else {
           return nil
         }
