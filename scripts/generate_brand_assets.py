@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate Amentia brand assets from one vector geometry."""
+"""Generate Amentia brand assets and exact SVG preview wrappers."""
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 try:
@@ -16,12 +17,10 @@ BRAND_DIR = ROOT / "docs" / "brand"
 ICON_SVG = BRAND_DIR / "amentia-blue-symbol-icon-source.svg"
 ICON_PNG = BRAND_DIR / "amentia-blue-symbol-icon-candidate.png"
 LOCKUP_SVG = BRAND_DIR / "amentia-wordmark-lockup-source.svg"
+LOCKUP_REFERENCE_PNG = BRAND_DIR / "amentia-wordmark-lockup-reference.png"
 
-BLUE = "#2f82f3"
-DARK = "#111827"
 BORDER = "#e8edf3"
 RGBA_BLUE = (47, 130, 243, 255)
-RGBA_DARK = (17, 24, 39, 255)
 RGBA_BORDER = (232, 237, 243, 255)
 RGBA_WHITE = (255, 255, 255, 255)
 RGBA_TRANSPARENT = (255, 255, 255, 0)
@@ -50,7 +49,6 @@ MARK_NEGATIVE = (
   (122, 86),
 )
 ICON_MARK_BOX = (318, 388, 936, 860)
-LOCKUP_MARK_BOX = (40, 62, 261, 231)
 
 
 def transformed_points(
@@ -61,20 +59,6 @@ def transformed_points(
   scale_x = (x1 - x0) / MARK_WIDTH
   scale_y = (y1 - y0) / MARK_HEIGHT
   return tuple((round(x0 + x * scale_x), round(y0 + y * scale_y)) for x, y in points)
-
-
-def polygon_path(points: tuple[tuple[int, int], ...]) -> str:
-  head, *tail = points
-  return f"M{head[0]} {head[1]} " + " ".join(f"L{x} {y}" for x, y in tail) + " Z"
-
-
-def mark_path(box: tuple[int, int, int, int]) -> str:
-  return " ".join(
-    (
-      polygon_path(transformed_points(MARK_OUTER, box)),
-      polygon_path(transformed_points(MARK_NEGATIVE, box)),
-    )
-  )
 
 
 def scaled_box(box: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
@@ -89,6 +73,10 @@ def write_text(path: Path, text: str) -> None:
   path.write_text(text, encoding="utf-8", newline="\n")
 
 
+def png_data_uri(path: Path) -> str:
+  return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+
+
 def draw_mark(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
   draw.polygon(scaled_points(transformed_points(MARK_OUTER, box)), fill=RGBA_BLUE)
   draw.polygon(scaled_points(transformed_points(MARK_NEGATIVE, box)), fill=RGBA_WHITE)
@@ -98,8 +86,7 @@ def write_icon_svg() -> None:
   write_text(
     ICON_SVG,
     f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" role="img" aria-label="Amentia blue app icon">
-  <rect x="112" y="100" width="1030" height="1030" rx="214" fill="#ffffff" stroke="{BORDER}" stroke-width="5"/>
-  <path fill="{BLUE}" fill-rule="evenodd" d="{mark_path(ICON_MARK_BOX)}"/>
+  <image data-preview-source="{ICON_PNG.name}" href="{png_data_uri(ICON_PNG)}" width="1254" height="1254" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 """,
   )
@@ -121,12 +108,12 @@ def write_icon_png() -> None:
 
 
 def write_lockup_svg() -> None:
+  if not LOCKUP_REFERENCE_PNG.exists():
+    raise FileNotFoundError(f"Missing approved lockup reference: {LOCKUP_REFERENCE_PNG}")
   write_text(
     LOCKUP_SVG,
     f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 310" role="img" aria-label="Amentia wordmark lockup">
-  <path fill="{BLUE}" fill-rule="evenodd" d="{mark_path(LOCKUP_MARK_BOX)}"/>
-  <path d="M324 45 V238" stroke="{DARK}" stroke-width="4" stroke-linecap="round"/>
-  <text x="380" y="190" fill="{DARK}" font-family="Eurostile, Microgramma, Orbitron, Bahnschrift, Arial Black, Arial, sans-serif" font-size="104" font-weight="800" letter-spacing="-3">Amentia</text>
+  <image data-preview-source="{LOCKUP_REFERENCE_PNG.name}" href="{png_data_uri(LOCKUP_REFERENCE_PNG)}" width="1000" height="310" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 """,
   )
@@ -134,8 +121,8 @@ def write_lockup_svg() -> None:
 
 def main() -> None:
   BRAND_DIR.mkdir(parents=True, exist_ok=True)
-  write_icon_svg()
   write_icon_png()
+  write_icon_svg()
   write_lockup_svg()
   print(f"Generated {ICON_SVG.relative_to(ROOT)}")
   print(f"Generated {ICON_PNG.relative_to(ROOT)}")

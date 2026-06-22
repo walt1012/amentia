@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import stat
 import tempfile
 import zipfile
@@ -48,6 +49,9 @@ from package_contract import (
   package_size_budget,
 )
 
+ROOT = Path(__file__).resolve().parents[1]
+BRAND_DIR = ROOT / "docs" / "brand"
+
 
 def assert_equal(actual: object, expected: object) -> None:
   if actual != expected:
@@ -60,6 +64,24 @@ def assert_raises(action, message: str) -> None:
   except (RuntimeError, FileNotFoundError):
     return
   raise AssertionError(message)
+
+
+def assert_svg_png_preview(svg_name: str, png_name: str) -> None:
+  svg_path = BRAND_DIR / svg_name
+  png_path = BRAND_DIR / png_name
+  if not png_path.is_file():
+    raise AssertionError(f"missing brand PNG reference: {png_path}")
+  svg = svg_path.read_text(encoding="utf-8")
+  if f'data-preview-source="{png_name}"' not in svg:
+    raise AssertionError(f"{svg_name} must declare {png_name} as its preview source")
+  if "<text" in svg or "<polygon" in svg or "<path" in svg:
+    raise AssertionError(f"{svg_name} must not approximate the approved PNG")
+  marker = 'href="data:image/png;base64,'
+  if marker not in svg:
+    raise AssertionError(f"{svg_name} must embed its approved PNG preview")
+  encoded = svg.split(marker, 1)[1].split('"', 1)[0]
+  if base64.b64decode(encoded) != png_path.read_bytes():
+    raise AssertionError(f"{svg_name} embedded preview must match {png_name}")
 
 
 def write_png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
@@ -102,6 +124,15 @@ def write_icns_header(path: Path, declared_size: int, body: bytes = b"") -> None
 
 
 def main() -> int:
+  assert_svg_png_preview(
+    "amentia-blue-symbol-icon-source.svg",
+    "amentia-blue-symbol-icon-candidate.png",
+  )
+  assert_svg_png_preview(
+    "amentia-wordmark-lockup-source.svg",
+    "amentia-wordmark-lockup-reference.png",
+  )
+
   assert_equal(normalize_version("0.1.0"), "0.1.0")
   assert_equal(normalize_version("v1.2.3"), "1.2.3")
   assert_raises(
