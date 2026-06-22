@@ -47,6 +47,20 @@ extension AppViewModel {
     return canSetPluginEnabled(pluginID: pluginID)
   }
 
+  func canReviewPluginGuidance(from entry: TimelineEntry) -> Bool {
+    entry.attributes["pluginSkillContextSelectedCount"] != nil
+  }
+
+  func reviewPluginGuidance(from entry: TimelineEntry) {
+    guard canReviewPluginGuidance(from: entry) else {
+      runtimeDetail = "Plugin guidance review is unavailable."
+      return
+    }
+
+    pluginManagerSection = .capabilities
+    runtimeDetail = "Review plugin guidance in Capabilities."
+  }
+
   func disablePluginGuidance(from entry: TimelineEntry) {
     guard canDisablePluginGuidance(from: entry),
           let pluginID = singlePluginGuidancePluginID(from: entry)

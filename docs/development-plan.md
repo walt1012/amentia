@@ -290,6 +290,8 @@ Completed:
 - Plugin skill context now has product-facing timeline and inspector receipts,
   plus a single-plugin `Disable Guidance` control that reuses the normal plugin
   disable lifecycle.
+- Plugin skill context receipts can jump back to the plugin manager's
+  reviewable-guidance surface before the user disables anything.
 
 Next:
 

@@ -13,6 +13,7 @@ struct TimelineCard: View {
   let showsPluginInputAction: Bool
   let showsPluginRetryAction: Bool
   let showsPluginFollowUpAction: Bool
+  let showsPluginGuidanceReviewAction: Bool
   let showsPluginGuidanceDisableAction: Bool
   let showsPluginSourceAction: Bool
   let showsPluginRefreshAction: Bool
@@ -25,6 +26,7 @@ struct TimelineCard: View {
   let onRunPluginCommandWithInput: () -> Void
   let onRetry: () -> Void
   let onRunPluginFollowUp: () -> Void
+  let onReviewPluginGuidance: () -> Void
   let onDisablePluginGuidance: () -> Void
   let onRevealPluginSource: () -> Void
   let onRefreshPlugins: () -> Void
@@ -132,6 +134,13 @@ struct TimelineCard: View {
               .buttonStyle(.borderedProminent)
             }
 
+            if showsPluginGuidanceReviewAction {
+              Button("Review Guidance") {
+                onReviewPluginGuidance()
+              }
+              .buttonStyle(.borderedProminent)
+            }
+
             if showsPluginGuidanceDisableAction {
               Button("Disable Guidance") {
                 onDisablePluginGuidance()
@@ -217,6 +226,7 @@ struct TimelineCard: View {
       || showsPluginInputAction
       || showsPluginRetryAction
       || showsPluginFollowUpAction
+      || showsPluginGuidanceReviewAction
       || showsPluginGuidanceDisableAction
       || showsPluginSourceAction
       || showsPluginRefreshAction

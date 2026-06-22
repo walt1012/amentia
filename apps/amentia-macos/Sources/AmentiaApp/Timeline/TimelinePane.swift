@@ -34,6 +34,7 @@ struct TimelinePane: View {
               showsPluginInputAction: viewModel.canRunPluginCommandWithInput(from: entry),
               showsPluginRetryAction: viewModel.canRetryPluginCommand(from: entry),
               showsPluginFollowUpAction: viewModel.canRunPluginFollowUp(from: entry),
+              showsPluginGuidanceReviewAction: viewModel.canReviewPluginGuidance(from: entry),
               showsPluginGuidanceDisableAction: viewModel.canDisablePluginGuidance(from: entry),
               showsPluginSourceAction: viewModel.canRevealPluginSource(from: entry),
               showsPluginRefreshAction: viewModel.canRefreshPlugins(from: entry),
@@ -67,6 +68,9 @@ struct TimelinePane: View {
               },
               onRunPluginFollowUp: {
                 viewModel.runPluginFollowUp(from: entry)
+              },
+              onReviewPluginGuidance: {
+                viewModel.reviewPluginGuidance(from: entry)
               },
               onDisablePluginGuidance: {
                 viewModel.disablePluginGuidance(from: entry)
