@@ -8,8 +8,7 @@ use amentia_protocol::{
   PluginHookRegistryResult, PluginHookSummary, PluginInspectParams, PluginInspectResult,
   PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
   PluginSkillRegistryResult, PluginSkillSummary, PluginSummary, ThreadReadResult, ThreadSummary,
-  TimelineItem, TurnStartResult,
-  WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
+  TimelineItem, TurnStartResult, WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
 
@@ -674,7 +673,10 @@ fn plugin_skill_registry_round_trips() {
   let value = serde_json::to_value(&decoded).expect("serialize skill registry value");
 
   assert_eq!(decoded.skills.len(), 1);
-  assert_eq!(decoded.skills[0].skill_id, "notion-connector::notion.workspace");
+  assert_eq!(
+    decoded.skills[0].skill_id,
+    "notion-connector::notion.workspace"
+  );
   assert_eq!(decoded.skills[0].status, "ready");
   assert_eq!(decoded.skills[0].content_bytes, 4096);
   assert!(value["skills"][0].get("skillId").is_some());

@@ -980,7 +980,11 @@ fn build_skill_registry_loads_bounded_enabled_plugin_skill_previews() {
   .expect("write plugin manifest");
   fs::write(
     skills_dir.join("notion-workspace.md"),
-    format!("{}\n{}", "Use this skill for Notion workspace drafts.", "x".repeat(5000)),
+    format!(
+      "{}\n{}",
+      "Use this skill for Notion workspace drafts.",
+      "x".repeat(5000)
+    ),
   )
   .expect("write skill file");
   let plugins = discover_plugins(&plugin_root).expect("discover plugins");
@@ -992,7 +996,10 @@ fn build_skill_registry_loads_bounded_enabled_plugin_skill_previews() {
   assert_eq!(skills.len(), 1);
   assert_eq!(skills[0].skill_id, "notion-connector::notion.workspace");
   assert_eq!(skills[0].plugin_id, "notion-connector");
-  assert_eq!(skills[0].description, "Prepare workspace context for Notion.");
+  assert_eq!(
+    skills[0].description,
+    "Prepare workspace context for Notion."
+  );
   assert_eq!(skills[0].status, "ready");
   assert!(skills[0].preview.as_ref().expect("preview").len() <= 1200);
   assert!(skills[0]

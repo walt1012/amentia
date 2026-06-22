@@ -36,7 +36,12 @@ fn plugin_skill_entries(plugin: &PluginCatalogEntry) -> Vec<PluginSkillEntry> {
     .into_iter()
     .filter_map(|skill| {
       let source_path = safe_skill_path(plugin_root, &skill.path)?;
-      Some(skill_entry(plugin, &skill.id, &skill.description, source_path))
+      Some(skill_entry(
+        plugin,
+        &skill.id,
+        &skill.description,
+        source_path,
+      ))
     })
     .collect()
 }
