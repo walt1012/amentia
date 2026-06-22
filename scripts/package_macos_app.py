@@ -1119,6 +1119,52 @@ def assert_bundled_plugin_connector_workflows(
     if not isinstance(execution, dict):
       continue
     workflow_id = execution.get("workflowId")
+    if isinstance(workflow_id, str) and workflow_id.strip():
+      input_fields = assert_connector_workflow_envelope(
+        plugin_root,
+        command_id,
+        execution,
+        "input",
+      )
+      output_fields = assert_connector_workflow_envelope(
+        plugin_root,
+        command_id,
+        execution,
+        "output",
+      )
+      assert_connector_workflow_field(
+        plugin_root,
+        command_id,
+        "output",
+        output_fields,
+        "items",
+        "timelineItems",
+      )
+      assert_connector_workflow_field(
+        plugin_root,
+        command_id,
+        "output",
+        output_fields,
+        "memoryNotes",
+        "memoryNotes",
+      )
+      if command_id.endswith(".publish-page-draft"):
+        assert_connector_workflow_field(
+          plugin_root,
+          command_id,
+          "input",
+          input_fields,
+          "input",
+          "text",
+        )
+        assert_connector_workflow_field(
+          plugin_root,
+          command_id,
+          "input",
+          input_fields,
+          "connectors",
+          "connectorRefs",
+        )
     if isinstance(workflow_id, str) and workflow_id.strip() and workflow_id not in workflow_ids:
       raise RuntimeError(
         f"Bundled command {command_id} references undeclared workflow: {workflow_id}"
@@ -1133,6 +1179,55 @@ def assert_bundled_plugin_connector_workflows(
       raise RuntimeError(
         f"Bundled command {command_id} workflow is not bound to its connector: {workflow_id}"
       )
+
+
+def assert_connector_workflow_envelope(
+  plugin_root: Path,
+  command_id: str,
+  execution: dict,
+  envelope_key: str,
+) -> dict[str, str]:
+  envelope = execution.get(envelope_key)
+  if not isinstance(envelope, dict):
+    raise RuntimeError(
+      f"Bundled command {command_id} must declare execution.{envelope_key}: {plugin_root}"
+    )
+  envelope_name = envelope.get("envelope")
+  if not isinstance(envelope_name, str) or not envelope_name.strip():
+    raise RuntimeError(
+      f"Bundled command {command_id} execution.{envelope_key}.envelope is required"
+    )
+  fields = envelope.get("fields")
+  if not isinstance(fields, list) or not fields:
+    raise RuntimeError(
+      f"Bundled command {command_id} execution.{envelope_key}.fields must be non-empty"
+    )
+  field_kinds = {}
+  for field in fields:
+    if not isinstance(field, dict):
+      raise RuntimeError(
+        f"Bundled command {command_id} execution.{envelope_key}.fields must be objects"
+      )
+    name = field.get("name")
+    kind = field.get("kind")
+    if isinstance(name, str) and isinstance(kind, str):
+      field_kinds[name] = kind
+  return field_kinds
+
+
+def assert_connector_workflow_field(
+  plugin_root: Path,
+  command_id: str,
+  envelope_key: str,
+  fields: dict[str, str],
+  name: str,
+  kind: str,
+) -> None:
+  if fields.get(name) != kind:
+    raise RuntimeError(
+      f"Bundled command {command_id} execution.{envelope_key} must declare "
+      f"{name}:{kind}: {plugin_root}"
+    )
 
 
 def assert_safe_capability_identifier(identifier: str, capability: str) -> None:

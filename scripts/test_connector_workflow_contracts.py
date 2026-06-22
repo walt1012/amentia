@@ -12,6 +12,15 @@ ROOT = Path(__file__).resolve().parents[1]
 BUNDLED_PLUGIN_ROOT = ROOT / "plugins" / "bundled"
 MIN_AGENT_STEPS = 1
 MAX_AGENT_STEPS = 8
+REQUIRED_ENVELOPE_KEYS = ("envelope", "fields")
+REMOTE_WRITE_INPUT_FIELD_KINDS = {
+  "input": "text",
+  "connectors": "connectorRefs",
+}
+WORKFLOW_OUTPUT_FIELD_KINDS = {
+  "items": "timelineItems",
+  "memoryNotes": "memoryNotes",
+}
 
 
 def read_json_object(path: Path) -> dict[str, Any]:
@@ -62,6 +71,67 @@ def validate_bundle_local_paths(plugin_root: Path, manifest: dict[str, Any]) -> 
     require(
       is_safe_bundle_relative_path(command),
       f"{plugin_root.name} MCP server {server_id} command must stay inside the plugin bundle",
+    )
+
+
+def envelope_field_kinds(envelope: object) -> dict[str, str]:
+  if not isinstance(envelope, dict):
+    return {}
+  fields = envelope.get("fields")
+  if not isinstance(fields, list):
+    return {}
+  kinds: dict[str, str] = {}
+  for field in fields:
+    if not isinstance(field, dict):
+      continue
+    name = field.get("name")
+    kind = field.get("kind")
+    if isinstance(name, str) and isinstance(kind, str):
+      kinds[name] = kind
+  return kinds
+
+
+def validate_execution_envelope(
+  plugin_root: Path,
+  command_id: str,
+  execution: dict[str, Any],
+  envelope_key: str,
+) -> dict[str, str]:
+  envelope = execution.get(envelope_key)
+  require(
+    isinstance(envelope, dict),
+    f"{plugin_root.name} command {command_id} must declare execution.{envelope_key}",
+  )
+  for key in REQUIRED_ENVELOPE_KEYS:
+    require(
+      key in envelope,
+      f"{plugin_root.name} command {command_id} execution.{envelope_key} missed {key}",
+    )
+  envelope_name = envelope.get("envelope")
+  require(
+    isinstance(envelope_name, str) and bool(envelope_name.strip()),
+    f"{plugin_root.name} command {command_id} execution.{envelope_key}.envelope is required",
+  )
+  fields = envelope.get("fields")
+  require(
+    isinstance(fields, list) and bool(fields),
+    f"{plugin_root.name} command {command_id} execution.{envelope_key}.fields must be non-empty",
+  )
+  return envelope_field_kinds(envelope)
+
+
+def require_named_fields(
+  plugin_root: Path,
+  command_id: str,
+  envelope_key: str,
+  actual: dict[str, str],
+  expected: dict[str, str],
+) -> None:
+  for name, kind in expected.items():
+    require(
+      actual.get(name) == kind,
+      f"{plugin_root.name} command {command_id} execution.{envelope_key} "
+      f"must declare {name}:{kind}",
     )
 
 
@@ -159,6 +229,15 @@ def validate_plugin(plugin_root: Path) -> None:
     workflow_id = execution.get("workflowId")
     if not isinstance(workflow_id, str) or not workflow_id.strip():
       continue
+    input_fields = validate_execution_envelope(plugin_root, command_id, execution, "input")
+    output_fields = validate_execution_envelope(plugin_root, command_id, execution, "output")
+    require_named_fields(
+      plugin_root,
+      command_id,
+      "output",
+      output_fields,
+      WORKFLOW_OUTPUT_FIELD_KINDS,
+    )
     require(
       workflow_id in workflow_ids,
       f"{plugin_root.name} command {command_id} references undeclared workflow {workflow_id}",
@@ -174,6 +253,14 @@ def validate_plugin(plugin_root: Path) -> None:
       and workflow.get("connectorId") in connectors_for_command,
       f"{plugin_root.name} command {command_id} is not bound to the workflow connector",
     )
+    if command_id.endswith(".publish-page-draft"):
+      require_named_fields(
+        plugin_root,
+        command_id,
+        "input",
+        input_fields,
+        REMOTE_WRITE_INPUT_FIELD_KINDS,
+      )
     workflow_command_ids.setdefault(workflow_id, []).append(command_id)
 
   for workflow_id, command_ids in workflow_command_ids.items():

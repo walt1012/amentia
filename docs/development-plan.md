@@ -233,6 +233,8 @@ Completed baseline:
 - Notion is the reference connection. Its authorization metadata, local token or
   key handling, missing-secret state, cleanup, timeline proof, retries, and
   receipts exercise the generic connector contract.
+- Executable connector workflow commands declare explicit input and output
+  envelopes so third-party bundles do not depend on implicit runner defaults.
 - Connector evidence stays generic in protocol and timeline data. Service names,
   access scopes, auth type, proof labels, and repair copy are translated by
   narrow presenters.

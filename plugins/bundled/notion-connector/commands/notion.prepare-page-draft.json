@@ -7,7 +7,35 @@
     "driver": "mcp",
     "entrypoint": "notion.preparePageDraft",
     "connectors": ["notion"],
-    "workflowId": "notion.create-page"
+    "workflowId": "notion.create-page",
+    "input": {
+      "envelope": "notion.preparePageDraft.input",
+      "fields": [
+        {
+          "name": "input",
+          "kind": "text",
+          "required": false,
+          "description": "Optional saved artifact reference or workspace context used to prepare a local Notion draft."
+        }
+      ]
+    },
+    "output": {
+      "envelope": "notion.preparePageDraft.output",
+      "fields": [
+        {
+          "name": "items",
+          "kind": "timelineItems",
+          "required": true,
+          "description": "Local draft proof timeline item."
+        },
+        {
+          "name": "memoryNotes",
+          "kind": "memoryNotes",
+          "required": false,
+          "description": "Optional connector memory notes."
+        }
+      ]
+    }
   },
   "memory": {
     "noteTitle": "Notion Page Draft",

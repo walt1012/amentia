@@ -357,6 +357,36 @@ def main() -> int:
       ),
       encoding="utf-8",
     )
+    assert_raises(
+      lambda: assert_bundled_plugin_connector_workflows(
+        plugin_root,
+        notion_manifest,
+        workflow_capabilities,
+      ),
+      "must declare execution.input",
+    )
+    (commands_dir / "notion.prepare-page-draft.json").write_text(
+      json.dumps(
+        {
+          "execution": {
+            "workflowId": "notion.create-page",
+            "connectors": ["notion"],
+            "input": {
+              "envelope": "notion.preparePageDraft.input",
+              "fields": [{"name": "input", "kind": "text"}],
+            },
+            "output": {
+              "envelope": "notion.preparePageDraft.output",
+              "fields": [
+                {"name": "items", "kind": "timelineItems"},
+                {"name": "memoryNotes", "kind": "memoryNotes"},
+              ],
+            },
+          }
+        }
+      ),
+      encoding="utf-8",
+    )
     assert_bundled_plugin_connector_workflows(
       plugin_root,
       notion_manifest,
