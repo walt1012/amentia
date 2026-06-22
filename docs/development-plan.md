@@ -264,6 +264,8 @@ Completed:
   missing local secrets as needing sign in instead of implying readiness.
 - Connector dashboards, rows, action affordances, and planners share the same
   fail-closed authorization state when a local secret is missing.
+- Timeline connector evidence carries authorization-required context and reuses
+  the same sign-in readiness model as the plugin manager.
 
 Next:
 

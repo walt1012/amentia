@@ -584,6 +584,7 @@ enum TimelineEventPresenter {
       "pluginDisplayName": connector.pluginDisplayName,
       "connectorService": connector.service,
       "authStatus": connector.authStatus,
+      "authRequired": "\(connector.authRequired)",
       "credentialPresent": "\(connector.credentialPresent)",
       "credentialSecretPresent": "\(connector.credentialSecretPresent)",
       "authorizationSummary": connectorAuthorizationSummary(connector),

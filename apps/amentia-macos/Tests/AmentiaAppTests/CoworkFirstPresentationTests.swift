@@ -968,6 +968,37 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("saved locally"))
   }
 
+  func testConnectionEvidenceDoesNotAskForSignInWhenAuthorizationIsNotRequired() {
+    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+      "connectorId": "local-preview",
+      "connectorService": "local",
+      "authRequired": "false",
+      "credentialPresent": "false",
+      "credentialSecretPresent": "false",
+    ])
+
+    XCTAssertEqual(
+      lines.first,
+      "Connection: Local. Authorization: ready."
+    )
+    XCTAssertFalse(lines.joined(separator: "\n").contains("needs sign in"))
+  }
+
+  func testConnectionEvidenceRequiresSignInWhenAuthorizationHasNoCredential() {
+    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+      "connectorId": "notion",
+      "connectorService": "notion",
+      "authRequired": "true",
+      "credentialPresent": "false",
+      "credentialSecretPresent": "false",
+    ])
+
+    XCTAssertEqual(
+      lines.first,
+      "Connection: Notion. Authorization: needs sign in."
+    )
+  }
+
   func testConnectionAuthorizationReceiptUsesProductCopy() {
     let connector = runtimePluginConnector(
       authStatus: "ready",

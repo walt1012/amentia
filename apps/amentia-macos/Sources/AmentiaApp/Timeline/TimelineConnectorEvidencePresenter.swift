@@ -131,16 +131,38 @@ enum TimelineConnectorEvidencePresenter {
   }
 
   private static func authorizationSummary(attributes: [String: String]) -> String {
-    if attributes["authStatus"] == "needsAuth"
-      || attributes["connectorAuthStatus"] == "needsAuth"
-      || attributes["credentialSecretPresent"] == "false"
-      || attributes["connectorCredentialSecretPresent"] == "false"
-    {
+    let authStatus = firstAttribute(attributes, keys: [
+      "authStatus",
+      "connectorAuthStatus",
+    ]) ?? "ready"
+    let credentialPresent = boolAttribute(attributes, keys: [
+      "credentialPresent",
+      "connectorCredentialPresent",
+    ])
+    let credentialSecretPresent = boolAttribute(attributes, keys: [
+      "credentialSecretPresent",
+      "connectorCredentialSecretPresent",
+    ])
+
+    if let authRequired = boolAttribute(attributes, keys: [
+      "authRequired",
+      "connectorAuthRequired",
+    ]) {
+      let hasCredential = credentialPresent ?? false
+      return PluginStatusDisplay.authorizationStatus(
+        authStatus,
+        authRequired: authRequired,
+        credentialPresent: hasCredential,
+        credentialSecretPresent: credentialSecretPresent ?? hasCredential
+      )
+    }
+
+    if authStatus == "needsAuth" {
       return "needs sign in"
     }
 
-    if attributes["credentialPresent"] == "true" {
-      return "saved locally"
+    if credentialPresent == true {
+      return credentialSecretPresent == false ? "needs sign in" : "saved locally"
     }
 
     guard firstAttribute(attributes, keys: [
@@ -155,6 +177,23 @@ enum TimelineConnectorEvidencePresenter {
     }
 
     return "available locally"
+  }
+
+  private static func boolAttribute(
+    _ attributes: [String: String],
+    keys: [String]
+  ) -> Bool? {
+    guard let value = firstAttribute(attributes, keys: keys)?.lowercased() else {
+      return nil
+    }
+    switch value {
+    case "true", "yes", "1":
+      return true
+    case "false", "no", "0":
+      return false
+    default:
+      return nil
+    }
   }
 
   private static func appendRemoteWriteContinuation(
