@@ -272,6 +272,9 @@ Completed:
   of exposing storage terminology.
 - Connector-blocked actions explain which connection to authorize and the next
   user step before runtime execution starts.
+- Plugin capability summaries count unknown capability kinds without exposing
+  raw manifest keys, and workflow, tool, skill, MCP, connector, check, and
+  validation copy stay product-facing by default.
 
 Next:
 

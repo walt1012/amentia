@@ -688,6 +688,43 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(detail.contains("Unknown validation error"))
   }
 
+  func testPluginValidationDetailHidesRawSetupPaths() {
+    let plugin = pluginSummary(
+      status: "invalid",
+      validationError: "failed to read /tmp/notion/amentia-plugin.json: missing field displayName",
+      validationHint: "Check /tmp/notion/amentia-plugin.json and use camelCase keys."
+    )
+
+    let detail = PluginStatusDisplay.validationDetail(plugin)
+
+    XCTAssertTrue(detail.contains("Plugin setup needs review."))
+    XCTAssertTrue(detail.contains("Fix: Check the plugin setup file, then refresh the plugin."))
+    XCTAssertFalse(detail.contains("/tmp/notion"))
+    XCTAssertFalse(detail.contains("amentia-plugin.json"))
+    XCTAssertFalse(detail.contains("displayName"))
+    XCTAssertFalse(detail.contains("camelCase"))
+  }
+
+  func testPluginDashboardSummaryHidesRawValidationHints() {
+    let snapshot = pluginDashboardSnapshot(
+      plugins: [
+        pluginSummary(
+          status: "invalid",
+          validationError: "failed to parse /tmp/notion/amentia-plugin.json",
+          validationHint: "Open /tmp/notion/amentia-plugin.json and fix displayName."
+        )
+      ]
+    )
+
+    let detail = PluginDashboardPresenter.pluginDetailSummary(snapshot)
+
+    XCTAssertTrue(detail.contains("needs attention"))
+    XCTAssertTrue(detail.contains("fix: Check the plugin setup file, then refresh the plugin."))
+    XCTAssertFalse(detail.contains("/tmp/notion"))
+    XCTAssertFalse(detail.contains("amentia-plugin.json"))
+    XCTAssertFalse(detail.contains("displayName"))
+  }
+
   func testPluginCapabilityPresenterHidesRawMetadata() {
     let capability = PluginCapabilitySummary(
       id: "notion::mcp_server::notion-pages",
@@ -780,6 +817,54 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(review, "Guidance: Use project notes as bounded local guidance.")
     XCTAssertFalse(review.contains("skills/workspace"))
     XCTAssertFalse(review.contains("SKILL.md"))
+  }
+
+  func testPluginCapabilityReviewSummarizesWorkflowWithoutRawIdentifiers() {
+    let capability = PluginCapabilitySummary(
+      id: "notion::connector_workflow:notion.create-page",
+      kind: "connector_workflow",
+      identifier: "notion.create-page",
+      pluginID: "notion",
+      pluginDisplayName: "Notion",
+      permissions: ["network.outbound"],
+      manifestPath: "/tmp/notion/amentia-plugin.json",
+      metadata: [
+        "surface": "connector_workflow",
+        "displayName": "Publish Page",
+        "connectorName": "Notion",
+        "service": "notion",
+        "action": "create_page",
+        "maxAgentSteps": "4",
+      ]
+    )
+
+    let title = PluginCapabilityPresenter.title(capability)
+    let review = PluginCapabilityPresenter.reviewSummary(capability) ?? ""
+    let visibleText = [title, review].joined(separator: "\n")
+
+    XCTAssertEqual(title, "Workflow: Publish Page")
+    XCTAssertEqual(review, "Workflow: service: Notion | action: create page | limit: up to 4 steps")
+    XCTAssertFalse(visibleText.contains("notion.create-page"))
+    XCTAssertFalse(visibleText.contains("connector_workflow"))
+    XCTAssertFalse(visibleText.contains("/tmp/notion"))
+  }
+
+  func testUnknownPluginCapabilitiesAndPermissionsUseProductFallbacks() {
+    let capabilitySummary = PluginCapabilityDisplay.summary([
+      "command:run",
+      "experimental_agent:planner",
+    ])
+    let unknownSurface = PluginCapabilityDisplay.surface("experimental_agent")
+    let permissionSummary = PluginPermissionDisplay.summary([
+      "network.outbound",
+      "secrets.raw",
+    ])
+
+    XCTAssertEqual(capabilitySummary, "1 action | 1 capability")
+    XCTAssertEqual(unknownSurface, "Capability")
+    XCTAssertEqual(permissionSummary, "Custom local permission, Network access")
+    XCTAssertFalse(capabilitySummary.contains("experimental_agent"))
+    XCTAssertFalse(permissionSummary.contains("secrets.raw"))
   }
 
   func testPluginInstallConfirmationAvoidsRawPathsAndManifestTerms() {

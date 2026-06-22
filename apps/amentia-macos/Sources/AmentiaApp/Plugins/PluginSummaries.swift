@@ -81,14 +81,24 @@ enum PluginCapabilityDisplay {
   }
 
   static func summary(_ counts: [String: Int]) -> String {
-    capabilityKindOrder
+    let knownKindParts = capabilityKindOrder
       .compactMap { kind in
         guard let count = counts[kind], count > 0 else {
           return nil
         }
         return "\(count) \(label(kind, count: count))"
       }
-      .joined(separator: " | ")
+
+    let knownKinds = Set(capabilityKindOrder)
+    let unknownCount = counts
+      .filter { !knownKinds.contains($0.key) }
+      .map { $0.value }
+      .reduce(0, +)
+    let unknownParts = unknownCount > 0
+      ? ["\(unknownCount) \(label("unknown", count: unknownCount))"]
+      : []
+
+    return (knownKindParts + unknownParts).joined(separator: " | ")
   }
 
   static func surface(_ kind: String) -> String {
@@ -108,7 +118,7 @@ enum PluginCapabilityDisplay {
     case "connector_workflow":
       return "Workflow"
     default:
-      return kind.replacingOccurrences(of: "_", with: " ")
+      return "Capability"
     }
   }
 
@@ -146,9 +156,12 @@ enum PluginCapabilityDisplay {
       return count == 1 ? "check" : "checks"
     case "connector_workflow":
       return count == 1 ? "workflow" : "workflows"
+    case "skill":
+      return count == 1 ? "skill" : "skills"
+    case "tool":
+      return count == 1 ? "tool" : "tools"
     default:
-      let label = kind.replacingOccurrences(of: "_", with: " ")
-      return count == 1 ? label : "\(label)s"
+      return count == 1 ? "capability" : "capabilities"
     }
   }
 }
@@ -182,7 +195,7 @@ enum PluginPermissionDisplay {
     case "mcp.connect":
       return "MCP access"
     default:
-      return permission
+      return "Custom local permission"
     }
   }
 }
@@ -207,7 +220,7 @@ enum PluginStatusDisplay {
     let issue = plugin.validationError?.trimmingCharacters(in: .whitespacesAndNewlines)
     let summary: String
     if let issue = issue, !issue.isEmpty {
-      summary = issue
+      summary = PluginValidationCopy.userFacingMessage(issue)
     } else {
       summary = "Setup needs review."
     }
@@ -218,7 +231,7 @@ enum PluginStatusDisplay {
       return summary
     }
 
-    return "\(summary) Fix: \(hint)"
+    return "\(summary) Fix: \(PluginValidationCopy.userFacingRepairHint(hint))"
   }
 
   static func connectionStatus(_ status: String) -> String {
@@ -409,6 +422,78 @@ enum PluginStatusDisplay {
         .replacingOccurrences(of: "_", with: " ")
         .replacingOccurrences(of: "-", with: " ")
     }
+  }
+}
+
+enum PluginValidationCopy {
+  static func userFacingMessage(_ message: String) -> String {
+    let normalized = message.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalized.isEmpty else {
+      return "Setup needs review."
+    }
+
+    if containsAny(normalized, [
+      "does not contain amentia-plugin.json",
+      "must be a plugin directory or amentia-plugin.json file",
+      "Select a plugin folder or the amentia-plugin.json manifest",
+    ]) {
+      return "Plugin setup file is missing."
+    }
+
+    if normalized.contains("cannot contain nested amentia-plugin.json manifests") {
+      return "Plugin bundle contains another plugin bundle."
+    }
+
+    if normalized.contains("cannot contain symbolic links") {
+      return "Plugin bundle must be self-contained."
+    }
+
+    if normalized.contains("is already installed") {
+      return "Plugin is already installed."
+    }
+
+    if normalized.contains("Plugin manifest name") {
+      return "Plugin name needs review."
+    }
+
+    if containsAny(normalized, ["correct format", "is missing", "failed to parse"]) {
+      return "Plugin setup file needs review."
+    }
+
+    if containsRawSetupDetail(normalized) {
+      return "Plugin setup needs review."
+    }
+
+    return normalized
+  }
+
+  static func userFacingRepairHint(_ hint: String) -> String {
+    let normalized = hint.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalized.isEmpty else {
+      return "Review the plugin setup and try again."
+    }
+
+    if containsRawSetupDetail(normalized)
+      || containsAny(normalized, ["correct format", "camelCase", "displayName"])
+    {
+      return "Check the plugin setup file, then refresh the plugin."
+    }
+
+    return normalized
+  }
+
+  private static func containsRawSetupDetail(_ value: String) -> Bool {
+    value.contains("/")
+      || value.contains("\\")
+      || value.contains("amentia-plugin.json")
+      || value.contains("manifest")
+      || value.contains("Manifest")
+      || value.contains("sourcePath")
+      || value.contains("definitionPath")
+  }
+
+  private static func containsAny(_ value: String, _ needles: [String]) -> Bool {
+    needles.contains { value.contains($0) }
   }
 }
 

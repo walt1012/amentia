@@ -51,8 +51,10 @@ enum PluginDashboardPresenter {
         let capabilities = plugin.capabilitySummary.isEmpty
           ? "No declared capabilities"
           : plugin.capabilitySummary
-        let validation = plugin.validationError == nil ? "ready" : "needs attention"
-        let hint = plugin.validationHint.map { " | fix: \($0)" } ?? ""
+        let hasValidationIssue = plugin.validationError != nil || plugin.validationHint != nil
+        let validation = hasValidationIssue ? "needs attention" : "ready"
+        let hint = plugin.validationHint
+          .map { " | fix: \(PluginValidationCopy.userFacingRepairHint($0))" } ?? ""
         return "\(plugin.displayName) \(plugin.version) | \(PluginStatusDisplay.pluginStatus(plugin.status)) | \(plugin.sourceLabel) | \(capabilities) | \(validation)\(hint)"
       }
       .joined(separator: "\n")

@@ -99,6 +99,17 @@ fn build_capability_registry_includes_connector_metadata() {
       "homepage": "https://www.notion.so"
     }
   ],
+  "connectorWorkflows": [
+    {
+      "id": "notion.create-page",
+      "displayName": "Notion Create Page",
+      "connectorId": "notion",
+      "action": "createPage",
+      "maxAgentSteps": 5,
+      "stages": ["prepare", "publish"],
+      "statuses": ["draft", "published"]
+    }
+  ],
   "authPolicy": {
     "type": "oauth2",
     "required": true,
@@ -135,6 +146,21 @@ fn build_capability_registry_includes_connector_metadata() {
   assert_eq!(mcp_server.metadata["transport"], "stdio");
   assert_eq!(mcp_server.metadata["serverStatus"], "missingCommand");
   assert!(mcp_server.metadata["serverError"].contains("requires a command"));
+
+  let workflow = registry
+    .iter()
+    .find(|capability| {
+      capability.capability_id == "notion-connector::connector_workflow:notion.create-page"
+    })
+    .expect("connector workflow capability");
+  assert_eq!(workflow.metadata["surface"], "connector_workflow");
+  assert_eq!(workflow.metadata["displayName"], "Notion Create Page");
+  assert_eq!(workflow.metadata["connectorName"], "Notion");
+  assert_eq!(workflow.metadata["service"], "notion");
+  assert_eq!(workflow.metadata["action"], "createPage");
+  assert_eq!(workflow.metadata["maxAgentSteps"], "5");
+  assert_eq!(workflow.metadata["stages"], "prepare, publish");
+  assert_eq!(workflow.metadata["statuses"], "draft, published");
 }
 
 #[test]

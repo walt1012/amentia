@@ -263,7 +263,7 @@ struct PluginHookRow: View {
         Spacer()
 
         if hook.status != "ready" {
-          Button("Source") {
+          Button("Setup") {
             onRevealSource()
           }
           .font(.caption2)

@@ -59,6 +59,12 @@ enum PluginCapabilityPresenter {
       return "Connection: \(displayName)"
     }
 
+    if capability.kind == "connector_workflow",
+       let displayName = cleanMetadataValue(capability.metadata["displayName"])
+    {
+      return "Workflow: \(displayName)"
+    }
+
     return PluginCapabilityDisplay.surface(capability.kind)
   }
 
@@ -70,6 +76,10 @@ enum PluginCapabilityPresenter {
       return skillReviewSummary(capability)
     case "mcp_server":
       return mcpServerReviewSummary(capability)
+    case "connector_workflow":
+      return workflowReviewSummary(capability)
+    case "tool":
+      return toolReviewSummary(capability)
     case "command", "hook":
       return definitionReviewSummary(capability)
     default:
@@ -166,6 +176,30 @@ enum PluginCapabilityPresenter {
     }
   }
 
+  private static func workflowReviewSummary(_ capability: PluginCapabilitySummary) -> String? {
+    var parts: [String] = []
+    if let service = cleanMetadataValue(capability.metadata["service"]) {
+      parts.append("service: \(PluginStatusDisplay.serviceName(service))")
+    }
+    if let action = cleanMetadataValue(capability.metadata["action"]) {
+      parts.append("action: \(displayAction(action))")
+    }
+    if let maxSteps = cleanMetadataValue(capability.metadata["maxAgentSteps"]) {
+      parts.append("limit: up to \(maxSteps) steps")
+    }
+    if parts.isEmpty {
+      return "Workflow: local connector workflow."
+    }
+    return "Workflow: \(parts.joined(separator: " | "))"
+  }
+
+  private static func toolReviewSummary(_ capability: PluginCapabilitySummary) -> String? {
+    if let description = cleanMetadataValue(capability.metadata["description"]) {
+      return "Tool: \(description)"
+    }
+    return "Tool: bounded local capability."
+  }
+
   private static func displayStatus(_ status: String) -> String {
     switch status {
     case "missingCommand":
@@ -184,6 +218,12 @@ enum PluginCapabilityPresenter {
     default:
       return value.replacingOccurrences(of: "_", with: " ")
     }
+  }
+
+  private static func displayAction(_ value: String) -> String {
+    value
+      .replacingOccurrences(of: "_", with: " ")
+      .replacingOccurrences(of: "-", with: " ")
   }
 
   private static func cleanMetadataValue(_ value: String?) -> String? {

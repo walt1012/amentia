@@ -4,7 +4,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use crate::io::{read_command_manifest, read_hook_manifest, read_manifest};
-use crate::types::PluginCatalogEntry;
+use crate::types::{PluginCatalogEntry, PluginManifest};
 
 use super::capability_identifier_is_safe;
 
@@ -44,6 +44,8 @@ pub(super) fn plugin_capability_metadata(
       }
     }
   }
+
+  insert_connector_workflow_metadata(&mut metadata_by_capability, &manifest);
 
   for skill in manifest.skills {
     let mut metadata = HashMap::from([
@@ -103,6 +105,47 @@ pub(super) fn plugin_capability_metadata(
   }
 
   metadata_by_capability
+}
+
+fn insert_connector_workflow_metadata(
+  metadata_by_capability: &mut HashMap<String, HashMap<String, String>>,
+  manifest: &PluginManifest,
+) {
+  let connector_metadata = manifest
+    .app_connectors
+    .iter()
+    .map(|connector| {
+      (
+        connector.id.as_str(),
+        (connector.display_name.as_str(), connector.service.as_str()),
+      )
+    })
+    .collect::<HashMap<_, _>>();
+
+  for workflow in &manifest.connector_workflows {
+    let Some((connector_display_name, service)) =
+      connector_metadata.get(workflow.connector_id.as_str())
+    else {
+      continue;
+    };
+    let mut metadata = HashMap::from([
+      ("surface".to_string(), "connector_workflow".to_string()),
+      ("displayName".to_string(), workflow.display_name.clone()),
+      ("connectorName".to_string(), (*connector_display_name).to_string()),
+      ("service".to_string(), (*service).to_string()),
+      ("action".to_string(), workflow.action.clone()),
+    ]);
+    if let Some(max_agent_steps) = workflow.max_agent_steps {
+      metadata.insert("maxAgentSteps".to_string(), max_agent_steps.to_string());
+    }
+    if !workflow.stages.is_empty() {
+      metadata.insert("stages".to_string(), workflow.stages.join(", "));
+    }
+    if !workflow.statuses.is_empty() {
+      metadata.insert("statuses".to_string(), workflow.statuses.join(", "));
+    }
+    metadata_by_capability.insert(format!("connector_workflow:{}", workflow.id), metadata);
+  }
 }
 
 fn insert_mcp_server_status(
