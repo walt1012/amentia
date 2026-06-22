@@ -130,4 +130,9 @@ extension AppViewModel {
   func pluginSkillPreview() -> [PluginSkillSummary] {
     PluginDashboardPresenter.skillPreview(pluginDashboardSnapshot)
   }
+
+  func canDisablePluginGuidance(skill: PluginSkillSummary) -> Bool {
+    pluginSummary(pluginID: skill.pluginID)?.enabled == true
+      && canSetPluginEnabled(pluginID: skill.pluginID)
+  }
 }

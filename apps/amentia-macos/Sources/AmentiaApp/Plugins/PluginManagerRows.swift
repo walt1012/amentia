@@ -73,7 +73,9 @@ struct PluginRow: View {
 
 struct PluginSkillRow: View {
   let skill: PluginSkillSummary
+  let canDisablePlugin: Bool
   let onRevealSource: () -> Void
+  let onDisablePlugin: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -88,12 +90,27 @@ struct PluginSkillRow: View {
 
         Spacer()
 
-        Button("Show File") {
-          onRevealSource()
+        HStack(spacing: 8) {
+          Button("Show File") {
+            onRevealSource()
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+
+          Button(PluginSkillDisplay.disableButtonTitle(skill)) {
+            onDisablePlugin()
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+          .disabled(!canDisablePlugin)
+          .help(PluginSkillDisplay.disableDetail(skill))
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
       }
+
+      Text(PluginSkillDisplay.disableDetail(skill))
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
 
       if !skill.permissions.isEmpty {
         Text("Needs: \(PluginPermissionDisplay.summary(skill.permissions))")

@@ -819,6 +819,19 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(review.contains("SKILL.md"))
   }
 
+  func testPluginSkillDisableCopyNamesGuidanceSource() {
+    let skill = pluginSkillSummary(
+      pluginDisplayName: "Workspace Notes",
+      description: "Use project notes as bounded local guidance."
+    )
+
+    XCTAssertEqual(PluginSkillDisplay.disableButtonTitle(skill), "Disable Workspace Notes")
+    XCTAssertEqual(
+      PluginSkillDisplay.disableDetail(skill),
+      "Stops Workspace Notes guidance from being added to future requests."
+    )
+  }
+
   func testPluginCapabilityReviewSummarizesWorkflowWithoutRawIdentifiers() {
     let capability = PluginCapabilitySummary(
       id: "notion::connector_workflow:notion.create-page",
@@ -1586,6 +1599,25 @@ final class CoworkFirstPresentationTests: XCTestCase {
     pluginCommandSummary(
       requiredConnectorIds: requiredConnectorIds,
       execution: supportedPluginExecution()
+    )
+  }
+
+  private func pluginSkillSummary(
+    pluginDisplayName: String = "Notion",
+    description: String = "Use bounded local guidance."
+  ) -> PluginSkillSummary {
+    PluginSkillSummary(
+      id: "notion::skill:notes",
+      description: description,
+      pluginID: "notion",
+      pluginDisplayName: pluginDisplayName,
+      permissions: [],
+      sourcePath: "/tmp/notion/skills/notes/SKILL.md",
+      status: "ready",
+      preview: "Keep guidance bounded.",
+      contentBytes: 128,
+      runBlocker: nil,
+      runRepairHint: nil
     )
   }
 

@@ -774,6 +774,14 @@ struct PluginHookSummary: Identifiable, Hashable {
 }
 
 enum PluginSkillDisplay {
+  static func disableButtonTitle(_ skill: PluginSkillSummary) -> String {
+    "Disable \(skill.pluginDisplayName)"
+  }
+
+  static func disableDetail(_ skill: PluginSkillSummary) -> String {
+    "Stops \(skill.pluginDisplayName) guidance from being added to future requests."
+  }
+
   static func previewLine(_ preview: String?, maxLength: Int = 160) -> String? {
     guard let preview else {
       return nil

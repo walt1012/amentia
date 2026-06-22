@@ -294,6 +294,8 @@ Completed:
   disable lifecycle.
 - Plugin skill context receipts can jump back to the plugin manager's
   reviewable-guidance surface before the user disables anything.
+- Reviewable guidance rows in the plugin manager expose the same disable path,
+  so prompt guidance sources can be revoked without opening raw setup files.
 
 Next:
 

@@ -109,8 +109,12 @@ private struct PluginCapabilitiesSection: View {
         ForEach(viewModel.pluginSkillPreview()) { skill in
           PluginSkillRow(
             skill: skill,
+            canDisablePlugin: viewModel.canDisablePluginGuidance(skill: skill),
             onRevealSource: {
               viewModel.revealPluginSourcePath(skill.sourcePath)
+            },
+            onDisablePlugin: {
+              viewModel.setPluginEnabled(pluginID: skill.pluginID, enabled: false)
             }
           )
         }
