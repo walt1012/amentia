@@ -213,6 +213,8 @@ Remaining quality bar:
 - CI stays fast, split, strict, and green for the release package path.
 - The app has a polished blue Dock icon and no obvious stale, unused, or
   confusing UI surfaces left in the primary path.
+- The approved Dock icon uses a 2048 px PNG master with a byte-matched SVG
+  preview wrapper and native macOS icon packaging checks.
 
 ## M14: Connector and Skill Platform
 

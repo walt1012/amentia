@@ -24,7 +24,8 @@ RGBA_BORDER = (232, 237, 243, 255)
 RGBA_WHITE = (255, 255, 255, 255)
 RGBA_TRANSPARENT = (255, 255, 255, 0)
 
-ICON_SIZE = 1254
+ICON_DESIGN_SIZE = 1254
+ICON_OUTPUT_SIZE = 2048
 SCALE = 4
 
 TILE = (28, 28, 1226, 1226)
@@ -119,15 +120,19 @@ def reference_mark_image() -> Image.Image:
 def write_icon_svg() -> None:
   write_text(
     ICON_SVG,
-    f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" role="img" aria-label="Amentia blue app icon">
-  <image data-preview-source="{ICON_PNG.name}" href="{png_data_uri(ICON_PNG)}" width="1254" height="1254" preserveAspectRatio="xMidYMid meet"/>
+    f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {ICON_OUTPUT_SIZE} {ICON_OUTPUT_SIZE}" role="img" aria-label="Amentia blue app icon">
+  <image data-preview-source="{ICON_PNG.name}" href="{png_data_uri(ICON_PNG)}" width="{ICON_OUTPUT_SIZE}" height="{ICON_OUTPUT_SIZE}" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 """,
   )
 
 
 def write_icon_png() -> None:
-  image = Image.new("RGBA", (ICON_SIZE * SCALE, ICON_SIZE * SCALE), RGBA_TRANSPARENT)
+  image = Image.new(
+    "RGBA",
+    (ICON_DESIGN_SIZE * SCALE, ICON_DESIGN_SIZE * SCALE),
+    RGBA_TRANSPARENT,
+  )
   draw = ImageDraw.Draw(image)
   draw.rounded_rectangle(
     scaled_box(TILE),
@@ -144,7 +149,7 @@ def write_icon_png() -> None:
     Image.Resampling.LANCZOS,
   )
   image.alpha_composite(mark, (ICON_MARK_BOX[0] * SCALE, ICON_MARK_BOX[1] * SCALE))
-  image = image.resize((ICON_SIZE, ICON_SIZE), Image.Resampling.LANCZOS)
+  image = image.resize((ICON_OUTPUT_SIZE, ICON_OUTPUT_SIZE), Image.Resampling.LANCZOS)
   image.save(ICON_PNG)
 
 

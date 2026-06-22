@@ -32,3 +32,6 @@ Source of truth:
 - The packaging script derives the macOS `Amentia.icns` Dock icon from the PNG
   candidate and rejects opaque square corners or excessive transparent padding
   during app bundle creation.
+- The generated app icon PNG uses a 2048 px source so the packaged ICNS has a
+  clean high-resolution master while preserving the approved 1254-unit design
+  proportions.

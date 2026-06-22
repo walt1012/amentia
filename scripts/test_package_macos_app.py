@@ -87,8 +87,13 @@ def assert_svg_png_preview(svg_name: str, png_name: str) -> None:
 
 def assert_app_icon_has_no_reference_crop_plate() -> None:
   image = decode_rgba_png(BRAND_DIR / "amentia-blue-symbol-icon-candidate.png")
+  scale = image["width"] / 1254
   pixels = image["pixels"]
-  sample_points = ((306, 376), (948, 376), (306, 868), (948, 868), (627, 376))
+  design_sample_points = ((306, 376), (948, 376), (306, 868), (948, 868), (627, 376))
+  sample_points = (
+    (round(x * scale), round(y * scale))
+    for x, y in design_sample_points
+  )
   for x, y in sample_points:
     if pixels[y][x] != (255, 255, 255, 255):
       raise AssertionError(
