@@ -11,8 +11,7 @@ use crate::context_memory_pack::{
   format_memory_context_prompt, merge_memory_context_attributes, pack_memory_notes_for_context,
 };
 use crate::context_plugin_skill_pack::{
-  format_plugin_skill_context_prompt, merge_plugin_skill_context_attributes,
-  PluginSkillContextPack,
+  format_plugin_skill_context_prompt, merge_plugin_skill_context_attributes, PluginSkillContextPack,
 };
 
 pub(crate) fn build_plan_item(

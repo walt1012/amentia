@@ -48,7 +48,12 @@ pub(crate) fn pack_plugin_skills_for_context(
     right
       .score
       .cmp(&left.score)
-      .then_with(|| left.skill.plugin_display_name.cmp(&right.skill.plugin_display_name))
+      .then_with(|| {
+        left
+          .skill
+          .plugin_display_name
+          .cmp(&right.skill.plugin_display_name)
+      })
       .then_with(|| left.skill.skill_id.cmp(&right.skill.skill_id))
   });
 
@@ -184,7 +189,11 @@ fn shrink_entry_to_fit(
   pack: &PluginSkillContextPack,
   mut entry: PluginSkillContextEntry,
 ) -> Option<PluginSkillContextEntry> {
-  let mut preview_budget = entry.preview.as_ref().map(|preview| preview.len()).unwrap_or(0);
+  let mut preview_budget = entry
+    .preview
+    .as_ref()
+    .map(|preview| preview.len())
+    .unwrap_or(0);
   while preview_budget > 0 {
     preview_budget /= 2;
     entry.preview = entry
@@ -299,10 +308,7 @@ fn normalize_text(value: &str) -> String {
 }
 
 fn compact_preview(preview: &str) -> String {
-  preview
-    .split_whitespace()
-    .collect::<Vec<_>>()
-    .join(" ")
+  preview.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn truncate_chars(value: &str, max_chars: usize) -> (Option<String>, bool) {
@@ -322,7 +328,7 @@ fn truncate_chars(value: &str, max_chars: usize) -> (Option<String>, bool) {
 #[cfg(test)]
 mod tests {
   use std::fs;
-  use std::path::PathBuf;
+  use std::path::{Path, PathBuf};
   use std::time::{SystemTime, UNIX_EPOCH};
 
   use amentia_plugin_host::discover_plugins;
@@ -352,10 +358,8 @@ mod tests {
     );
     let plugins = discover_plugins(&plugin_root).expect("discover plugins");
 
-    let context = pack_plugin_skills_for_context(
-      &plugins,
-      "prepare a Notion page draft from this workspace",
-    );
+    let context =
+      pack_plugin_skills_for_context(&plugins, "prepare a Notion page draft from this workspace");
 
     fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
 
@@ -418,7 +422,7 @@ mod tests {
   }
 
   fn write_skill_plugin(
-    plugin_root: &PathBuf,
+    plugin_root: &Path,
     plugin_name: &str,
     display_name: &str,
     default_enabled: bool,
