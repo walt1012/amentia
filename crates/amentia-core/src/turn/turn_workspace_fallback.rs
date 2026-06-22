@@ -10,6 +10,7 @@ pub(super) fn execute_no_workspace_turn(
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
+    &snapshot.plugin_skill_context,
     &snapshot.message,
     None,
     "Open a project before running filesystem tools.".to_string(),

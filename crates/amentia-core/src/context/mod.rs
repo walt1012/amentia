@@ -7,6 +7,7 @@ pub(crate) mod context_memory_prompt;
 pub(crate) mod context_memory_selection;
 pub(crate) mod context_observation;
 pub(crate) mod context_persistence;
+pub(crate) mod context_plugin_skill_pack;
 pub(crate) mod context_plugins;
 pub(crate) mod intent_file;
 pub(crate) mod intent_inference;

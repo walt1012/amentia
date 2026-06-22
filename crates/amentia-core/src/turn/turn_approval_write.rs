@@ -29,6 +29,7 @@ pub(super) fn execute_write_turn(
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
+    &snapshot.plugin_skill_context,
     &snapshot.message,
     Some(workspace),
     write_plan_summary(policy, intent, workspace),

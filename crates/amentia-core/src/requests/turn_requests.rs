@@ -5,6 +5,7 @@ use amentia_model_runtime::GenerationCancellation;
 use amentia_protocol::{JsonRpcRequest, JsonRpcResponse, TurnStartParams, TurnStartResult};
 
 use crate::approval_state::approvals_for_thread;
+use crate::context_plugin_skill_pack::pack_plugin_skills_for_context;
 use crate::plugin_commands::capture_plugin_command_output_memory;
 use crate::plugin_permissions::granted_permission_sources;
 use crate::request_params::parse_required_params;
@@ -42,6 +43,8 @@ pub fn prepare_turn_start(
   let cancellation = GenerationCancellation::new();
   let memory_notes = context.memory_state.snapshot_notes();
   let plugin_state = context.plugin_state.clone();
+  let plugin_skill_context =
+    pack_plugin_skills_for_context(plugin_state.catalog(), &params.message);
   let permission_sources = granted_permission_sources(context.plugin_state.catalog());
   let local_execution_safety_mode =
     LocalExecutionSafetyMode::from_request(params.local_execution_safety_mode.as_deref());
@@ -91,6 +94,7 @@ pub fn prepare_turn_start(
       model_runtime,
       cancellation,
       memory_notes,
+      plugin_skill_context,
       plugin_state,
       permission_sources,
       local_execution_safety_mode,

@@ -68,6 +68,7 @@ pub(super) fn execute_web_search_candidate_local_answer(
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
+    &snapshot.plugin_skill_context,
     &snapshot.message,
     snapshot.workspace.as_ref(),
     format!(
@@ -122,6 +123,7 @@ pub(super) fn execute_web_search_turn(
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
+    &snapshot.plugin_skill_context,
     &snapshot.message,
     snapshot.workspace.as_ref(),
     if permission_is_granted(&snapshot.permission_sources, WEB_SEARCH_TOOL_PERMISSION) {

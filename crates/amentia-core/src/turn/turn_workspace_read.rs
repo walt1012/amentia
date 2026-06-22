@@ -41,6 +41,7 @@ fn execute_read_step(
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
+    &snapshot.plugin_skill_context,
     &snapshot.message,
     Some(workspace),
     if permission_is_granted(&snapshot.permission_sources, "file.read") {

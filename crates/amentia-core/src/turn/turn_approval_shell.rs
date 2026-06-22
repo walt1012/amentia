@@ -24,6 +24,7 @@ pub(super) fn execute_shell_turn(
   items.push(build_plan_item(
     &snapshot.model_runtime,
     &snapshot.memory_notes,
+    &snapshot.plugin_skill_context,
     &snapshot.message,
     Some(workspace),
     shell_plan_summary(policy, workspace),

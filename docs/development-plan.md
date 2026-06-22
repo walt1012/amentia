@@ -284,6 +284,9 @@ Completed:
   user-facing evidence.
 - Enabled plugin skills now load through a bounded, local, read-only registry
   with short previews, repair hints, and progressive plugin-manager disclosure.
+- Enabled plugin skills can contribute a query-selected, read-only context pack
+  to planner prompts with strict count, character budget, revocation, and receipt
+  attributes; they still do not execute code or override the user request.
 
 Next:
 
@@ -294,8 +297,8 @@ Next:
 - Prove connector import, local enablement, credential use, revocation, removal,
   retries, receipts, and memory capture with one reference connector before
   adding more services.
-- Use plugin skills in the agent loop only after the selection, review,
-  revocation, receipts, and prompt-size boundaries are explicit.
+- Add user-facing review and disable controls for selected plugin skill context
+  when a plugin materially influences an agent plan.
 - Treat hooks as verification and automation points first, not arbitrary
   always-on automation.
 

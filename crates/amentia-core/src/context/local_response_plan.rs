@@ -10,10 +10,15 @@ use crate::context_compaction::{compact_generation_prompt, merge_generation_prom
 use crate::context_memory_pack::{
   format_memory_context_prompt, merge_memory_context_attributes, pack_memory_notes_for_context,
 };
+use crate::context_plugin_skill_pack::{
+  format_plugin_skill_context_prompt, merge_plugin_skill_context_attributes,
+  PluginSkillContextPack,
+};
 
 pub(crate) fn build_plan_item(
   model_runtime: &LocalModelRuntime,
   memory_notes: &[MemoryNote],
+  plugin_skill_context: &PluginSkillContextPack,
   message: &str,
   workspace: Option<&WorkspaceSummary>,
   plan_hint: String,
@@ -33,10 +38,15 @@ pub(crate) fn build_plan_item(
       )
     })
     .unwrap_or_else(|| "Workspace: unavailable.".to_string());
+  let planner_context = format!(
+    "{}\n{}",
+    format_memory_context_prompt(&memory_context),
+    format_plugin_skill_context_prompt(plugin_skill_context)
+  );
   let prompt = compact_generation_prompt(
     &format!(
       "You are the local planner for Amentia.\n{workspace_context}\n{}\nUser request: {message}\nCandidate local action: {plan_hint}\nWrite one concise English sentence describing the next action Amentia should take.",
-      format_memory_context_prompt(&memory_context)
+      planner_context
     ),
     &memory_context,
   );
@@ -60,6 +70,7 @@ pub(crate) fn build_plan_item(
     );
   }
   merge_memory_context_attributes(&mut attributes, &memory_context);
+  merge_plugin_skill_context_attributes(&mut attributes, plugin_skill_context);
   merge_generation_prompt_attributes(&mut attributes, &prompt);
 
   TimelineItem {
