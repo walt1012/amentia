@@ -134,7 +134,7 @@ final class PluginConnectorCredentialDialogPresenterTests: XCTestCase {
     XCTAssertEqual(prompt, "Pass a short text input to this action.")
   }
 
-  func testSecretlessAuthorizationPromptRemainsAvailableForNonApiKeyConnectors() {
+  func testTokenOptionalAuthorizationPromptRemainsAvailableForNonApiKeyConnectors() {
     let connector = PluginConnectorSummary(
       id: "local-marker::calendar",
       displayName: "Local Calendar",

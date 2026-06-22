@@ -201,7 +201,7 @@ Remaining quality bar:
 - Users can delete a session, review or revert session changes, and Reset Amentia
   from visible UI without learning hidden menus; Reset Amentia must remove
   app-owned folders, paused downloads, preferences, caches, saved app state, and
-  local connector secrets.
+  local connector tokens or keys.
 - The default path avoids raw runtime, manifest, checksum, ID, and backend
   wording; advanced diagnostics remain available only when useful.
 - Amentia can run the cowork loop, use Web Search, manage sessions, and recover or
@@ -270,6 +270,8 @@ Completed:
   missing credentials, so bound actions do not look unauthenticated.
 - Connector authorization dialogs use user-facing token and key language instead
   of exposing storage terminology.
+- Connector-blocked actions explain which connection to authorize and the next
+  user step before runtime execution starts.
 
 Next:
 

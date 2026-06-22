@@ -570,7 +570,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(summary.contains("authorized"))
   }
 
-  func testPluginDashboardDoesNotCountMissingSecretsAsAuthorized() {
+  func testPluginDashboardDoesNotCountMissingTokensAsAuthorized() {
     let snapshot = pluginDashboardSnapshot(
       connectors: [
         pluginConnectorSummary(
@@ -593,15 +593,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(detail.contains("authorized locally"))
   }
 
-  func testPluginActionPlannerAllowsReauthorizationWhenSecretIsMissing() {
-    let connector = pluginConnectorSummary(
-      id: "notion::main",
-      displayName: "Notion",
-      status: "ready",
-      authStatus: "authorized",
-      credentialPresent: true,
-      credentialSecretPresent: false
-    )
+  func testPluginActionPlannerAllowsReauthorizationWhenTokenIsMissing() {
+    let connector = missingTokenConnector()
     let snapshot = pluginActionSnapshot(connectors: [connector])
 
     XCTAssertTrue(
@@ -618,16 +611,9 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
-  func testPluginActionPlannerFindsMissingSecretConnectorForAction() {
-    let connector = pluginConnectorSummary(
-      id: "notion::main",
-      displayName: "Notion",
-      status: "ready",
-      authStatus: "authorized",
-      credentialPresent: true,
-      credentialSecretPresent: false
-    )
-    let command = pluginCommandSummary(requiredConnectorIds: ["notion::main"])
+  func testPluginActionPlannerFindsMissingTokenConnectorForAction() {
+    let connector = missingTokenConnector()
+    let command = connectorAuthCommand()
     let snapshot = pluginActionSnapshot(connectors: [connector], commands: [command])
 
     XCTAssertEqual(
@@ -637,6 +623,52 @@ final class CoworkFirstPresentationTests: XCTestCase {
       ),
       "notion::main"
     )
+  }
+
+  func testPluginActionPlannerExplainsConnectorAuthorizationNextStep() {
+    let connector = missingTokenConnector()
+    let command = connectorAuthCommand()
+    let snapshot = pluginActionSnapshot(connectors: [connector], commands: [command])
+
+    let detail = PluginActionPlanner.commandConnectorAuthorizationDetail(
+      commandID: command.id,
+      snapshot: snapshot
+    )
+
+    XCTAssertEqual(
+      detail,
+      "Connect Notion before running Publish Note. Choose Authorize and paste a local token or API key."
+    )
+    XCTAssertEqual(
+      PluginActionPlanner.commandRunDisabledReason(commandID: command.id, snapshot: snapshot),
+      detail
+    )
+  }
+
+  func testPluginCommandCoordinatorBlocksWithConnectorAuthorizationNextStep() {
+    let connector = missingTokenConnector()
+    let command = connectorAuthCommand()
+    let snapshot = pluginActionSnapshot(connectors: [connector], commands: [command])
+
+    let preparation = PluginCommandCoordinator.prepareRun(
+      commandID: command.id,
+      input: nil,
+      selectedThreadID: "thread-1",
+      snapshot: snapshot,
+      commands: [command]
+    )
+
+    switch preparation {
+    case let .blocked(blockedCommand, detail, input):
+      XCTAssertEqual(blockedCommand.id, command.id)
+      XCTAssertEqual(
+        detail,
+        "Connect Notion before running Publish Note. Choose Authorize and paste a local token or API key."
+      )
+      XCTAssertNil(input)
+    case .ready, .unavailable:
+      XCTFail("Expected the command to be blocked for connector authorization.")
+    }
   }
 
   func testPluginValidationFallbackAvoidsUnknownErrorCopy() {
@@ -954,7 +986,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("authorized"))
   }
 
-  func testConnectionEvidenceDoesNotTreatMissingSecretAsAuthorized() {
+  func testConnectionEvidenceDoesNotTreatMissingTokenAsAuthorized() {
     let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
       "connectorId": "notion",
       "connectorService": "notion",
@@ -1050,7 +1082,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(entry.body.contains("saved locally"))
   }
 
-  func testConnectionAuthorizationReceiptDoesNotTreatMissingSecretAsAuthorized() {
+  func testConnectionAuthorizationReceiptDoesNotTreatMissingTokenAsAuthorized() {
     let connector = runtimePluginConnector(
       authStatus: "ready",
       credentialPresent: true,
@@ -1379,6 +1411,17 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  private func missingTokenConnector(id: String = "notion::main") -> PluginConnectorSummary {
+    pluginConnectorSummary(
+      id: id,
+      displayName: "Notion",
+      status: "ready",
+      authStatus: "authorized",
+      credentialPresent: true,
+      credentialSecretPresent: false
+    )
+  }
+
   private func runtimePluginConnector(
     authStatus: String,
     credentialPresent: Bool,
@@ -1413,7 +1456,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   private func pluginCommandSummary(
     id: String = "notion.publish",
-    requiredConnectorIds: [String]
+    requiredConnectorIds: [String],
+    execution: PluginCommandExecutionSummary? = nil
   ) -> PluginCommandSummary {
     PluginCommandSummary(
       id: id,
@@ -1423,8 +1467,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
       pluginDisplayName: "Notion",
       permissions: [],
       sourcePath: "/tmp/notion/amentia-plugin.json",
-      execution: nil,
-      executionKind: nil,
+      execution: execution,
+      executionKind: execution?.kind,
       memorySummary: nil,
       runStatus: "needsConnectorAuth",
       runBlocker: nil,
@@ -1433,6 +1477,28 @@ final class CoworkFirstPresentationTests: XCTestCase {
       requiredConnectorIds: requiredConnectorIds,
       approvalRequired: false,
       approvalReason: nil
+    )
+  }
+
+  private func supportedPluginExecution() -> PluginCommandExecutionSummary {
+    PluginCommandExecutionSummary(
+      kind: "mcp.remote.createPage",
+      driver: "node",
+      entrypoint: nil,
+      workflowID: "notion.create-page",
+      workflow: nil,
+      input: nil,
+      output: nil,
+      supported: true
+    )
+  }
+
+  private func connectorAuthCommand(
+    requiredConnectorIds: [String] = ["notion::main"]
+  ) -> PluginCommandSummary {
+    pluginCommandSummary(
+      requiredConnectorIds: requiredConnectorIds,
+      execution: supportedPluginExecution()
     )
   }
 

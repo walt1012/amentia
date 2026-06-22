@@ -12,6 +12,9 @@ struct PluginActionSnapshot {
 }
 
 enum PluginActionPlanner {
+  private static let commandNeedsConnectorAuthDetail =
+    "Authorize the required connection before running this action."
+
   static func isRemovable(_ plugin: PluginSummary) -> Bool {
     plugin.provenance == "local"
   }
@@ -159,6 +162,36 @@ enum PluginActionPlanner {
     snapshot.commands.first(where: { $0.id == commandID })?.runBlocker
   }
 
+  static func commandConnectorAuthorizationDetail(
+    commandID: String,
+    snapshot: PluginActionSnapshot
+  ) -> String? {
+    guard let command = snapshot.commands.first(where: { $0.id == commandID }),
+          command.runStatus == "needsConnectorAuth"
+    else {
+      return nil
+    }
+
+    guard let connectorID = commandAuthorizationConnectorID(
+      commandID: commandID,
+      snapshot: snapshot
+    ),
+      let connector = snapshot.connectors.first(where: { $0.id == connectorID })
+    else {
+      return command.runBlocker ?? commandNeedsConnectorAuthDetail
+    }
+
+    let actionTitle = command.title.trimmingCharacters(in: .whitespacesAndNewlines)
+    let connectionName = connector.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let safeActionTitle = actionTitle.isEmpty ? "this action" : actionTitle
+    let safeConnectionName = connectionName.isEmpty ? "the required connection" : connectionName
+    let setup = connector.authRequired
+      ? "Choose Authorize and paste a local token or API key."
+      : "Choose Authorize to approve the connection."
+
+    return "Connect \(safeConnectionName) before running \(safeActionTitle). \(setup)"
+  }
+
   private static func connectorNeedsAuthorization(
     _ connector: PluginConnectorSummary
   ) -> Bool {
@@ -192,6 +225,11 @@ enum PluginActionPlanner {
       return "Action was not found."
     }
 
+    if command.runStatus == "needsConnectorAuth",
+       let detail = commandConnectorAuthorizationDetail(commandID: commandID, snapshot: snapshot)
+    {
+      return detail
+    }
     if command.runStatus != "ready" {
       return command.runBlocker ?? "Action is not ready."
     }

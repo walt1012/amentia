@@ -30,10 +30,12 @@ enum PluginCommandCoordinator {
     }
 
     if PluginActionPlanner.commandNeedsConnectorAuth(commandID: commandID, snapshot: snapshot) {
-      let detail = PluginActionPlanner.commandRunBlocker(
+      let detail = PluginActionPlanner.commandConnectorAuthorizationDetail(
         commandID: commandID,
         snapshot: snapshot
-      ) ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
+      )
+        ?? PluginActionPlanner.commandRunBlocker(commandID: commandID, snapshot: snapshot)
+        ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
       return blockedOrUnavailable(
         commandID: commandID,
         commands: commands,
