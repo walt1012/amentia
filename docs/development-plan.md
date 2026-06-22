@@ -210,7 +210,7 @@ Remaining quality bar:
   bundles; Actions, Connections, Skills, MCP, Tools, and Checks are capabilities
   when present. Slash routes and manifest strings stay out of the primary path.
 - CI stays fast, split, strict, and green for the release package path.
-- The app has a polished blue `p` Dock icon and no obvious stale, unused, or
+- The app has a polished blue Dock icon and no obvious stale, unused, or
   confusing UI surfaces left in the primary path.
 
 ## M14: Connector and Skill Platform
