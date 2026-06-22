@@ -266,6 +266,8 @@ Completed:
   fail-closed authorization state when a local secret is missing.
 - Timeline connector evidence carries authorization-required context and reuses
   the same sign-in readiness model as the plugin manager.
+- Timeline connector evidence keeps local credential bindings distinct from
+  missing credentials, so bound actions do not look unauthenticated.
 
 Next:
 

@@ -999,6 +999,24 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testConnectionEvidenceTreatsLocalBindingAsAvailable() {
+    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+      "connectorId": "notion",
+      "connectorService": "notion",
+      "authRequired": "true",
+      "credentialPresent": "false",
+      "credentialSecretPresent": "false",
+      "credentialBinding": "env-bound",
+    ])
+
+    XCTAssertEqual(
+      lines.first,
+      "Connection: Notion. Authorization: available locally."
+    )
+    XCTAssertFalse(lines.joined(separator: "\n").contains("env-bound"))
+    XCTAssertFalse(lines.joined(separator: "\n").contains("needs sign in"))
+  }
+
   func testConnectionAuthorizationReceiptUsesProductCopy() {
     let connector = runtimePluginConnector(
       authStatus: "ready",

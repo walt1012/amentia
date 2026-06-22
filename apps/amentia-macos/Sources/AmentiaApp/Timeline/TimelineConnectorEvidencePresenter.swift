@@ -143,19 +143,14 @@ enum TimelineConnectorEvidencePresenter {
       "credentialSecretPresent",
       "connectorCredentialSecretPresent",
     ])
-
-    if let authRequired = boolAttribute(attributes, keys: [
-      "authRequired",
-      "connectorAuthRequired",
-    ]) {
-      let hasCredential = credentialPresent ?? false
-      return PluginStatusDisplay.authorizationStatus(
-        authStatus,
-        authRequired: authRequired,
-        credentialPresent: hasCredential,
-        credentialSecretPresent: credentialSecretPresent ?? hasCredential
-      )
-    }
+    let localCredentialBinding = firstAttribute(attributes, keys: [
+      "credentialStore",
+      "connectorCredentialStores",
+      "pluginRunnerConnectorStores",
+      "credentialBinding",
+      "connectorSecretBindings",
+      "pluginRunnerSecretBindings",
+    ])
 
     if authStatus == "needsAuth" {
       return "needs sign in"
@@ -165,18 +160,23 @@ enum TimelineConnectorEvidencePresenter {
       return credentialSecretPresent == false ? "needs sign in" : "saved locally"
     }
 
-    guard firstAttribute(attributes, keys: [
-      "credentialStore",
-      "connectorCredentialStores",
-      "pluginRunnerConnectorStores",
-      "credentialBinding",
-      "connectorSecretBindings",
-      "pluginRunnerSecretBindings",
-    ]) != nil else {
-      return "not saved"
+    if localCredentialBinding != nil {
+      return "available locally"
     }
 
-    return "available locally"
+    if let authRequired = boolAttribute(attributes, keys: [
+      "authRequired",
+      "connectorAuthRequired",
+    ]) {
+      return PluginStatusDisplay.authorizationStatus(
+        authStatus,
+        authRequired: authRequired,
+        credentialPresent: false,
+        credentialSecretPresent: false
+      )
+    }
+
+    return "not saved"
   }
 
   private static func boolAttribute(
