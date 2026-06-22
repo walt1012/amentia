@@ -277,7 +277,7 @@ enum PluginDashboardPresenter {
 
   static func hookDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
     guard !snapshot.hooks.isEmpty else {
-      return "Enable a plugin with checks to verify local events."
+      return "Enable a plugin with checks to verify local activity."
     }
 
     return snapshot.hooks.map(hookDetail).joined(separator: "\n")
@@ -408,9 +408,11 @@ enum PluginDashboardPresenter {
   }
 
   private static func hookDetail(_ hook: PluginHookSummary) -> String {
-    let status = hook.status == "ready"
-      ? hook.event
-      : "\(hook.event) | \(PluginStatusDisplay.commandStatus(hook.status))"
+    var status = PluginHookDisplay.eventDetail(hook)
+    if hook.status != "ready" {
+      status += " | \(PluginStatusDisplay.commandStatus(hook.status))"
+    }
+
     if let runBlocker = hook.runBlocker {
       return "\(hook.pluginDisplayName): \(hook.title) (\(status)) | \(runBlocker)"
     }

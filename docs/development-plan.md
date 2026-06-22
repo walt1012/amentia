@@ -298,6 +298,8 @@ Completed:
   so prompt guidance sources can be revoked without opening raw setup files.
 - Check rows in the plugin manager expose the same plugin disable path, so
   verification sources can be revoked without opening raw setup files.
+- Check triggers are translated into product language in plugin manager rows and
+  dashboard summaries, including a safe fallback for unknown third-party events.
 
 Next:
 

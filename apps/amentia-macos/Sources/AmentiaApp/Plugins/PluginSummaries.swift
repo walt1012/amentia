@@ -774,6 +774,23 @@ struct PluginHookSummary: Identifiable, Hashable {
 }
 
 enum PluginHookDisplay {
+  static func statusLine(_ hook: PluginHookSummary) -> String {
+    "\(hook.pluginDisplayName) | \(eventDetail(hook))"
+  }
+
+  static func eventDetail(_ hook: PluginHookSummary) -> String {
+    switch hook.event {
+    case "shell.completed":
+      return "Runs after shell commands"
+    case "after_action":
+      return "Runs after actions"
+    case "before_action":
+      return "Runs before actions"
+    default:
+      return "Runs during plugin checks"
+    }
+  }
+
   static func disableButtonTitle(_ hook: PluginHookSummary) -> String {
     "Disable \(hook.pluginDisplayName)"
   }

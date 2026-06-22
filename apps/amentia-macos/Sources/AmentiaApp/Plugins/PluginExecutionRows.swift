@@ -257,7 +257,7 @@ struct PluginHookRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(hook.title)
             .font(.caption.weight(.semibold))
-          Text("\(hook.pluginDisplayName) | \(hook.event)")
+          Text(PluginHookDisplay.statusLine(hook))
             .font(.caption2)
             .foregroundColor(hook.status == "ready" ? .secondary : .orange)
         }

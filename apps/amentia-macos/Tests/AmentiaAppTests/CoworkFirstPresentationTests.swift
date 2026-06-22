@@ -842,6 +842,34 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testPluginHookDisplayUsesProductEventLanguage() {
+    let shellHook = pluginHookSummary(id: "shell::hook:recorder", event: "shell.completed")
+    let unknownHook = pluginHookSummary(id: "custom::hook:opaque", event: "third_party.raw_event")
+
+    XCTAssertEqual(PluginHookDisplay.eventDetail(shellHook), "Runs after shell commands")
+    XCTAssertEqual(PluginHookDisplay.eventDetail(unknownHook), "Runs during plugin checks")
+    XCTAssertEqual(
+      PluginHookDisplay.statusLine(shellHook),
+      "Notion | Runs after shell commands"
+    )
+    XCTAssertFalse(PluginHookDisplay.eventDetail(unknownHook).contains("third_party.raw_event"))
+    XCTAssertFalse(PluginHookDisplay.statusLine(unknownHook).contains("third_party.raw_event"))
+  }
+
+  func testPluginDashboardHidesRawHookEvents() {
+    let snapshot = pluginDashboardSnapshot(hooks: [
+      pluginHookSummary(id: "shell::hook:recorder", event: "shell.completed"),
+      pluginHookSummary(id: "custom::hook:opaque", event: "third_party.raw_event"),
+    ])
+
+    let detail = PluginDashboardPresenter.hookDetailSummary(snapshot)
+
+    XCTAssertTrue(detail.contains("Runs after shell commands"))
+    XCTAssertTrue(detail.contains("Runs during plugin checks"))
+    XCTAssertFalse(detail.contains("shell.completed"))
+    XCTAssertFalse(detail.contains("third_party.raw_event"))
+  }
+
   func testPluginCapabilityReviewSummarizesWorkflowWithoutRawIdentifiers() {
     let capability = PluginCapabilitySummary(
       id: "notion::connector_workflow:notion.create-page",
@@ -1631,12 +1659,15 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
-  private func pluginHookSummary(id: String) -> PluginHookSummary {
+  private func pluginHookSummary(
+    id: String,
+    event: String = "after_action"
+  ) -> PluginHookSummary {
     PluginHookSummary(
       id: id,
       title: "Review Output",
       description: "Check plugin output before presenting it.",
-      event: "after_action",
+      event: event,
       pluginID: "notion",
       pluginDisplayName: "Notion",
       permissions: [],
