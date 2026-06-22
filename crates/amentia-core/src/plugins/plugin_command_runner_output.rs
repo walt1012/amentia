@@ -5,11 +5,11 @@ use amentia_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use super::plugin_command_runner::{
   PluginRunnerFailure, PluginRunnerResult, PluginRunnerRunResult,
 };
+use super::plugin_command_runner_contracts::PLUGIN_RUNNER_OUTPUT_CONTENT_LIMIT;
 use super::plugin_command_runner_memory::plugin_runner_memory_notes;
 use super::plugin_command_runner_output_parser::{
   parse_plugin_runner_output, PluginRunnerParsedOutput,
 };
-use super::plugin_command_runner_contracts::PLUGIN_RUNNER_OUTPUT_CONTENT_LIMIT;
 use super::plugin_command_runner_proof::{
   plugin_runner_expected_workflow_id, plugin_runner_items_include_workflow,
 };

@@ -28,9 +28,7 @@ pub(super) fn merge_plugin_runner_attributes(
   }
 }
 
-pub(super) fn plugin_runner_attributes_are_bounded(
-  attributes: &HashMap<String, String>,
-) -> bool {
+pub(super) fn plugin_runner_attributes_are_bounded(attributes: &HashMap<String, String>) -> bool {
   attributes.len() <= PLUGIN_RUNNER_ATTRIBUTE_COUNT_LIMIT
     && attributes
       .iter()
