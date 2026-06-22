@@ -57,6 +57,7 @@ RUNTIME_EXECUTABLE_NAME = "amentia-runtime-bin"
 APP_ICON_FILE_NAME = f"{APP_NAME}.icns"
 APP_ICON_SOURCE_RELATIVE_PATH = Path("docs/brand/amentia-blue-symbol-icon-candidate.png")
 APP_ICON_MIN_SOURCE_SIZE = 1024
+APP_ICON_MAX_TRANSPARENT_MARGIN_RATIO = 0.04
 APP_ICONSET_RENDITIONS = (
   (16, 1),
   (16, 2),
@@ -396,6 +397,7 @@ def assert_png_source_can_drive_app_icon(path: Path) -> None:
       f"{APP_ICON_MIN_SOURCE_SIZE}x{APP_ICON_MIN_SOURCE_SIZE}: {path}"
     )
   assert_png_source_has_transparent_corners(path)
+  assert_png_source_fills_macos_icon_frame(path)
 
 
 def png_dimensions(path: Path) -> tuple[int, int]:
@@ -420,6 +422,48 @@ def assert_png_source_has_transparent_corners(path: Path) -> None:
       "macOS app icon source must use transparent outer corners so the "
       f"installed Dock icon is a rounded app tile: {path}"
     )
+
+
+def assert_png_source_fills_macos_icon_frame(path: Path) -> None:
+  image = decode_rgba_png(path)
+  width, height = image["width"], image["height"]
+  pixels = image["pixels"]
+  alpha_bounds = png_alpha_bounds(pixels, width, height)
+  if alpha_bounds is None:
+    raise RuntimeError(f"macOS app icon source must contain visible pixels: {path}")
+
+  left, top, right, bottom = alpha_bounds
+  max_margin = round(min(width, height) * APP_ICON_MAX_TRANSPARENT_MARGIN_RATIO)
+  margins = (left, top, width - right, height - bottom)
+  if any(margin > max_margin for margin in margins):
+    raise RuntimeError(
+      "macOS app icon source must fill the icon frame instead of placing a "
+      f"small tile inside transparent padding: {path}: margins {margins}, "
+      f"max {max_margin}"
+    )
+
+
+def png_alpha_bounds(
+  pixels: list[list[tuple[int, int, int, int]]],
+  width: int,
+  height: int,
+) -> tuple[int, int, int, int] | None:
+  left = width
+  top = height
+  right = 0
+  bottom = 0
+  for y, row in enumerate(pixels):
+    for x, pixel in enumerate(row):
+      if pixel[3] == 0:
+        continue
+      left = min(left, x)
+      top = min(top, y)
+      right = max(right, x + 1)
+      bottom = max(bottom, y + 1)
+
+  if right == 0 or bottom == 0:
+    return None
+  return left, top, right, bottom
 
 
 def decode_rgba_png(path: Path) -> dict[str, object]:

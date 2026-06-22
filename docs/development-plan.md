@@ -171,9 +171,10 @@ Completed baseline:
 - Keep execution reliable: long work is observable, cancellable, resumable when
   appropriate, receipt-backed, and CI-verified through shared scripts instead of
   repeated workflow shell blocks.
-- Finish product identity around a refined blue Amentia monogram mark, keep the
-  vector source and PNG candidate aligned, require transparent outer icon
-  corners, and ship it through the native macOS icon package contract.
+- Finish product identity around the approved Amentia lockup reference, derive
+  the Dock icon mark from that source, keep SVG previews byte-aligned with PNG
+  assets, require transparent outer icon corners, and ship through the native
+  macOS icon package contract.
 - Keep extension management understandable: plugin installation is the bundle
   workflow, while capabilities are grouped as Actions, Connections, Skills,
   MCP, Tools, and Checks.

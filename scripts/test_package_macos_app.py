@@ -30,6 +30,7 @@ from package_macos_app import (
   assert_zip_entries_are_safe,
   copy_tree_if_present,
   copy_required_llama_backend,
+  decode_rgba_png,
   normalize_source_commit,
   normalize_version,
   parse_lipo_architectures,
@@ -84,6 +85,17 @@ def assert_svg_png_preview(svg_name: str, png_name: str) -> None:
     raise AssertionError(f"{svg_name} embedded preview must match {png_name}")
 
 
+def assert_app_icon_has_no_reference_crop_plate() -> None:
+  image = decode_rgba_png(BRAND_DIR / "amentia-blue-symbol-icon-candidate.png")
+  pixels = image["pixels"]
+  sample_points = ((306, 376), (948, 376), (306, 868), (948, 868), (627, 376))
+  for x, y in sample_points:
+    if pixels[y][x] != (255, 255, 255, 255):
+      raise AssertionError(
+        "app icon source must not paste the reference image background as a visible plate"
+      )
+
+
 def write_png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
   return (
     len(payload).to_bytes(4, "big")
@@ -119,6 +131,27 @@ def write_rgba_png(path: Path, width: int, height: int, corner_alpha: int = 0) -
   )
 
 
+def write_inset_rgba_png(path: Path, width: int, height: int, inset: int) -> None:
+  ihdr = (
+    width.to_bytes(4, "big")
+    + height.to_bytes(4, "big")
+    + b"\x08\x06\x00\x00\x00"
+  )
+  rows = []
+  for y in range(height):
+    row = bytearray()
+    for x in range(width):
+      alpha = 255 if inset <= x < width - inset and inset <= y < height - inset else 0
+      row.extend((255, 255, 255, alpha))
+    rows.append(b"\x00" + bytes(row))
+  path.write_bytes(
+    b"\x89PNG\r\n\x1a\n"
+    + write_png_chunk(b"IHDR", ihdr)
+    + write_png_chunk(b"IDAT", zlib.compress(b"".join(rows)))
+    + write_png_chunk(b"IEND", b"")
+  )
+
+
 def write_icns_header(path: Path, declared_size: int, body: bytes = b"") -> None:
   path.write_bytes(b"icns" + declared_size.to_bytes(4, "big") + body)
 
@@ -132,6 +165,10 @@ def main() -> int:
     "amentia-wordmark-lockup-source.svg",
     "amentia-wordmark-lockup-reference.png",
   )
+  assert_png_source_can_drive_app_icon(
+    BRAND_DIR / "amentia-blue-symbol-icon-candidate.png"
+  )
+  assert_app_icon_has_no_reference_crop_plate()
 
   assert_equal(normalize_version("0.1.0"), "0.1.0")
   assert_equal(normalize_version("v1.2.3"), "1.2.3")
@@ -169,6 +206,12 @@ def main() -> int:
     assert_raises(
       lambda: assert_png_source_can_drive_app_icon(opaque_png_path),
       "opaque icon corners should fail macOS rounded icon guard",
+    )
+    inset_png_path = root_path / "inset.png"
+    write_inset_rgba_png(inset_png_path, 1254, 1254, inset=120)
+    assert_raises(
+      lambda: assert_png_source_can_drive_app_icon(inset_png_path),
+      "large transparent icon insets should fail macOS frame guard",
     )
     invalid_png_path = root_path / "icon.txt"
     invalid_png_path.write_text("not png", encoding="utf-8")

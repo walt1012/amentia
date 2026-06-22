@@ -20,7 +20,6 @@ LOCKUP_SVG = BRAND_DIR / "amentia-wordmark-lockup-source.svg"
 LOCKUP_REFERENCE_PNG = BRAND_DIR / "amentia-wordmark-lockup-reference.png"
 
 BORDER = "#e8edf3"
-RGBA_BLUE = (47, 130, 243, 255)
 RGBA_BORDER = (232, 237, 243, 255)
 RGBA_WHITE = (255, 255, 255, 255)
 RGBA_TRANSPARENT = (255, 255, 255, 0)
@@ -28,45 +27,21 @@ RGBA_TRANSPARENT = (255, 255, 255, 0)
 ICON_SIZE = 1254
 SCALE = 4
 
-TILE = (112, 100, 1142, 1130)
-TILE_RADIUS = 214
+TILE = (28, 28, 1226, 1226)
+TILE_RADIUS = 246
 TILE_STROKE = 5
 
-MARK_WIDTH = 220
-MARK_HEIGHT = 168
-MARK_OUTER = ((110, 0), (220, 168), (0, 168))
-MARK_NEGATIVE = (
-  (110, 68),
-  (67, 140),
-  (103, 140),
-  (118, 168),
-  (170, 168),
-  (148, 140),
-  (121, 140),
-  (105, 111),
-  (154, 111),
-  (135, 86),
-  (122, 86),
-)
-ICON_MARK_BOX = (318, 388, 936, 860)
-
-
-def transformed_points(
-  points: tuple[tuple[int, int], ...],
-  box: tuple[int, int, int, int],
-) -> tuple[tuple[int, int], ...]:
-  x0, y0, x1, y1 = box
-  scale_x = (x1 - x0) / MARK_WIDTH
-  scale_y = (y1 - y0) / MARK_HEIGHT
-  return tuple((round(x0 + x * scale_x), round(y0 + y * scale_y)) for x, y in points)
+ICON_MARK_BOX = (306, 376, 948, 868)
+REFERENCE_MARK_PADDING = 2
+REFERENCE_BLUE_MINIMUM = 120
+REFERENCE_BLUE_RED_DELTA = 35
+REFERENCE_BLUE_GREEN_DELTA = 5
+REFERENCE_BACKGROUND_CHROMA_FLOOR = 3
+REFERENCE_ANTIALIAS_ALPHA_GAIN = 14
 
 
 def scaled_box(box: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
   return tuple(value * SCALE for value in box)
-
-
-def scaled_points(points: tuple[tuple[int, int], ...]) -> list[tuple[int, int]]:
-  return [(x * SCALE, y * SCALE) for x, y in points]
 
 
 def write_text(path: Path, text: str) -> None:
@@ -77,9 +52,68 @@ def png_data_uri(path: Path) -> str:
   return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
 
 
-def draw_mark(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
-  draw.polygon(scaled_points(transformed_points(MARK_OUTER, box)), fill=RGBA_BLUE)
-  draw.polygon(scaled_points(transformed_points(MARK_NEGATIVE, box)), fill=RGBA_WHITE)
+def reference_mark_bounds(image: Image.Image) -> tuple[int, int, int, int]:
+  left = image.width
+  top = image.height
+  right = 0
+  bottom = 0
+  pixels = image.load()
+  for y in range(image.height):
+    for x in range(image.width):
+      red, green, blue, alpha = pixels[x, y]
+      if alpha == 0:
+        continue
+      if (
+        blue >= REFERENCE_BLUE_MINIMUM
+        and blue >= red + REFERENCE_BLUE_RED_DELTA
+        and blue >= green + REFERENCE_BLUE_GREEN_DELTA
+      ):
+        left = min(left, x)
+        top = min(top, y)
+        right = max(right, x + 1)
+        bottom = max(bottom, y + 1)
+
+  if right == 0 or bottom == 0:
+    raise RuntimeError(f"Approved lockup reference is missing a blue mark: {LOCKUP_REFERENCE_PNG}")
+  return left, top, right, bottom
+
+
+def expanded_box(
+  box: tuple[int, int, int, int],
+  image_size: tuple[int, int],
+  padding: int,
+) -> tuple[int, int, int, int]:
+  left, top, right, bottom = box
+  width, height = image_size
+  return (
+    max(0, left - padding),
+    max(0, top - padding),
+    min(width, right + padding),
+    min(height, bottom + padding),
+  )
+
+
+def reference_mark_image() -> Image.Image:
+  if not LOCKUP_REFERENCE_PNG.exists():
+    raise FileNotFoundError(f"Missing approved lockup reference: {LOCKUP_REFERENCE_PNG}")
+  reference = Image.open(LOCKUP_REFERENCE_PNG).convert("RGBA")
+  bounds = expanded_box(
+    reference_mark_bounds(reference),
+    reference.size,
+    REFERENCE_MARK_PADDING,
+  )
+  mark = reference.crop(bounds)
+  pixels = mark.load()
+  for y in range(mark.height):
+    for x in range(mark.width):
+      red, green, blue, alpha = pixels[x, y]
+      blue_chroma = blue - max(red, green)
+      if alpha == 0 or blue_chroma <= REFERENCE_BACKGROUND_CHROMA_FLOOR:
+        pixels[x, y] = (255, 255, 255, 0)
+        continue
+      extracted_alpha = min(255, max(0, blue_chroma * REFERENCE_ANTIALIAS_ALPHA_GAIN))
+      pixels[x, y] = (red, green, blue, extracted_alpha)
+  return mark
 
 
 def write_icon_svg() -> None:
@@ -102,7 +136,14 @@ def write_icon_png() -> None:
     outline=RGBA_BORDER,
     width=TILE_STROKE * SCALE,
   )
-  draw_mark(draw, ICON_MARK_BOX)
+  mark = reference_mark_image().resize(
+    (
+      (ICON_MARK_BOX[2] - ICON_MARK_BOX[0]) * SCALE,
+      (ICON_MARK_BOX[3] - ICON_MARK_BOX[1]) * SCALE,
+    ),
+    Image.Resampling.LANCZOS,
+  )
+  image.alpha_composite(mark, (ICON_MARK_BOX[0] * SCALE, ICON_MARK_BOX[1] * SCALE))
   image = image.resize((ICON_SIZE, ICON_SIZE), Image.Resampling.LANCZOS)
   image.save(ICON_PNG)
 
