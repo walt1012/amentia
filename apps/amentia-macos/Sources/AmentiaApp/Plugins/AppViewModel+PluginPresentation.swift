@@ -135,4 +135,9 @@ extension AppViewModel {
     pluginSummary(pluginID: skill.pluginID)?.enabled == true
       && canSetPluginEnabled(pluginID: skill.pluginID)
   }
+
+  func canDisablePluginCheck(hook: PluginHookSummary) -> Bool {
+    pluginSummary(pluginID: hook.pluginID)?.enabled == true
+      && canSetPluginEnabled(pluginID: hook.pluginID)
+  }
 }

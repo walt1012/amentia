@@ -773,6 +773,16 @@ struct PluginHookSummary: Identifiable, Hashable {
   let memorySummary: String?
 }
 
+enum PluginHookDisplay {
+  static func disableButtonTitle(_ hook: PluginHookSummary) -> String {
+    "Disable \(hook.pluginDisplayName)"
+  }
+
+  static func disableDetail(_ hook: PluginHookSummary) -> String {
+    "Stops \(hook.pluginDisplayName) checks from running during future activity."
+  }
+}
+
 enum PluginSkillDisplay {
   static func disableButtonTitle(_ skill: PluginSkillSummary) -> String {
     "Disable \(skill.pluginDisplayName)"

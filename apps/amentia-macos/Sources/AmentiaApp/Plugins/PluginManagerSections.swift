@@ -284,11 +284,15 @@ private struct PluginHooksSection: View {
           PluginHookRow(
             hook: hook,
             canRefresh: viewModel.canRefreshPlugins(),
+            canDisablePlugin: viewModel.canDisablePluginCheck(hook: hook),
             onRevealSource: {
               viewModel.revealPluginSourcePath(hook.sourcePath)
             },
             onRefresh: {
               viewModel.refreshPlugins()
+            },
+            onDisablePlugin: {
+              viewModel.setPluginEnabled(pluginID: hook.pluginID, enabled: false)
             }
           )
         }

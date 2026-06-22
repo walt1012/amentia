@@ -832,6 +832,16 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testPluginHookDisableCopyNamesCheckSource() {
+    let hook = pluginHookSummary(id: "notion::hook:review")
+
+    XCTAssertEqual(PluginHookDisplay.disableButtonTitle(hook), "Disable Notion")
+    XCTAssertEqual(
+      PluginHookDisplay.disableDetail(hook),
+      "Stops Notion checks from running during future activity."
+    )
+  }
+
   func testPluginCapabilityReviewSummarizesWorkflowWithoutRawIdentifiers() {
     let capability = PluginCapabilitySummary(
       id: "notion::connector_workflow:notion.create-page",

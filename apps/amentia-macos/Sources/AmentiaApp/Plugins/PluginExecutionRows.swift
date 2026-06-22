@@ -246,8 +246,10 @@ struct PluginCommandRow: View {
 struct PluginHookRow: View {
   let hook: PluginHookSummary
   let canRefresh: Bool
+  let canDisablePlugin: Bool
   let onRevealSource: () -> Void
   let onRefresh: () -> Void
+  let onDisablePlugin: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -274,11 +276,23 @@ struct PluginHookRow: View {
           .font(.caption2)
           .disabled(!canRefresh)
         }
+
+        Button(PluginHookDisplay.disableButtonTitle(hook)) {
+          onDisablePlugin()
+        }
+        .font(.caption2)
+        .disabled(!canDisablePlugin)
+        .help(PluginHookDisplay.disableDetail(hook))
       }
 
       Text(hook.description)
         .font(.caption2)
         .foregroundColor(.secondary)
+
+      Text(PluginHookDisplay.disableDetail(hook))
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .textSelection(.enabled)
 
       if let memorySummary = hook.memorySummary {
         Text(memorySummary)

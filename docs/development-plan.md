@@ -296,6 +296,8 @@ Completed:
   reviewable-guidance surface before the user disables anything.
 - Reviewable guidance rows in the plugin manager expose the same disable path,
   so prompt guidance sources can be revoked without opening raw setup files.
+- Check rows in the plugin manager expose the same plugin disable path, so
+  verification sources can be revoked without opening raw setup files.
 
 Next:
 
