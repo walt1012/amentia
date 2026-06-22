@@ -4,10 +4,12 @@ use amentia_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 use amentia_protocol::TimelineItem;
 
 use super::plugin_command_runner_attribute_policy::{
-  merge_plugin_runner_attributes, plugin_runner_owned_attributes,
+  merge_plugin_runner_attributes, plugin_runner_attributes_are_bounded,
+  plugin_runner_owned_attributes,
 };
 use super::plugin_command_runner_contracts::{
   PluginRunnerTimelineItemEnvelope, PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS,
+  PLUGIN_RUNNER_TIMELINE_ITEM_CONTENT_LIMIT, PLUGIN_RUNNER_TIMELINE_ITEM_TITLE_LIMIT,
 };
 use super::plugin_command_runner_proof::{
   insert_plugin_runner_timeline_contracts, plugin_runner_timeline_contracts_are_valid,
@@ -52,7 +54,15 @@ fn plugin_runner_timeline_item(
   let kind = item.kind.trim();
   let title = item.title.trim();
   let content = item.content.trim();
-  if !plugin_runner_timeline_kind_is_allowed(kind) || title.is_empty() || content.is_empty() {
+  if !plugin_runner_timeline_kind_is_allowed(kind)
+    || title.is_empty()
+    || title.len() > PLUGIN_RUNNER_TIMELINE_ITEM_TITLE_LIMIT
+    || content.is_empty()
+    || content.len() > PLUGIN_RUNNER_TIMELINE_ITEM_CONTENT_LIMIT
+  {
+    return None;
+  }
+  if !plugin_runner_attributes_are_bounded(&item.attributes) {
     return None;
   }
 

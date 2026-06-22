@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+const PLUGIN_RUNNER_ATTRIBUTE_COUNT_LIMIT: usize = 32;
+const PLUGIN_RUNNER_ATTRIBUTE_KEY_LIMIT: usize = 96;
+const PLUGIN_RUNNER_ATTRIBUTE_VALUE_LIMIT: usize = 512;
+
 pub(super) fn plugin_runner_owned_attributes(
   attributes: HashMap<String, String>,
 ) -> HashMap<String, String> {
@@ -22,6 +26,22 @@ pub(super) fn merge_plugin_runner_attributes(
         .or_insert_with(|| value.clone());
     }
   }
+}
+
+pub(super) fn plugin_runner_attributes_are_bounded(
+  attributes: &HashMap<String, String>,
+) -> bool {
+  attributes.len() <= PLUGIN_RUNNER_ATTRIBUTE_COUNT_LIMIT
+    && attributes
+      .iter()
+      .all(|(key, value)| plugin_runner_attribute_is_bounded(key, value))
+}
+
+fn plugin_runner_attribute_is_bounded(key: &str, value: &str) -> bool {
+  let key = key.trim();
+  !key.is_empty()
+    && key.len() <= PLUGIN_RUNNER_ATTRIBUTE_KEY_LIMIT
+    && value.len() <= PLUGIN_RUNNER_ATTRIBUTE_VALUE_LIMIT
 }
 
 fn plugin_runner_reserved_attribute(key: &str) -> bool {
@@ -66,7 +86,10 @@ fn plugin_runner_reserved_attribute(key: &str) -> bool {
 mod tests {
   use std::collections::HashMap;
 
-  use super::{merge_plugin_runner_attributes, plugin_runner_owned_attributes};
+  use super::{
+    merge_plugin_runner_attributes, plugin_runner_attributes_are_bounded,
+    plugin_runner_owned_attributes,
+  };
 
   #[test]
   fn owned_attributes_drop_core_and_protocol_keys() {
@@ -122,5 +145,12 @@ mod tests {
       item_attributes.get("customSignal").map(String::as_str),
       Some("plugin-value")
     );
+  }
+
+  #[test]
+  fn plugin_owned_attributes_must_stay_bounded() {
+    let attributes = HashMap::from([("customSignal".to_string(), "x".repeat(513))]);
+
+    assert!(!plugin_runner_attributes_are_bounded(&attributes));
   }
 }

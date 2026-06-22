@@ -172,6 +172,92 @@ fn output_contract_rejects_action_timeline_kinds_from_runner() {
 }
 
 #[test]
+fn output_contract_rejects_oversized_timeline_attributes() {
+  let command = test_command();
+  let oversized_value = "x".repeat(513);
+  let output = format!(
+    r#"{{
+      "items": [
+        {{
+          "kind": "pluginResult",
+          "title": "Runner Item",
+          "content": "This item carries oversized metadata.",
+          "attributes": {{
+            "customSignal": "{oversized_value}"
+          }}
+        }}
+      ]
+    }}"#
+  );
+
+  let failure = match plugin_runner_output(&command, "stdio.test", &output, HashMap::new()) {
+    Ok(_) => panic!("oversized timeline attributes should fail"),
+    Err(failure) => failure,
+  };
+
+  assert_eq!(failure.code, -32054);
+  assert_eq!(
+    failure
+      .attributes
+      .get("pluginRunnerOutputInvalidTimelineItemCount")
+      .map(String::as_str),
+    Some("1")
+  );
+}
+
+#[test]
+fn output_contract_rejects_oversized_timeline_content() {
+  let command = test_command();
+  let oversized_content = "x".repeat(4097);
+  let output = format!(
+    r#"{{
+      "items": [
+        {{
+          "kind": "pluginResult",
+          "title": "Runner Item",
+          "content": "{oversized_content}"
+        }}
+      ]
+    }}"#
+  );
+
+  let failure = match plugin_runner_output(&command, "stdio.test", &output, HashMap::new()) {
+    Ok(_) => panic!("oversized timeline content should fail"),
+    Err(failure) => failure,
+  };
+
+  assert_eq!(failure.code, -32054);
+  assert_eq!(
+    failure
+      .attributes
+      .get("pluginRunnerOutputInvalidTimelineItemCount")
+      .map(String::as_str),
+    Some("1")
+  );
+}
+
+#[test]
+fn output_contract_rejects_oversized_envelope_content() {
+  let command = test_command();
+  let oversized_content = "x".repeat(8193);
+  let output = format!(r#"{{ "content": "{oversized_content}" }}"#);
+
+  let failure = match plugin_runner_output(&command, "stdio.test", &output, HashMap::new()) {
+    Ok(_) => panic!("oversized envelope content should fail"),
+    Err(failure) => failure,
+  };
+
+  assert_eq!(failure.code, -32054);
+  assert_eq!(
+    failure
+      .attributes
+      .get("pluginRunnerOutputStatus")
+      .map(String::as_str),
+    Some("oversizedEnvelope")
+  );
+}
+
+#[test]
 fn output_contract_accepts_remote_write_inspection_items() {
   let command = test_command();
   let output = r#"{

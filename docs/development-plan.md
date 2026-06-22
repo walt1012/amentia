@@ -278,6 +278,9 @@ Completed:
 - Plugin skill paths and MCP server commands must stay inside the plugin bundle,
   with both manifest validation and bundled-plugin contract checks failing
   closed before execution.
+- Plugin runner output is bounded at the contract layer: oversized content,
+  timeline items, and metadata are rejected before they reach session storage or
+  user-facing evidence.
 
 Next:
 

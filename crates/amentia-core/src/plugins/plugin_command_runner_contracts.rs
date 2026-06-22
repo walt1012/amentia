@@ -7,6 +7,9 @@ pub(super) const PLUGIN_RUNNER_MEMORY_NOTE_TITLE_LIMIT: usize = 120;
 pub(super) const PLUGIN_RUNNER_MEMORY_NOTE_BODY_LIMIT: usize = 4096;
 pub(super) const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LIMIT: usize = 8;
 pub(super) const PLUGIN_RUNNER_MEMORY_NOTE_TAG_LENGTH_LIMIT: usize = 40;
+pub(super) const PLUGIN_RUNNER_OUTPUT_CONTENT_LIMIT: usize = 8192;
+pub(super) const PLUGIN_RUNNER_TIMELINE_ITEM_CONTENT_LIMIT: usize = 4096;
+pub(super) const PLUGIN_RUNNER_TIMELINE_ITEM_TITLE_LIMIT: usize = 120;
 pub(super) const PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS: &[&str] =
   &["pluginResult", "toolResult", "warning", "system"];
 pub(super) const PLUGIN_RUNNER_CONNECTOR_WORKFLOW_CONTRACT: &str = "amentia.connectorWorkflow.v1";

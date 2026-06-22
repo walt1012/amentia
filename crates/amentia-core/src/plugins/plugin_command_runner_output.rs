@@ -9,6 +9,7 @@ use super::plugin_command_runner_memory::plugin_runner_memory_notes;
 use super::plugin_command_runner_output_parser::{
   parse_plugin_runner_output, PluginRunnerParsedOutput,
 };
+use super::plugin_command_runner_contracts::PLUGIN_RUNNER_OUTPUT_CONTENT_LIMIT;
 use super::plugin_command_runner_proof::{
   plugin_runner_expected_workflow_id, plugin_runner_items_include_workflow,
 };
@@ -72,6 +73,30 @@ pub(super) fn plugin_runner_output(
     .map(|content| content.trim().to_string())
     .filter(|content| !content.is_empty())
     .unwrap_or_default();
+  if content.len() > PLUGIN_RUNNER_OUTPUT_CONTENT_LIMIT {
+    attributes.insert(
+      "pluginRunnerOutputStatus".to_string(),
+      "oversizedEnvelope".to_string(),
+    );
+    attributes.insert("pluginRunnerOutputParsed".to_string(), "true".to_string());
+    attributes.insert(
+      "pluginRunnerOutputContentBytes".to_string(),
+      content.len().to_string(),
+    );
+    return Err(
+      PluginRunnerFailure::with_output(
+        -32054,
+        format!(
+          "Plugin command `{}` returned an output envelope with oversized content.",
+          command.command_id
+        ),
+        output.to_string(),
+        String::new(),
+        attributes,
+      )
+      .boxed(),
+    );
+  }
   let (items, invalid_item_count) =
     plugin_runner_timeline_items(command, execution_kind, &attributes, envelope.items);
   let memory_note_selection = plugin_runner_memory_notes(envelope.memory_notes);
