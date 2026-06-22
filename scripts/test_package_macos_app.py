@@ -26,6 +26,7 @@ from package_macos_app import (
   assert_macos_icon_packaged,
   assert_png_source_can_drive_app_icon,
   assert_bundled_plugin_connector_workflows,
+  assert_bundled_plugin_skill_files,
   assert_packaged_app_copy_is_present,
   assert_zip_entries_are_safe,
   copy_tree_if_present,
@@ -410,6 +411,34 @@ def main() -> int:
         workflow_capabilities,
       ),
       "command workflow must be bound to the declared connector",
+    )
+
+  with tempfile.TemporaryDirectory(prefix="amentia-package-plugin-skills-") as root:
+    plugin_root = Path(root)
+    skills_dir = plugin_root / "skills"
+    skills_dir.mkdir()
+    (skills_dir / "notion-workspace.md").write_text("Notion guidance.", encoding="utf-8")
+    skill_manifest = {
+      "skills": [
+        {
+          "id": "notion.workspace",
+          "description": "Guidance for Notion-ready workspace notes.",
+          "path": "skills/notion-workspace.md",
+        }
+      ],
+    }
+    assert_raises(
+      lambda: assert_bundled_plugin_skill_files(
+        plugin_root,
+        skill_manifest,
+        {"prompt_pack:notion.workspace"},
+      ),
+      "skill capability should be explicit",
+    )
+    assert_bundled_plugin_skill_files(
+      plugin_root,
+      skill_manifest,
+      {"skill:notion.workspace"},
     )
 
   with tempfile.TemporaryDirectory(prefix="amentia-package-copy-") as root:

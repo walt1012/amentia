@@ -130,6 +130,7 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
     "connector:notion",
     "connector_workflow:notion.create-page",
     "mcp_server:notion",
+    "skill:notion.workspace",
   },
   "review-assistant": {"command:review.inspect-diff"},
   "shell-recorder": {"command:shell.summarize-session", "hook:shell.recorder"},
@@ -1000,7 +1001,7 @@ def assert_bundled_plugins_are_package_ready(app_path: Path) -> None:
       raise RuntimeError(f"Bundled plugin {plugin_id} is missing capabilities: {missing}")
     assert_bundled_plugin_capability_files(plugin_root, capabilities)
     assert_bundled_plugin_connector_workflows(plugin_root, manifest, capabilities)
-    assert_bundled_plugin_skill_files(plugin_root, manifest)
+    assert_bundled_plugin_skill_files(plugin_root, manifest, capabilities)
     assert_bundled_plugin_mcp_server_files(plugin_root, manifest, capabilities)
 
 
@@ -1239,13 +1240,25 @@ def assert_safe_capability_identifier(identifier: str, capability: str) -> None:
     raise RuntimeError(f"Bundled plugin capability has unsafe identifier: {capability}")
 
 
-def assert_bundled_plugin_skill_files(plugin_root: Path, manifest: dict) -> None:
+def assert_bundled_plugin_skill_files(
+  plugin_root: Path,
+  manifest: dict,
+  capabilities: set[str],
+) -> None:
   skills = manifest.get("skills", [])
   if not isinstance(skills, list):
     raise RuntimeError(f"Bundled plugin skills must be a list: {plugin_root}")
+  declared_skill_ids = set()
   for skill in skills:
     if not isinstance(skill, dict):
       raise RuntimeError(f"Bundled plugin skill entry must be an object: {plugin_root}")
+    skill_id = skill.get("id")
+    if not isinstance(skill_id, str) or not skill_id.strip():
+      raise RuntimeError(f"Bundled plugin skill entry is missing id: {plugin_root}")
+    assert_safe_capability_identifier(skill_id, f"skill:{skill_id}")
+    declared_skill_ids.add(skill_id)
+    if f"skill:{skill_id}" not in capabilities:
+      raise RuntimeError(f"Bundled plugin skill is missing capability: skill:{skill_id}")
     skill_path = skill.get("path")
     if not isinstance(skill_path, str) or not skill_path.strip():
       raise RuntimeError(f"Bundled plugin skill entry is missing path: {plugin_root}")
@@ -1253,6 +1266,12 @@ def assert_bundled_plugin_skill_files(plugin_root: Path, manifest: dict) -> None
       safe_plugin_resource_path(plugin_root, skill_path),
       f"bundled plugin skill {skill_path}",
     )
+  for capability in capabilities:
+    if not capability.startswith("skill:"):
+      continue
+    skill_id = capability.removeprefix("skill:")
+    if skill_id not in declared_skill_ids:
+      raise RuntimeError(f"Bundled plugin is missing skill declaration: {capability}")
 
 
 def assert_bundled_plugin_mcp_server_files(

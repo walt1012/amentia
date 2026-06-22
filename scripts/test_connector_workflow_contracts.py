@@ -74,6 +74,36 @@ def validate_bundle_local_paths(plugin_root: Path, manifest: dict[str, Any]) -> 
     )
 
 
+def validate_skill_capabilities(
+  plugin_root: Path,
+  manifest: dict[str, Any],
+  capabilities: set[str],
+) -> None:
+  declared_skill_ids: set[str] = set()
+  for skill in manifest.get("skills", []):
+    if not isinstance(skill, dict):
+      raise AssertionError(f"{plugin_root.name} skill entries must be objects")
+    skill_id = skill.get("id")
+    require(
+      isinstance(skill_id, str) and bool(skill_id.strip()),
+      f"{plugin_root.name} skill entry must declare an id",
+    )
+    declared_skill_ids.add(skill_id)
+    require(
+      f"skill:{skill_id}" in capabilities,
+      f"{plugin_root.name} skill {skill_id} is missing a skill capability",
+    )
+
+  for capability in capabilities:
+    if not capability.startswith("skill:"):
+      continue
+    skill_id = capability.removeprefix("skill:")
+    require(
+      skill_id in declared_skill_ids,
+      f"{plugin_root.name} skill capability {capability} has no skill entry",
+    )
+
+
 def envelope_field_kinds(envelope: object) -> dict[str, str]:
   if not isinstance(envelope, dict):
     return {}
@@ -165,6 +195,7 @@ def validate_plugin(plugin_root: Path) -> None:
     for value in manifest.get("capabilities", [])
     if isinstance(value, str)
   }
+  validate_skill_capabilities(plugin_root, manifest, capabilities)
   workflows = [
     workflow
     for workflow in manifest.get("connectorWorkflows", [])
