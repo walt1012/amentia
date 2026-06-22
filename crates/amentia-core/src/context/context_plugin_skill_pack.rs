@@ -21,6 +21,7 @@ pub(crate) struct PluginSkillContextPack {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PluginSkillContextEntry {
   pub(crate) skill_id: String,
+  pub(crate) plugin_id: String,
   pub(crate) plugin_display_name: String,
   pub(crate) description: String,
   pub(crate) preview: Option<String>,
@@ -161,6 +162,23 @@ pub(crate) fn merge_plugin_skill_context_attributes(
         .collect::<Vec<_>>()
         .join(","),
     );
+    attributes.insert(
+      "pluginSkillContextPluginIds".to_string(),
+      joined_unique_attribute(pack.skills.iter().map(|skill| skill.plugin_id.as_str())),
+    );
+    attributes.insert(
+      "pluginSkillContextPluginNames".to_string(),
+      joined_unique_attribute(pack.skills.iter().map(|skill| skill.plugin_display_name.as_str())),
+    );
+    attributes.insert(
+      "pluginSkillContextSkillDescriptions".to_string(),
+      pack
+        .skills
+        .iter()
+        .map(|skill| skill.description.as_str())
+        .collect::<Vec<_>>()
+        .join(" | "),
+    );
   }
 }
 
@@ -176,6 +194,7 @@ fn context_entry(candidate: ScoredPluginSkill) -> (PluginSkillContextEntry, bool
   (
     PluginSkillContextEntry {
       skill_id: candidate.skill.skill_id,
+      plugin_id: candidate.skill.plugin_id,
       plugin_display_name: candidate.skill.plugin_display_name,
       description: candidate.skill.description,
       preview,
@@ -183,6 +202,15 @@ fn context_entry(candidate: ScoredPluginSkill) -> (PluginSkillContextEntry, bool
     },
     was_truncated,
   )
+}
+
+fn joined_unique_attribute<'a>(values: impl Iterator<Item = &'a str>) -> String {
+  values
+    .filter(|value| !value.trim().is_empty())
+    .collect::<BTreeSet<_>>()
+    .into_iter()
+    .collect::<Vec<_>>()
+    .join(",")
 }
 
 fn shrink_entry_to_fit(
@@ -382,6 +410,18 @@ mod tests {
     assert_eq!(
       attributes["pluginSkillContextSkillIds"],
       "notion-connector::notion.workspace"
+    );
+    assert_eq!(
+      attributes["pluginSkillContextPluginIds"],
+      "notion-connector"
+    );
+    assert_eq!(
+      attributes["pluginSkillContextPluginNames"],
+      "Notion Connector"
+    );
+    assert_eq!(
+      attributes["pluginSkillContextSkillDescriptions"],
+      "Prepare workspace context for Notion drafts."
     );
     assert_eq!(attributes["pluginSkillContextRevocable"], "true");
   }

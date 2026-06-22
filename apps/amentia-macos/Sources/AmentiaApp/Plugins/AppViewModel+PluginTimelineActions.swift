@@ -35,6 +35,29 @@ extension AppViewModel {
     setPluginEnabled(pluginID: pluginID, enabled: true)
   }
 
+  func canDisablePluginGuidance(from entry: TimelineEntry) -> Bool {
+    guard entry.attributes["pluginSkillContextSelectedCount"] != nil,
+          let pluginID = singlePluginGuidancePluginID(from: entry),
+          let plugin = pluginSummary(pluginID: pluginID),
+          plugin.enabled
+    else {
+      return false
+    }
+
+    return canSetPluginEnabled(pluginID: pluginID)
+  }
+
+  func disablePluginGuidance(from entry: TimelineEntry) {
+    guard canDisablePluginGuidance(from: entry),
+          let pluginID = singlePluginGuidancePluginID(from: entry)
+    else {
+      runtimeDetail = "Plugin guidance cannot be disabled from this item."
+      return
+    }
+
+    setPluginEnabled(pluginID: pluginID, enabled: false)
+  }
+
   func authorizePluginConnector(from entry: TimelineEntry) {
     guard canAuthorizePluginConnector(from: entry),
           let connectorID = pluginConnectorID(from: entry)
@@ -238,6 +261,14 @@ extension AppViewModel {
 
     let pluginID = String(qualifiedID[..<separatorRange.lowerBound])
     return pluginID.isEmpty ? nil : pluginID
+  }
+
+  private func singlePluginGuidancePluginID(from entry: TimelineEntry) -> String? {
+    let pluginIDs = entry.attributes["pluginSkillContextPluginIds"]?
+      .split(separator: ",")
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty } ?? []
+    return pluginIDs.count == 1 ? pluginIDs[0] : nil
   }
 
   private func pluginConnectorID(from entry: TimelineEntry) -> String? {

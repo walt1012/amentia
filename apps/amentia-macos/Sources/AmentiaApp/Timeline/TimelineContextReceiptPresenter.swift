@@ -12,6 +12,7 @@ enum TimelineContextReceiptPresenter {
       actionCardSummary(entry.attributes),
       sourceCardSummary(entry.attributes),
       memoryCardSummary(entry.attributes),
+      pluginSkillCardSummary(entry.attributes),
       compactionCardSummary(entry.attributes),
     ].compactMap { $0 }
 
@@ -32,6 +33,7 @@ enum TimelineContextReceiptPresenter {
       sourceSection(entry),
       actionSection(entry),
       memorySection(entry),
+      pluginSkillSection(entry),
       compactionSection(entry),
     ].compactMap { $0 }
   }
@@ -197,6 +199,34 @@ enum TimelineContextReceiptPresenter {
     return TimelineContextReceiptSection(
       id: "memory",
       title: "Memory Context",
+      body: lines.joined(separator: "\n")
+    )
+  }
+
+  private static func pluginSkillSection(_ entry: TimelineEntry) -> TimelineContextReceiptSection? {
+    guard let selectedCount = entry.attributes["pluginSkillContextSelectedCount"],
+          selectedCount != "0"
+    else {
+      return nil
+    }
+
+    var lines = ["Selected guidance: \(selectedCount)"]
+    appendLine("Plugins", entry.attributes["pluginSkillContextPluginNames"], to: &lines)
+    appendLine("Skills", entry.attributes["pluginSkillContextSkillDescriptions"], to: &lines)
+
+    let candidateCount = entry.attributes["pluginSkillContextCandidateCount"] ?? selectedCount
+    let omittedCount = entry.attributes["pluginSkillContextOmittedCount"] ?? "0"
+    let trimmedCount = entry.attributes["pluginSkillContextTruncatedCount"] ?? "0"
+    lines.append(
+      "Selection: kept \(selectedCount) of \(candidateCount), "
+        + "skipped \(omittedCount), shortened \(trimmedCount)"
+    )
+    lines.append("Safety: plugin guidance is read-only for this plan.")
+    lines.append("Control: disable the source plugin if it should not guide future plans.")
+
+    return TimelineContextReceiptSection(
+      id: "plugin-skill-context",
+      title: "Plugin Guidance",
       body: lines.joined(separator: "\n")
     )
   }
@@ -495,6 +525,20 @@ enum TimelineContextReceiptPresenter {
     return "Memory \(noteCount)"
   }
 
+  private static func pluginSkillCardSummary(_ attributes: [String: String]) -> String? {
+    guard let selectedCount = attributes["pluginSkillContextSelectedCount"],
+          selectedCount != "0"
+    else {
+      return nil
+    }
+
+    let names = splitAttributeList(attributes["pluginSkillContextPluginNames"])
+    if names.count == 1 {
+      return "Plugin guidance: \(names[0])"
+    }
+    return "Plugin guidance \(selectedCount)"
+  }
+
   private static func compactionCardSummary(_ attributes: [String: String]) -> String? {
     let promptTruncated = attributes["promptTruncated"] == "true"
     let observationTruncated = attributes["observationTruncated"] == "true"
@@ -521,5 +565,12 @@ enum TimelineContextReceiptPresenter {
     default:
       return value
     }
+  }
+
+  private static func splitAttributeList(_ value: String?) -> [String] {
+    value?
+      .split(separator: ",")
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty } ?? []
   }
 }

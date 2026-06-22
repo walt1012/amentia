@@ -13,6 +13,7 @@ struct TimelineCard: View {
   let showsPluginInputAction: Bool
   let showsPluginRetryAction: Bool
   let showsPluginFollowUpAction: Bool
+  let showsPluginGuidanceDisableAction: Bool
   let showsPluginSourceAction: Bool
   let showsPluginRefreshAction: Bool
   let localExecutionRecoveryTitle: String?
@@ -24,6 +25,7 @@ struct TimelineCard: View {
   let onRunPluginCommandWithInput: () -> Void
   let onRetry: () -> Void
   let onRunPluginFollowUp: () -> Void
+  let onDisablePluginGuidance: () -> Void
   let onRevealPluginSource: () -> Void
   let onRefreshPlugins: () -> Void
   let onRecoverLocalExecution: () -> Void
@@ -130,6 +132,13 @@ struct TimelineCard: View {
               .buttonStyle(.borderedProminent)
             }
 
+            if showsPluginGuidanceDisableAction {
+              Button("Disable Guidance") {
+                onDisablePluginGuidance()
+              }
+              .buttonStyle(.bordered)
+            }
+
             if showsPluginSourceAction {
               Button("Show Source") {
                 onRevealPluginSource()
@@ -208,6 +217,7 @@ struct TimelineCard: View {
       || showsPluginInputAction
       || showsPluginRetryAction
       || showsPluginFollowUpAction
+      || showsPluginGuidanceDisableAction
       || showsPluginSourceAction
       || showsPluginRefreshAction
       || localExecutionRecoveryTitle != nil

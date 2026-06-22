@@ -287,6 +287,9 @@ Completed:
 - Enabled plugin skills can contribute a query-selected, read-only context pack
   to planner prompts with strict count, character budget, revocation, and receipt
   attributes; they still do not execute code or override the user request.
+- Plugin skill context now has product-facing timeline and inspector receipts,
+  plus a single-plugin `Disable Guidance` control that reuses the normal plugin
+  disable lifecycle.
 
 Next:
 
@@ -297,8 +300,6 @@ Next:
 - Prove connector import, local enablement, credential use, revocation, removal,
   retries, receipts, and memory capture with one reference connector before
   adding more services.
-- Add user-facing review and disable controls for selected plugin skill context
-  when a plugin materially influences an agent plan.
 - Treat hooks as verification and automation points first, not arbitrary
   always-on automation.
 
