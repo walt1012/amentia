@@ -223,100 +223,50 @@ Status: active.
 Goal: make third-party local plugins safe and useful without building a
 marketplace too early.
 
-Completed:
+Completed baseline:
 
-- Plugin installation/removal is the bundle lifecycle; connectors, actions,
-  skills, MCP servers, tools, and checks are capabilities inside bundles.
-- Notion is the reference connector while the generic local connector contract
-  matures.
-- Plugin runner execution is split by ownership: setup, entrypoint validation,
-  subprocess execution, stdout parsing, MCP output protocol scanning, output
-  schema, memory-note capture, timeline conversion, proof validation, metadata
-  ownership, and handoff forwarding are separately testable.
-- Remote-write proof and connector-workflow proof are generic timeline
-  contracts, not Notion-specific code paths.
-- Connector timeline evidence keeps protocol fields as attributes while default
-  summaries translate stages, proofs, tools, retries, and failure reasons into
-  product language.
-- Connector authorizations store durable metadata plus local tokens or keys;
-  clear/remove paths forget runtime authorization and attempt full connector
-  cleanup before reporting recoverable failures.
-- Service-specific connector help is isolated behind narrow presenters so the
-  common plugin, credential, command-input, and proof paths stay generic.
-- Capability metadata is reviewed through product copy for connections, skills,
-  MCP servers, actions, and checks without exposing manifest paths or raw
-  protocol keys in the default plugin manager.
-- Plugin registry loading is supervised without serializing independent
-  capability, action, connection, and check requests; default plugin surfaces
-  stay bounded and reveal detail progressively.
-- Connector authorization and capability summaries translate service names,
-  access scopes, auth type, and local storage into user-readable language while
-  keeping manifest fields out of the default path.
-- Connector authorization receipts use product language, and runtime token/key
-  enforcement accepts common API-key spelling variants from third-party
-  manifests.
-- Connector registries and command readiness fail closed when a durable
-  authorization record exists but a required local API key is unavailable.
-- Runtime smoke covers the restart path where persisted connector metadata
-  remains but the local token/key store cannot restore the API key.
-- Plugin removal captures connector cleanup ids before deleting the bundle and
-  also cleans authorization-backed ids so local connector tokens do not linger.
-- Clearing a connector authorization forgets runtime and durable authorization
-  state even when the local token/key store reports a recoverable delete error.
-- Timeline connector receipts and evidence treat stale authorization records or
-  missing local tokens as needing sign in instead of implying readiness.
-- Connector dashboards, rows, action affordances, and planners share the same
-  fail-closed authorization state when a local token or key is missing.
-- Timeline connector evidence carries authorization-required context and reuses
-  the same sign-in readiness model as the plugin manager.
-- Timeline connector evidence keeps local credential bindings distinct from
-  missing credentials, so bound actions do not look unauthenticated.
-- Connector authorization dialogs use user-facing token and key language instead
-  of exposing storage terminology.
-- Connector-blocked actions explain which connection to authorize and the next
-  user step before runtime execution starts.
-- Plugin capability summaries count unknown capability kinds without exposing
-  raw manifest keys, and workflow, tool, skill, MCP, connector, check, and
-  validation copy stay product-facing by default.
-- Plugin skill paths and MCP server commands must stay inside the plugin bundle,
-  with both manifest validation and bundled-plugin contract checks failing
-  closed before execution.
-- Plugin runner output is bounded at the contract layer: oversized content,
-  timeline items, and metadata are rejected before they reach session storage or
-  user-facing evidence.
-- Enabled plugin skills now load through a bounded, local, read-only registry
-  with short previews, repair hints, and progressive plugin-manager disclosure.
-- Enabled plugin skills can contribute a query-selected, read-only context pack
-  to planner prompts with strict count, character budget, revocation, and receipt
-  attributes; they still do not execute code or override the user request.
-- Plugin skill context now has product-facing timeline and inspector receipts,
-  plus a single-plugin `Disable Guidance` control that reuses the normal plugin
-  disable lifecycle.
-- Plugin skill context receipts can jump back to the plugin manager's
-  reviewable-guidance surface before the user disables anything.
-- Reviewable guidance rows in the plugin manager expose the same disable path,
-  so prompt guidance sources can be revoked without opening raw setup files.
-- Check rows in the plugin manager expose the same plugin disable path, so
-  verification sources can be revoked without opening raw setup files.
-- Check triggers are translated into product language in plugin manager rows and
-  dashboard summaries, including a safe fallback for unknown third-party events.
+- Plugins are installed bundles. Actions, Connections, Skills, MCP servers,
+  Tools, and Checks are capabilities inside those bundles.
+- The plugin host validates manifests, keeps skill paths and MCP commands inside
+  bundle roots, bounds runner output, supervises registry loading, and fails
+  closed when setup, credentials, or local secrets are missing.
+- Notion is the reference connection. Its authorization metadata, local token or
+  key handling, missing-secret state, cleanup, timeline proof, retries, and
+  receipts exercise the generic connector contract.
+- Connector evidence stays generic in protocol and timeline data. Service names,
+  access scopes, auth type, proof labels, and repair copy are translated by
+  narrow presenters.
+- Skills are bounded, read-only context packs with query selection, strict
+  budgets, reviewable receipts, and a plugin disable path for revocation.
+- Checks are verification surfaces with product-facing trigger copy and the same
+  plugin disable path, not arbitrary always-on automation.
+- Plugin manager surfaces expose capability meaning progressively. Source paths,
+  manifest keys, raw event names, routes, hashes, and storage details stay out of
+  the default path.
 
-Next:
+Exit gates:
 
-- Keep capability metadata progressively surfaced before adding broad catalogs
-  or remote transports.
-- Keep connector evidence generic in timeline data as more services are added;
-  only service copy and service proof labels belong in narrow presenters.
-- Prove connector import, local enablement, credential use, revocation, removal,
-  retries, receipts, and memory capture with one reference connector before
-  adding more services.
-- Treat hooks as verification and automation points first, not arbitrary
-  always-on automation.
+- Reference connector proof: install or refresh the Notion bundle, authorize it,
+  run one useful action or workflow, show a receipt, clear the credential, remove
+  the plugin, and verify no stale local credential state remains.
+- Installed-app proof: in a packaged app, verify model download, activation,
+  local inference, Web Search, session delete, session revert, Reset Amentia, and
+  plugin install/disable/remove before adding more connector surface area.
+- Runner proof: actions, connector workflows, skills, MCP metadata, and checks
+  must have bounded output, timeout or cancellation behavior where execution is
+  possible, product-facing errors, and CI coverage for failure paths.
+- Product clarity proof: plugin, timeline, model, session, and settings surfaces
+  must remain understandable to a non-developer by default, with technical
+  detail available only through reveal or diagnostics paths.
+- Scope decision: after the Notion proof is stable, either close M14 and move to
+  M15 or add exactly one more connector to test whether the generic contract
+  truly holds. Do not start a broad catalog first.
 
 ## M15: Cowork Continuity
 
 Goal: make Amentia better over time without turning it into a remote server agent.
 
+- Start only after the M14 exit gates are green in a packaged app.
 - Add a local follow-up queue for user-approved next actions.
 - Add scheduled work only after approvals, sandbox policy, and receipts
   work headlessly and fail closed.
