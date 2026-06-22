@@ -102,7 +102,7 @@ enum SessionChangePresenter {
   }
 
   private static func conflictDetail(_ reason: String) -> String {
-    if reason.contains("changed after Amentia wrote it") || reason.contains("changed after Amentia wrote it") {
+    if reason.contains("changed after Amentia wrote it") || reason.contains("changed after Amentia saved it") {
       return "changed after Amentia saved it"
     }
     if reason.contains("failed to read current file content") {

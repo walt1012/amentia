@@ -41,6 +41,18 @@ final class SessionChangePresenterTests: XCTestCase {
     XCTAssertTrue(prompt.message.contains("leave everything untouched for now"))
   }
 
+  func testRevertPromptAcceptsSavedConflictWording() {
+    let prompt = SessionChangePresenter.revertPrompt(for: preview(changes: [
+      change(
+        path: "Sources/App.swift",
+        canRevert: false,
+        conflictReason: "changed after Amentia saved it"
+      ),
+    ]))
+
+    XCTAssertTrue(prompt.message.contains("changed after Amentia saved it"))
+  }
+
   func testRevertPromptKeepsLongChangeListsReadable() {
     let prompt = SessionChangePresenter.revertPrompt(for: preview(changes: [
       change(path: "one.swift"),
