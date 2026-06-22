@@ -1379,7 +1379,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     capabilities: [PluginCapabilitySummary] = [],
     connectors: [PluginConnectorSummary] = [],
     commands: [PluginCommandSummary] = [],
-    hooks: [PluginHookSummary] = []
+    hooks: [PluginHookSummary] = [],
+    skills: [PluginSkillSummary] = []
   ) -> PluginDashboardSnapshot {
     PluginDashboardSnapshot(
       plugins: plugins ?? [pluginSummary()],
@@ -1397,6 +1398,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       connectors: connectors,
       commands: commands,
       hooks: hooks,
+      skills: skills,
       diagnostics: [],
       refreshRecoveryAttributes: [:],
       hasLifecycleOperation: false
