@@ -25,6 +25,8 @@ define release, CI, package, model, or workflow behavior.
 - Runtime and model checks: `runtime_smoke_test.py` and
   `validate_model_pack.py` cover the runtime protocol surface and curated local
   model metadata.
+- Connector proof: `reference_connector_proof.py` validates the M14 Notion
+  reference connector acceptance evidence before broader connector work starts.
 - Tests: `test_*.py` files are lightweight contract tests for the scripts above
   and should stay runnable without Rust or Swift toolchains.
 
