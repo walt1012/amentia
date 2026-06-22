@@ -1,3 +1,5 @@
+use std::path::{Component, Path};
+
 use anyhow::Result;
 
 use crate::manifest::PluginManifest;
@@ -69,6 +71,10 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
       "Use one of the supported permissions: {}.",
       KNOWN_PERMISSIONS.join(", ")
     );
+  }
+  if validation_error.contains("path must stay inside the plugin bundle") {
+    return "Use a normal relative path inside the plugin bundle, for example `skills/workspace-notes.md`."
+      .to_string();
   }
   if validation_error.contains("plugin auth policy type")
     && validation_error.contains("is not supported")
@@ -172,6 +178,12 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
     if skill.path.trim().is_empty() {
       anyhow::bail!("plugin skill `{}` must include a non-empty path", skill.id);
     }
+    validate_bundle_relative_path(&skill.path).map_err(|_| {
+      anyhow::anyhow!(
+        "plugin skill `{}` path must stay inside the plugin bundle",
+        skill.id
+      )
+    })?;
   }
 
   for server in &manifest.mcp_servers {
@@ -191,6 +203,12 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
           server.id
         );
       }
+      validate_bundle_relative_path(command).map_err(|_| {
+        anyhow::anyhow!(
+          "plugin MCP server `{}` command must stay inside the plugin bundle",
+          server.id
+        )
+      })?;
     }
   }
 
@@ -364,6 +382,24 @@ fn validate_manifest_identifier(kind: &str, identifier: &str) -> Result<()> {
   }
   if identifier.chars().any(char::is_whitespace) {
     anyhow::bail!("plugin {kind} identifier `{identifier}` must not contain whitespace");
+  }
+  Ok(())
+}
+
+fn validate_bundle_relative_path(path: &str) -> Result<()> {
+  let trimmed = path.trim();
+  if trimmed.is_empty()
+    || trimmed.contains('\\')
+    || trimmed.contains(':')
+    || Path::new(trimmed).is_absolute()
+  {
+    anyhow::bail!("path must stay inside the plugin bundle");
+  }
+  for component in Path::new(trimmed).components() {
+    match component {
+      Component::Normal(_) => {}
+      _ => anyhow::bail!("path must stay inside the plugin bundle"),
+    }
   }
   Ok(())
 }

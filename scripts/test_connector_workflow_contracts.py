@@ -33,12 +33,63 @@ def require(condition: bool, message: str) -> None:
     raise AssertionError(message)
 
 
+def is_safe_bundle_relative_path(value: object) -> bool:
+  if not isinstance(value, str):
+    return False
+  path = value.strip()
+  if not path or "\\" in path or ":" in path or path.startswith("/"):
+    return False
+  return not any(part in {"", ".", ".."} for part in path.split("/"))
+
+
+def validate_bundle_local_paths(plugin_root: Path, manifest: dict[str, Any]) -> None:
+  for skill in manifest.get("skills", []):
+    if not isinstance(skill, dict):
+      raise AssertionError(f"{plugin_root.name} skill entries must be objects")
+    skill_id = skill.get("id", "unknown")
+    require(
+      is_safe_bundle_relative_path(skill.get("path")),
+      f"{plugin_root.name} skill {skill_id} path must stay inside the plugin bundle",
+    )
+
+  for server in manifest.get("mcpServers", []):
+    if not isinstance(server, dict):
+      raise AssertionError(f"{plugin_root.name} MCP server entries must be objects")
+    command = server.get("command")
+    if command is None:
+      continue
+    server_id = server.get("id", "unknown")
+    require(
+      is_safe_bundle_relative_path(command),
+      f"{plugin_root.name} MCP server {server_id} command must stay inside the plugin bundle",
+    )
+
+
+def assert_bundle_path_classifier() -> None:
+  safe_paths = ["skills/notion-workspace.md", "bin/notion-mcp-local-draft.sh"]
+  unsafe_paths = [
+    "",
+    "../outside.md",
+    "skills/../../outside.md",
+    "/tmp/outside.md",
+    "C:\\outside.md",
+    "bin\\runner.sh",
+    "skills//notes.md",
+    "skills/./notes.md",
+  ]
+  for path in safe_paths:
+    require(is_safe_bundle_relative_path(path), f"{path} should be bundle-local")
+  for path in unsafe_paths:
+    require(not is_safe_bundle_relative_path(path), f"{path} should be rejected")
+
+
 def validate_plugin(plugin_root: Path) -> None:
   manifest_path = plugin_root / "amentia-plugin.json"
   if not manifest_path.exists():
     return
 
   manifest = read_json_object(manifest_path)
+  validate_bundle_local_paths(plugin_root, manifest)
   capabilities = {
     value
     for value in manifest.get("capabilities", [])
@@ -133,6 +184,7 @@ def validate_plugin(plugin_root: Path) -> None:
 
 
 def main() -> int:
+  assert_bundle_path_classifier()
   for plugin_root in sorted(BUNDLED_PLUGIN_ROOT.iterdir()):
     if plugin_root.is_dir():
       validate_plugin(plugin_root)

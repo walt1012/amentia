@@ -275,6 +275,9 @@ Completed:
 - Plugin capability summaries count unknown capability kinds without exposing
   raw manifest keys, and workflow, tool, skill, MCP, connector, check, and
   validation copy stay product-facing by default.
+- Plugin skill paths and MCP server commands must stay inside the plugin bundle,
+  with both manifest validation and bundled-plugin contract checks failing
+  closed before execution.
 
 Next:
 

@@ -126,6 +126,69 @@ fn validate_manifest_rejects_capability_identifier_whitespace() {
 }
 
 #[test]
+fn validate_manifest_rejects_skill_paths_that_escape_bundle() {
+  for path in [
+    "../outside.md",
+    "skills/../../outside.md",
+    "/tmp/outside.md",
+    "C:\\outside.md",
+    "skills\\outside.md",
+  ] {
+    let mut manifest = manifest(vec![], vec!["file.read"]);
+    manifest.skills = vec![PluginSkillManifest {
+      id: "workspace.notes".to_string(),
+      description: "Workspace note guidance.".to_string(),
+      path: path.to_string(),
+    }];
+
+    let error = validate_manifest(&manifest).expect_err("unsafe skill path should fail");
+
+    assert!(error
+      .to_string()
+      .contains("plugin skill `workspace.notes` path must stay inside the plugin bundle"));
+  }
+}
+
+#[test]
+fn validate_manifest_accepts_bundle_relative_skill_paths() {
+  let mut manifest = manifest(vec![], vec!["file.read"]);
+  manifest.skills = vec![PluginSkillManifest {
+    id: "workspace.notes".to_string(),
+    description: "Workspace note guidance.".to_string(),
+    path: "skills/workspace-notes.md".to_string(),
+  }];
+
+  let result = validate_manifest(&manifest);
+
+  assert!(result.is_ok());
+}
+
+#[test]
+fn validate_manifest_rejects_mcp_server_commands_that_escape_bundle() {
+  for command in [
+    "../runner.sh",
+    "bin/../../runner.sh",
+    "/usr/local/bin/runner",
+    "C:\\runner.exe",
+    "bin\\runner.sh",
+  ] {
+    let mut manifest = manifest(vec!["mcp_server:local"], vec!["mcp.connect"]);
+    manifest.mcp_servers = vec![PluginMcpServerManifest {
+      id: "local".to_string(),
+      command: Some(command.to_string()),
+      args: vec![],
+      transport: Some("stdio".to_string()),
+    }];
+
+    let error = validate_manifest(&manifest).expect_err("unsafe MCP command should fail");
+
+    assert!(error
+      .to_string()
+      .contains("plugin MCP server `local` command must stay inside the plugin bundle"));
+  }
+}
+
+#[test]
 fn validation_hint_describes_supported_capability_kinds() {
   let hint = validation_hint_for_error("plugin capability kind `memory` is not supported");
 
@@ -154,6 +217,17 @@ fn validation_hint_describes_stable_identifiers_for_colons() {
   assert!(hint.contains("stable plugin identifiers"));
   assert!(hint.contains("colons"));
   assert!(hint.contains("notion-connector"));
+}
+
+#[test]
+fn validation_hint_describes_bundle_relative_paths() {
+  let hint = validation_hint_for_error(
+    "plugin skill `workspace.notes` path must stay inside the plugin bundle",
+  );
+
+  assert!(hint.contains("relative path"));
+  assert!(hint.contains("plugin bundle"));
+  assert!(hint.contains("skills/workspace-notes.md"));
 }
 
 #[test]
