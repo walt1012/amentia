@@ -3,15 +3,13 @@ use amentia_plugin_host::{
   PluginCommandEntry as HostPluginCommandEntry,
   PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
   PluginCommandEnvelopeFieldEntry as HostPluginCommandEnvelopeFieldEntry,
-  PluginConnectorEntry as HostPluginConnectorEntry,
-  PluginHookEntry as HostPluginHookEntry,
+  PluginConnectorEntry as HostPluginConnectorEntry, PluginHookEntry as HostPluginHookEntry,
   PluginSkillEntry as HostPluginSkillEntry,
 };
 use amentia_protocol::{
   PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
   PluginCommandExecutionSummary, PluginCommandSummary, PluginCommandWorkflowSummary,
-  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookSummary,
-  PluginSkillSummary,
+  PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookSummary, PluginSkillSummary,
 };
 
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
