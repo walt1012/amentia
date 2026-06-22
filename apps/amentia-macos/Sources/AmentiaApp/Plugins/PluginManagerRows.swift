@@ -70,3 +70,64 @@ struct PluginRow: View {
     PluginStatusDisplay.pluginStatus(plugin.status).capitalized
   }
 }
+
+struct PluginSkillRow: View {
+  let skill: PluginSkillSummary
+  let onRevealSource: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(skill.description)
+            .font(.caption.weight(.semibold))
+          Text("\(skill.pluginDisplayName) | \(displayStatus)")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+        }
+
+        Spacer()
+
+        Button("Show File") {
+          onRevealSource()
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+      }
+
+      if !skill.permissions.isEmpty {
+        Text("Needs: \(PluginPermissionDisplay.summary(skill.permissions))")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if let previewLine {
+        Text("Preview: \(previewLine)")
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      if let issueText {
+        Text(issueText)
+          .font(.caption2)
+          .foregroundColor(.orange)
+          .textSelection(.enabled)
+      }
+    }
+    .softPanel(tone: skill.status == "ready" ? .neutral : .warning)
+  }
+
+  private var displayStatus: String {
+    PluginStatusDisplay.skillStatus(skill.status).capitalized
+  }
+
+  private var previewLine: String? {
+    PluginSkillDisplay.previewLine(skill.preview, maxLength: 140)
+  }
+
+  private var issueText: String? {
+    PluginSkillDisplay.issueText(skill)
+  }
+}

@@ -15,12 +15,25 @@ extension AppViewModel {
   }
 
   func pluginSurfaceSummary() -> String {
-    [
-      pluginRegistryCountSummary(),
+    let specificSummaries = [
       pluginConnectorCountSummary(),
       pluginCommandCountSummary(),
+      pluginSkillCountSummary(),
       pluginHookCountSummary(),
-    ].joined(separator: " | ")
+    ].filter { summary in
+      !summary.hasPrefix("No ") && !summary.contains("not loaded")
+    }
+
+    if !specificSummaries.isEmpty {
+      return specificSummaries.joined(separator: " | ")
+    }
+
+    let capabilitySummary = pluginRegistryCountSummary()
+    if !capabilitySummary.hasPrefix("No ") && !capabilitySummary.contains("not loaded") {
+      return capabilitySummary
+    }
+
+    return "Install plugins to add actions, connections, skills, and checks."
   }
 
   func pluginCatalogPreview() -> [PluginSummary] {
@@ -104,5 +117,17 @@ extension AppViewModel {
 
   func pluginHookPreview() -> [PluginHookSummary] {
     PluginDashboardPresenter.hookPreview(pluginDashboardSnapshot)
+  }
+
+  func pluginSkillCountSummary() -> String {
+    PluginDashboardPresenter.skillCountSummary(pluginDashboardSnapshot)
+  }
+
+  func pluginSkillDetailSummary() -> String {
+    PluginDashboardPresenter.skillDetailSummary(pluginDashboardSnapshot)
+  }
+
+  func pluginSkillPreview() -> [PluginSkillSummary] {
+    PluginDashboardPresenter.skillPreview(pluginDashboardSnapshot)
   }
 }

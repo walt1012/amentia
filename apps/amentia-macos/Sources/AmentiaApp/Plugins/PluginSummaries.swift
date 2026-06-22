@@ -294,6 +294,19 @@ enum PluginStatusDisplay {
     }
   }
 
+  static func skillStatus(_ status: String) -> String {
+    switch status {
+    case "ready":
+      return "ready"
+    case "missingSkillFile":
+      return "skill file missing"
+    case "invalidSkillFile":
+      return "skill needs review"
+    default:
+      return "needs attention"
+    }
+  }
+
   static func missingConnectionSummary(count: Int) -> String {
     count == 1
       ? "A required connection is missing."
@@ -758,4 +771,69 @@ struct PluginHookSummary: Identifiable, Hashable {
   let runBlocker: String?
   let runRepairHint: String?
   let memorySummary: String?
+}
+
+enum PluginSkillDisplay {
+  static func previewLine(_ preview: String?, maxLength: Int = 160) -> String? {
+    guard let preview else {
+      return nil
+    }
+
+    let line = preview
+      .split(whereSeparator: \.isNewline)
+      .map(String.init)
+      .first?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard let line, !line.isEmpty else {
+      return nil
+    }
+
+    if line.count <= maxLength {
+      return line
+    }
+
+    return "\(String(line.prefix(maxLength)))..."
+  }
+
+  static func issueText(_ skill: PluginSkillSummary) -> String? {
+    guard skill.status != "ready" else {
+      return nil
+    }
+
+    let blocker = skill.runBlocker?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let hint = skill.runRepairHint?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    switch (nonEmpty(blocker), nonEmpty(hint)) {
+    case let (blocker?, hint?):
+      return "\(blocker) Fix: \(hint)"
+    case let (blocker?, nil):
+      return blocker
+    case let (nil, hint?):
+      return "Fix: \(hint)"
+    case (nil, nil):
+      return "This guidance needs review before Amentia can use it."
+    }
+  }
+
+  private static func nonEmpty(_ value: String?) -> String? {
+    guard let value, !value.isEmpty else {
+      return nil
+    }
+    return value
+  }
+}
+
+struct PluginSkillSummary: Identifiable, Hashable {
+  let id: String
+  let description: String
+  let pluginID: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let sourcePath: String
+  let status: String
+  let preview: String?
+  let contentBytes: Int
+  let runBlocker: String?
+  let runRepairHint: String?
 }

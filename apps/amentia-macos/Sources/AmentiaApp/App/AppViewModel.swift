@@ -254,6 +254,10 @@ final class AppViewModel: ObservableObject {
     pluginState.hooks
   }
 
+  var pluginSkills: [PluginSkillSummary] {
+    pluginState.skills
+  }
+
   var pluginDashboardSnapshot: PluginDashboardSnapshot {
     pluginState.dashboardSnapshot
   }

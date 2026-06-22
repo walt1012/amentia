@@ -1674,6 +1674,79 @@ fn plugin_hook_registry_surfaces_invalid_hook_manifests() {
 }
 
 #[test]
+fn plugin_skill_registry_lists_enabled_plugin_skills() {
+  let mut context = RuntimeContext::new_in_memory();
+  let source_root = create_temp_plugin_bundle(
+    "plugin-skill-registry",
+    "notion-connector",
+    "Notion Connector",
+  );
+  let plugin_manifest = source_root.join("amentia-plugin.json");
+  fs::create_dir_all(source_root.join("skills")).expect("create skills dir");
+  fs::write(
+    &plugin_manifest,
+    r#"{
+  "name": "notion-connector",
+  "version": "0.1.0",
+  "displayName": "Notion Connector",
+  "description": "Notion skill plugin",
+  "author": { "name": "Amentia" },
+  "permissions": ["network.outbound"],
+  "skills": [
+    {
+      "id": "notion.workspace",
+      "description": "Prepare workspace context for Notion.",
+      "path": "skills/notion-workspace.md"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write skill plugin manifest");
+  fs::write(
+    source_root.join("skills").join("notion-workspace.md"),
+    "Use this skill for local Notion workspace drafts.",
+  )
+  .expect("write skill file");
+  replace_plugin_catalog(
+    &mut context,
+    vec![PluginCatalogEntry {
+      id: "notion-connector".to_string(),
+      name: "notion-connector".to_string(),
+      version: "0.1.0".to_string(),
+      display_name: "Notion Connector".to_string(),
+      status: "ready".to_string(),
+      description: "Notion skill plugin".to_string(),
+      author_name: Some("Amentia".to_string()),
+      enabled: true,
+      default_enabled: true,
+      capabilities: vec!["skill:notion.workspace".to_string()],
+      permissions: vec!["network.outbound".to_string()],
+      manifest_path: plugin_manifest.display().to_string(),
+      provenance: "test".to_string(),
+      validation_error: None,
+      validation_hint: None,
+    }],
+  );
+
+  let response = handle_request(&mut context, request(methods::PLUGIN_SKILL_REGISTRY, None));
+
+  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+
+  assert!(response.error.is_none());
+  let result = response.result.expect("skill registry result");
+  let skills = result["skills"].as_array().expect("skills");
+  assert_eq!(skills.len(), 1);
+  assert_eq!(skills[0]["skillId"], "notion-connector::notion.workspace");
+  assert_eq!(skills[0]["pluginId"], "notion-connector");
+  assert_eq!(skills[0]["status"], "ready");
+  assert!(skills[0]["preview"]
+    .as_str()
+    .expect("preview")
+    .contains("Notion workspace drafts"));
+}
+
+#[test]
 fn plugin_connector_registry_lists_disabled_connector_plugins() {
   let mut context = RuntimeContext::new_in_memory();
   replace_plugin_catalog(

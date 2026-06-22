@@ -41,6 +41,9 @@ pub fn handle_request(context: &mut RuntimeContext, request: JsonRpcRequest) -> 
     methods::PLUGIN_REFRESH => plugin_requests::handle_plugin_refresh(context, request),
     methods::PLUGIN_REMOVE => plugin_requests::handle_plugin_remove(context, request),
     methods::PLUGIN_SET_ENABLED => plugin_requests::handle_plugin_set_enabled(context, request),
+    methods::PLUGIN_SKILL_REGISTRY => {
+      plugin_requests::handle_plugin_skill_registry(context, request)
+    }
     methods::RUNTIME_READINESS => JsonRpcResponse::success(
       request.id,
       &runtime_readiness::build_runtime_readiness(context),

@@ -26,9 +26,10 @@ pub use manifest::{
 pub use paths::{configured_plugin_install_root, configured_plugin_roots, default_plugin_root};
 pub use registry::{
   build_capability_registry, build_command_registry, build_connector_registry, build_hook_registry,
+  build_skill_registry,
 };
 pub use types::{
   PluginCapabilityRegistration, PluginCatalogEntry, PluginCommandEntry, PluginCommandEnvelopeEntry,
   PluginCommandEnvelopeFieldEntry, PluginCommandExecutionEntry, PluginConnectorEntry,
-  PluginConnectorWorkflowEntry, PluginHookEntry, PluginRemovalRecord,
+  PluginConnectorWorkflowEntry, PluginHookEntry, PluginRemovalRecord, PluginSkillEntry,
 };

@@ -243,4 +243,20 @@ enum RuntimeSummaryMapper {
       memorySummary: hook.memorySummary
     )
   }
+
+  static func pluginSkillSummary(from skill: RuntimeBridge.RuntimePluginSkill) -> PluginSkillSummary {
+    PluginSkillSummary(
+      id: skill.skillID,
+      description: skill.description,
+      pluginID: skill.pluginID,
+      pluginDisplayName: skill.pluginDisplayName,
+      permissions: skill.permissions,
+      sourcePath: skill.sourcePath,
+      status: skill.status,
+      preview: skill.preview,
+      contentBytes: skill.contentBytes,
+      runBlocker: skill.runBlocker,
+      runRepairHint: skill.runRepairHint
+    )
+  }
 }

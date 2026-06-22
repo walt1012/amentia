@@ -2,7 +2,8 @@ use amentia_protocol::{JsonRpcRequest, JsonRpcResponse, PluginListResult};
 
 use crate::protocol_adapters::{
   build_protocol_capability_registry, build_protocol_command_registry,
-  build_protocol_connector_registry, build_protocol_hook_registry, to_protocol_plugin,
+  build_protocol_connector_registry, build_protocol_hook_registry, build_protocol_skill_registry,
+  to_protocol_plugin,
 };
 use crate::RuntimeContext;
 
@@ -43,6 +44,16 @@ pub(crate) fn handle_plugin_hook_registry(
   JsonRpcResponse::success(
     request.id,
     &build_protocol_hook_registry(context.plugin_state.catalog()),
+  )
+}
+
+pub(crate) fn handle_plugin_skill_registry(
+  context: &RuntimeContext,
+  request: JsonRpcRequest,
+) -> JsonRpcResponse {
+  JsonRpcResponse::success(
+    request.id,
+    &build_protocol_skill_registry(context.plugin_state.catalog()),
   )
 }
 

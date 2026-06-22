@@ -282,6 +282,8 @@ Completed:
 - Plugin runner output is bounded at the contract layer: oversized content,
   timeline items, and metadata are rejected before they reach session storage or
   user-facing evidence.
+- Enabled plugin skills now load through a bounded, local, read-only registry
+  with short previews, repair hints, and progressive plugin-manager disclosure.
 
 Next:
 
@@ -292,8 +294,8 @@ Next:
 - Prove connector import, local enablement, credential use, revocation, removal,
   retries, receipts, and memory capture with one reference connector before
   adding more services.
-- Add a small skill-like instruction layer only if it is bounded,
-  user-reviewable, progressively loaded, and stored locally.
+- Use plugin skills in the agent loop only after the selection, review,
+  revocation, receipts, and prompt-size boundaries are explicit.
 - Treat hooks as verification and automation points first, not arbitrary
   always-on automation.
 

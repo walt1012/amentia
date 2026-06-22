@@ -3,12 +3,15 @@ use amentia_plugin_host::{
   PluginCommandEntry as HostPluginCommandEntry,
   PluginCommandEnvelopeEntry as HostPluginCommandEnvelopeEntry,
   PluginCommandEnvelopeFieldEntry as HostPluginCommandEnvelopeFieldEntry,
-  PluginConnectorEntry as HostPluginConnectorEntry, PluginHookEntry as HostPluginHookEntry,
+  PluginConnectorEntry as HostPluginConnectorEntry,
+  PluginHookEntry as HostPluginHookEntry,
+  PluginSkillEntry as HostPluginSkillEntry,
 };
 use amentia_protocol::{
   PluginCapabilityRegistration, PluginCommandEnvelopeFieldSummary, PluginCommandEnvelopeSummary,
   PluginCommandExecutionSummary, PluginCommandSummary, PluginCommandWorkflowSummary,
   PluginConnectorSummary, PluginConnectorWorkflowSummary, PluginHookSummary,
+  PluginSkillSummary,
 };
 
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
@@ -238,5 +241,21 @@ pub(super) fn to_protocol_plugin_hook(hook: HostPluginHookEntry) -> PluginHookSu
     run_blocker: hook.manifest_error,
     run_repair_hint,
     memory_summary,
+  }
+}
+
+pub(super) fn to_protocol_plugin_skill(skill: HostPluginSkillEntry) -> PluginSkillSummary {
+  PluginSkillSummary {
+    skill_id: skill.skill_id,
+    description: skill.description,
+    plugin_id: skill.plugin_id,
+    plugin_display_name: skill.plugin_display_name,
+    permissions: skill.permissions,
+    source_path: skill.source_path,
+    status: skill.status,
+    preview: skill.preview,
+    content_bytes: skill.content_bytes,
+    run_blocker: skill.run_blocker,
+    run_repair_hint: skill.run_repair_hint,
   }
 }

@@ -950,3 +950,102 @@ fn build_hook_registry_skips_unsafe_capability_identifiers() {
 
   assert!(hooks.is_empty());
 }
+
+#[test]
+fn build_skill_registry_loads_bounded_enabled_plugin_skill_previews() {
+  let plugin_root = create_temp_plugin_root("skill-registry");
+  let plugin_dir = plugin_root.join("notion-connector");
+  let skills_dir = plugin_dir.join("skills");
+  fs::create_dir_all(&skills_dir).expect("create skills dir");
+  fs::write(
+    plugin_dir.join("amentia-plugin.json"),
+    r#"{
+  "name": "notion-connector",
+  "version": "0.1.0",
+  "displayName": "Notion Connector",
+  "description": "Test plugin",
+  "author": { "name": "Amentia" },
+  "capabilities": [],
+  "permissions": ["network.outbound"],
+  "skills": [
+    {
+      "id": "notion.workspace",
+      "description": "Prepare workspace context for Notion.",
+      "path": "skills/notion-workspace.md"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write plugin manifest");
+  fs::write(
+    skills_dir.join("notion-workspace.md"),
+    format!("{}\n{}", "Use this skill for Notion workspace drafts.", "x".repeat(5000)),
+  )
+  .expect("write skill file");
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+
+  let skills = build_skill_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert_eq!(skills.len(), 1);
+  assert_eq!(skills[0].skill_id, "notion-connector::notion.workspace");
+  assert_eq!(skills[0].plugin_id, "notion-connector");
+  assert_eq!(skills[0].description, "Prepare workspace context for Notion.");
+  assert_eq!(skills[0].status, "ready");
+  assert!(skills[0].preview.as_ref().expect("preview").len() <= 1200);
+  assert!(skills[0]
+    .preview
+    .as_ref()
+    .expect("preview")
+    .contains("Use this skill for Notion"));
+  assert!(skills[0].content_bytes > 1200);
+  assert!(skills[0].run_blocker.is_none());
+}
+
+#[test]
+fn build_skill_registry_reports_missing_skill_files() {
+  let plugin_root = create_temp_plugin_root("skill-registry-missing");
+  let plugin_dir = plugin_root.join("workspace-skills");
+  fs::create_dir_all(&plugin_dir).expect("create plugin dir");
+  fs::write(
+    plugin_dir.join("amentia-plugin.json"),
+    r#"{
+  "name": "workspace-skills",
+  "version": "0.1.0",
+  "displayName": "Workspace Skills",
+  "description": "Test plugin",
+  "author": { "name": "Amentia" },
+  "permissions": ["file.read"],
+  "skills": [
+    {
+      "id": "workspace.notes",
+      "description": "Use workspace notes.",
+      "path": "skills/missing.md"
+    }
+  ],
+  "defaultEnabled": true
+}"#,
+  )
+  .expect("write plugin manifest");
+  let plugins = discover_plugins(&plugin_root).expect("discover plugins");
+
+  let skills = build_skill_registry(&plugins);
+
+  fs::remove_dir_all(&plugin_root).expect("cleanup plugin root");
+
+  assert_eq!(skills.len(), 1);
+  assert_eq!(skills[0].status, "missingSkillFile");
+  assert!(skills[0].preview.is_none());
+  assert!(skills[0]
+    .run_blocker
+    .as_ref()
+    .expect("run blocker")
+    .contains("could not be loaded"));
+  assert!(skills[0]
+    .run_repair_hint
+    .as_ref()
+    .expect("repair hint")
+    .contains("Check the skill file"));
+}

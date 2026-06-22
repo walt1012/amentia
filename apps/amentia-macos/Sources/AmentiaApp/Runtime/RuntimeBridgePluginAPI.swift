@@ -193,6 +193,30 @@ extension RuntimeBridge {
     }
   }
 
+  func listPluginSkills() async throws -> [RuntimePluginSkill] {
+    let response: JSONRPCResponse<PluginSkillRegistryResult> = try await sendRequest(
+      method: "plugin/skillRegistry",
+      params: OptionalRequestParams.none
+    )
+    let result = try responseResult(from: response)
+
+    return result.skills.map { skill in
+      RuntimePluginSkill(
+        skillID: skill.skillId,
+        description: skill.description,
+        pluginID: skill.pluginId,
+        pluginDisplayName: skill.pluginDisplayName,
+        permissions: skill.permissions,
+        sourcePath: skill.sourcePath,
+        status: skill.status,
+        preview: skill.preview,
+        contentBytes: skill.contentBytes,
+        runBlocker: skill.runBlocker,
+        runRepairHint: skill.runRepairHint
+      )
+    }
+  }
+
   func setPluginEnabled(pluginID: String, enabled: Bool) async throws -> RuntimePlugin {
     let response: JSONRPCResponse<PluginSetEnabledResult> = try await sendRequest(
       method: "plugin/setEnabled",

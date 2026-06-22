@@ -7,6 +7,7 @@ struct PluginStateRefresh {
   let connectors: [PluginConnectorSummary]?
   let commands: [PluginCommandSummary]?
   let hooks: [PluginHookSummary]?
+  let skills: [PluginSkillSummary]?
   let diagnostics: [String]
   let refreshRecoveryAttributes: [String: String]
 }
@@ -18,6 +19,7 @@ struct PluginRuntimeState {
   var connectors: [PluginConnectorSummary]
   var commands: [PluginCommandSummary]
   var hooks: [PluginHookSummary]
+  var skills: [PluginSkillSummary]
   var diagnostics: [String]
   var refreshRecoveryAttributes: [String: String]
   private var lifecycleOperationID: UUID?
@@ -29,6 +31,7 @@ struct PluginRuntimeState {
     connectors: [PluginConnectorSummary] = [],
     commands: [PluginCommandSummary] = [],
     hooks: [PluginHookSummary] = [],
+    skills: [PluginSkillSummary] = [],
     diagnostics: [String] = [],
     refreshRecoveryAttributes: [String: String] = [:],
     lifecycleOperationID: UUID? = nil
@@ -39,6 +42,7 @@ struct PluginRuntimeState {
     self.connectors = connectors
     self.commands = commands
     self.hooks = hooks
+    self.skills = skills
     self.diagnostics = diagnostics
     self.refreshRecoveryAttributes = refreshRecoveryAttributes
     self.lifecycleOperationID = lifecycleOperationID
@@ -56,6 +60,7 @@ struct PluginRuntimeState {
       connectors: connectors,
       commands: commands,
       hooks: hooks,
+      skills: skills,
       diagnostics: diagnostics,
       refreshRecoveryAttributes: refreshRecoveryAttributes,
       hasLifecycleOperation: hasLifecycleOperation
@@ -84,6 +89,9 @@ struct PluginRuntimeState {
     }
     if let hooks = refresh.hooks {
       self.hooks = hooks
+    }
+    if let skills = refresh.skills {
+      self.skills = skills
     }
     diagnostics = refresh.diagnostics
     refreshRecoveryAttributes = refresh.refreshRecoveryAttributes

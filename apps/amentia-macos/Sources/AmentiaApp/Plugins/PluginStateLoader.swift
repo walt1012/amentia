@@ -43,11 +43,15 @@ enum PluginStateLoader {
     async let hookLoadTask = load("hook registry") {
       try await runtimeBridge.listPluginHooks()
     }
+    async let skillLoadTask = load("skill registry") {
+      try await runtimeBridge.listPluginSkills()
+    }
 
     let registryLoad = await registryLoadTask
     let commandLoad = await commandLoadTask
     let connectorLoad = await connectorLoadTask
     let hookLoad = await hookLoadTask
+    let skillLoad = await skillLoadTask
     guard !Task.isCancelled else {
       return emptyRefresh()
     }
@@ -56,6 +60,7 @@ enum PluginStateLoader {
     let runtimeCommands = commandLoad.value
     let runtimeConnectors = connectorLoad.value
     let runtimeHooks = hookLoad.value
+    let runtimeSkills = skillLoad.value
     let diagnostics = [
       catalogRefresh.diagnostic,
       pluginLoad.diagnostic,
@@ -63,6 +68,7 @@ enum PluginStateLoader {
       commandLoad.diagnostic,
       connectorLoad.diagnostic,
       hookLoad.diagnostic,
+      skillLoad.diagnostic,
     ].compactMap { $0 }
 
     let plugins = runtimePlugins.map { plugins in
@@ -77,6 +83,7 @@ enum PluginStateLoader {
       connectors: mappedConnectors(runtimeConnectors, pluginsLoaded: runtimePlugins != nil),
       commands: mappedCommands(runtimeCommands, pluginsLoaded: runtimePlugins != nil),
       hooks: mappedHooks(runtimeHooks, pluginsLoaded: runtimePlugins != nil),
+      skills: mappedSkills(runtimeSkills, pluginsLoaded: runtimePlugins != nil),
       diagnostics: diagnostics,
       refreshRecoveryAttributes: catalogRefresh.recoveryAttributes
     )
@@ -118,6 +125,7 @@ enum PluginStateLoader {
       connectors: nil,
       commands: nil,
       hooks: nil,
+      skills: nil,
       diagnostics: [],
       refreshRecoveryAttributes: [:]
     )
@@ -187,6 +195,17 @@ enum PluginStateLoader {
   ) -> [PluginHookSummary]? {
     if let hooks {
       return hooks.map { RuntimeSummaryMapper.pluginHookSummary(from: $0) }
+    }
+
+    return pluginsLoaded ? [] : nil
+  }
+
+  private static func mappedSkills(
+    _ skills: [RuntimeBridge.RuntimePluginSkill]?,
+    pluginsLoaded: Bool
+  ) -> [PluginSkillSummary]? {
+    if let skills {
+      return skills.map { RuntimeSummaryMapper.pluginSkillSummary(from: $0) }
     }
 
     return pluginsLoaded ? [] : nil

@@ -75,6 +75,10 @@ struct PluginHookRegistryResult: Codable {
   let hooks: [RuntimePluginHookPayload]
 }
 
+struct PluginSkillRegistryResult: Codable {
+  let skills: [RuntimePluginSkillPayload]
+}
+
 struct RuntimePluginCapabilityRegistrySummaryPayload: Codable {
   let enabledPluginCount: Int
   let totalCapabilityCount: Int
@@ -198,6 +202,20 @@ struct RuntimePluginHookPayload: Codable {
   let runBlocker: String?
   let runRepairHint: String?
   let memorySummary: String?
+}
+
+struct RuntimePluginSkillPayload: Codable {
+  let skillId: String
+  let description: String
+  let pluginId: String
+  let pluginDisplayName: String
+  let permissions: [String]
+  let sourcePath: String
+  let status: String
+  let preview: String?
+  let contentBytes: Int
+  let runBlocker: String?
+  let runRepairHint: String?
 }
 
 struct RuntimePluginPayload: Codable {
@@ -402,5 +420,19 @@ extension RuntimeBridge {
     let runBlocker: String?
     let runRepairHint: String?
     let memorySummary: String?
+  }
+
+  struct RuntimePluginSkill {
+    let skillID: String
+    let description: String
+    let pluginID: String
+    let pluginDisplayName: String
+    let permissions: [String]
+    let sourcePath: String
+    let status: String
+    let preview: String?
+    let contentBytes: Int
+    let runBlocker: String?
+    let runRepairHint: String?
   }
 }

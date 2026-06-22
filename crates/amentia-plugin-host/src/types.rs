@@ -137,6 +137,22 @@ pub struct PluginHookEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PluginSkillEntry {
+  pub skill_id: String,
+  pub description: String,
+  pub plugin_id: String,
+  pub plugin_display_name: String,
+  pub permissions: Vec<String>,
+  pub source_path: String,
+  pub status: String,
+  pub preview: Option<String>,
+  pub content_bytes: usize,
+  pub run_blocker: Option<String>,
+  pub run_repair_hint: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PluginRemovalRecord {
   pub plugin_id: String,
   pub display_name: String,

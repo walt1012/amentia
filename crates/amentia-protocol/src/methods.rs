@@ -20,6 +20,7 @@ pub const PLUGIN_LIST: &str = "plugin/list";
 pub const PLUGIN_REFRESH: &str = "plugin/refresh";
 pub const PLUGIN_REMOVE: &str = "plugin/remove";
 pub const PLUGIN_SET_ENABLED: &str = "plugin/setEnabled";
+pub const PLUGIN_SKILL_REGISTRY: &str = "plugin/skillRegistry";
 pub const RUNTIME_READINESS: &str = "runtime/readiness";
 pub const THREAD_UPDATED_NOTIFICATION: &str = "thread/updated";
 pub const WORKSPACE_CURRENT: &str = "workspace/current";

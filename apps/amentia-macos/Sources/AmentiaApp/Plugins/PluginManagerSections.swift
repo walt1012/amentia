@@ -96,6 +96,25 @@ private struct PluginCapabilitiesSection: View {
           PluginCapabilityRow(capability: capability)
         }
       }
+
+      if !viewModel.pluginSkillPreview().isEmpty {
+        Divider()
+        Text("Reviewable guidance")
+          .font(.caption.weight(.semibold))
+        Text(viewModel.pluginSkillCountSummary())
+          .font(.caption2)
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+
+        ForEach(viewModel.pluginSkillPreview()) { skill in
+          PluginSkillRow(
+            skill: skill,
+            onRevealSource: {
+              viewModel.revealPluginSourcePath(skill.sourcePath)
+            }
+          )
+        }
+      }
     }
   }
 }

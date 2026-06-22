@@ -7,6 +7,7 @@ struct PluginDashboardSnapshot {
   let connectors: [PluginConnectorSummary]
   let commands: [PluginCommandSummary]
   let hooks: [PluginHookSummary]
+  let skills: [PluginSkillSummary]
   let diagnostics: [String]
   let refreshRecoveryAttributes: [String: String]
   let hasLifecycleOperation: Bool
@@ -147,6 +148,10 @@ enum PluginDashboardPresenter {
       return "Plugin capabilities are not loaded yet."
     }
 
+    if registrySummary.totalCapabilityCount == 0 {
+      return "No plugin capabilities yet"
+    }
+
     let capabilityLabel = registrySummary.totalCapabilityCount == 1 ? "capability" : "capabilities"
     let pluginLabel = registrySummary.enabledPluginCount == 1 ? "plugin" : "plugins"
     return "\(registrySummary.totalCapabilityCount) \(capabilityLabel) from \(registrySummary.enabledPluginCount) enabled \(pluginLabel)"
@@ -282,6 +287,31 @@ enum PluginDashboardPresenter {
     preview(snapshot.hooks)
   }
 
+  static func skillCountSummary(_ snapshot: PluginDashboardSnapshot) -> String {
+    if snapshot.skills.isEmpty {
+      return "No skills yet"
+    }
+
+    let readyCount = snapshot.skills.filter { $0.status == "ready" }.count
+    let blockedCount = snapshot.skills.count - readyCount
+    if blockedCount == 0 {
+      return "\(readyCount) skill\(readyCount == 1 ? "" : "s") ready"
+    }
+    return "\(snapshot.skills.count) skill\(snapshot.skills.count == 1 ? "" : "s") | \(blockedCount) need review"
+  }
+
+  static func skillDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
+    guard !snapshot.skills.isEmpty else {
+      return "Enable a plugin with skills to review local instructions before use."
+    }
+
+    return preview(snapshot.skills).map(skillDetail).joined(separator: "\n")
+  }
+
+  static func skillPreview(_ snapshot: PluginDashboardSnapshot) -> [PluginSkillSummary] {
+    preview(snapshot.skills)
+  }
+
   private static func preview<Value>(_ values: [Value]) -> [Value] {
     Array(values.prefix(previewLimit))
   }
@@ -385,6 +415,23 @@ enum PluginDashboardPresenter {
       return "\(hook.pluginDisplayName): \(hook.title) (\(status)) | \(runBlocker)"
     }
     return "\(hook.pluginDisplayName): \(hook.title) (\(status))"
+  }
+
+  private static func skillDetail(_ skill: PluginSkillSummary) -> String {
+    var parts = [
+      "\(skill.pluginDisplayName): \(skill.description)",
+      "status: \(PluginStatusDisplay.skillStatus(skill.status))"
+    ]
+    if let preview = PluginSkillDisplay.previewLine(skill.preview) {
+      parts.append("preview: \(preview)")
+    }
+    if let runBlocker = skill.runBlocker {
+      parts.append("blocked: \(runBlocker)")
+    }
+    if let runRepairHint = skill.runRepairHint {
+      parts.append("fix: \(runRepairHint)")
+    }
+    return parts.joined(separator: " | ")
   }
 
 }

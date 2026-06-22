@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
 use amentia_plugin_host::{
-  build_capability_registry, build_command_registry, build_hook_registry, PluginCatalogEntry,
+  build_capability_registry, build_command_registry, build_hook_registry, build_skill_registry,
+  PluginCatalogEntry,
 };
 use amentia_protocol::{
   PluginCapabilityRegistryResult, PluginCapabilityRegistrySummary, PluginCommandRegistryResult,
-  PluginConnectorRegistryResult, PluginHookRegistryResult,
+  PluginConnectorRegistryResult, PluginHookRegistryResult, PluginSkillRegistryResult,
 };
 
 use crate::plugins::plugin_command_readiness::command_readiness;
 
 use super::protocol_plugin_registry_mappers::{
   to_protocol_capability, to_protocol_plugin_command, to_protocol_plugin_connector,
-  to_protocol_plugin_hook,
+  to_protocol_plugin_hook, to_protocol_plugin_skill,
 };
 use super::runtime_plugins::RuntimePluginState;
 
@@ -80,6 +81,17 @@ pub(crate) fn build_protocol_hook_registry(
     hooks: build_hook_registry(plugins)
       .into_iter()
       .map(to_protocol_plugin_hook)
+      .collect(),
+  }
+}
+
+pub(crate) fn build_protocol_skill_registry(
+  plugins: &[PluginCatalogEntry],
+) -> PluginSkillRegistryResult {
+  PluginSkillRegistryResult {
+    skills: build_skill_registry(plugins)
+      .into_iter()
+      .map(to_protocol_plugin_skill)
       .collect(),
   }
 }

@@ -7,7 +7,8 @@ use amentia_protocol::{
   PluginConnectorRegistryResult, PluginConnectorSummary, PluginConnectorWorkflowSummary,
   PluginHookRegistryResult, PluginHookSummary, PluginInspectParams, PluginInspectResult,
   PluginInstallParams, PluginRemoveParams, PluginRemoveResult, PluginSetEnabledParams,
-  PluginSummary, ThreadReadResult, ThreadSummary, TimelineItem, TurnStartResult,
+  PluginSkillRegistryResult, PluginSkillSummary, PluginSummary, ThreadReadResult, ThreadSummary,
+  TimelineItem, TurnStartResult,
   WorkspaceOpenParams, WorkspaceOpenResult, WorkspaceSummary,
 };
 use std::collections::HashMap;
@@ -647,4 +648,35 @@ fn plugin_hook_registry_round_trips() {
     decoded.hooks[0].memory_summary.as_deref(),
     Some("Stores shell completion memory after execution.")
   );
+}
+
+#[test]
+fn plugin_skill_registry_round_trips() {
+  let result = PluginSkillRegistryResult {
+    skills: vec![PluginSkillSummary {
+      skill_id: "notion-connector::notion.workspace".to_string(),
+      description: "Prepare workspace context for Notion.".to_string(),
+      plugin_id: "notion-connector".to_string(),
+      plugin_display_name: "Notion Connector".to_string(),
+      permissions: vec!["network.outbound".to_string()],
+      source_path: "plugins/bundled/notion-connector/skills/notion-workspace.md".to_string(),
+      status: "ready".to_string(),
+      preview: Some("Use this connector skill for Notion drafts.".to_string()),
+      content_bytes: 4096,
+      run_blocker: None,
+      run_repair_hint: None,
+    }],
+  };
+
+  let encoded = serde_json::to_string(&result).expect("serialize skill registry");
+  let decoded: PluginSkillRegistryResult =
+    serde_json::from_str(&encoded).expect("deserialize skill registry");
+  let value = serde_json::to_value(&decoded).expect("serialize skill registry value");
+
+  assert_eq!(decoded.skills.len(), 1);
+  assert_eq!(decoded.skills[0].skill_id, "notion-connector::notion.workspace");
+  assert_eq!(decoded.skills[0].status, "ready");
+  assert_eq!(decoded.skills[0].content_bytes, 4096);
+  assert!(value["skills"][0].get("skillId").is_some());
+  assert!(value["skills"][0].get("contentBytes").is_some());
 }
