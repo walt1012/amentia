@@ -164,12 +164,7 @@ pub(crate) fn merge_plugin_skill_context_attributes(
     );
     attributes.insert(
       "pluginSkillContextPluginIds".to_string(),
-      joined_unique_attribute(
-        pack
-          .skills
-          .iter()
-          .map(|skill| skill.plugin_id.as_str()),
-      ),
+      joined_unique_attribute(pack.skills.iter().map(|skill| skill.plugin_id.as_str())),
     );
     attributes.insert(
       "pluginSkillContextPluginNames".to_string(),
