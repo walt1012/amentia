@@ -77,29 +77,42 @@ files cosmetically.
 
 Active milestone: **M14 Connector and Skill Platform**.
 
-Current capabilities:
+Implemented foundations:
 
-- Local model setup: in-app download, verification, activation, pause, resume,
-  cancel, recovery, backend launch probing, reliable relaunch after model
-  selection, automatic post-selection self-check, file-backed bounded inference,
-  in-app model self-check, Reset Amentia, curated model choice, and one active
-  model.
-- Cowork loop: project-scoped tools, Web Search retrieval, approvals, sandbox
-  diagnostics, bounded subprocesses, human receipts, session delete, and
-  session-level change preview/revert.
+- Local model setup has the core path in place: in-app download, verification,
+  activation, pause, resume, cancel, recovery, backend launch probing,
+  file-backed bounded inference, in-app model self-check, Reset Amentia,
+  curated model choice, and one active model.
+- Cowork loop foundations are in place: project-scoped tools, Web Search
+  retrieval, approvals, sandbox diagnostics, bounded subprocesses, human
+  receipts, session delete, and session-level change preview/revert.
 - Extension baseline: local plugin registry, installation lifecycle, actions,
   connections, skills, MCP servers, tools, checks, credentials, retries, generic
   proof surfaces, and Notion as the reference connection.
 - Product language: normal setup, model, project, session, readiness, timeline,
   inspector, plugin, connection, permission, and local-data paths avoid raw
   protocol names, paths, IDs, hashes, and manifest details by default.
-- Primary window polish: native sidebar density, calm timeline cards, focused
-  composer, readiness, first-run setup, session sidebar ownership, model
-  management, project search, plugin management, inspector sections, settings
-  surfaces, and subtle state-driven motion without fixed dark styling.
+- Primary window foundations are in place: native sidebar density, calm timeline
+  cards, focused composer, readiness, first-run setup, session sidebar
+  ownership, model management, project search, plugin management, inspector
+  sections, settings surfaces, and subtle state-driven motion without fixed dark
+  styling.
 - Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
   guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
   transparent-corner macOS icon packaging, and split CI as the source of truth.
+
+Current proof gaps:
+
+- Installed-app model deployment is the first gate. A fresh installed DMG must
+  download, verify, activate, self-check, and invoke a local model before more
+  connector breadth is added.
+- User-owned cleanup is the second gate. Session delete, session revert, plugin
+  removal, connection credential clearing, and Reset Amentia must leave no
+  app-owned residue outside the intended support, cache, preference, saved-state,
+  and local credential locations.
+- Product clarity is the third gate. Default UI should stay human and calm; raw
+  protocol names, manifest strings, hashes, internal paths, and schema details
+  belong only in diagnostics or reveal-on-demand proof.
 
 Current constraints:
 
@@ -135,7 +148,7 @@ Completed:
   verification, and package metadata stay in `README-FIRST.txt` and the release
   manifest.
 
-Evidence:
+Required evidence:
 
 - A fresh unsigned install completes the daily cowork loop without hosted model
   dependency or manual model import.
@@ -149,16 +162,16 @@ Evidence:
 
 ## M13: Product Quality and Identity
 
-Status: baseline established; continue only as needed for daily-use quality.
+Status: baseline established; installed-app proof remains active.
 
 Goal: make the shipped app feel intentional, maintainable, and worthy of daily
 use before expanding the platform surface.
 
 Completed baseline:
 
-- Clean the installed app experience: human UI copy, clear first-run model
-  setup, light-mode/system appearance support, and no internal wording in the
-  normal cowork path.
+- Clean the installed app experience: human UI copy, first-run model setup,
+  light-mode/system appearance support, and no internal wording in the normal
+  cowork path.
 - Polish the primary window: native sidebar density, readable timeline width,
   calm inspector sections, and subtle state-driven motion inspired by Codex and
   Claude rather than decorative animation.
@@ -253,9 +266,11 @@ Exit gates:
 - Reference connector proof: install or refresh the Notion bundle, authorize it,
   run one useful action or workflow, show a receipt, clear the credential, remove
   the plugin, verify no stale local credential state remains, and capture the
-  result with `scripts/reference_connector_proof.py`. The proof must reject
-  placeholders, use a UTC acceptance timestamp, and explicitly cover storage and
-  local credential handle cleanup.
+  result with `scripts/reference_connector_proof.py`. Store the accepted
+  evidence under `docs/evidence/m14-reference-connector-proof.json` only after a
+  real installed-app run. The proof must reject placeholders, use a UTC
+  acceptance timestamp, and explicitly cover storage and local credential handle
+  cleanup.
 - Installed-app proof: in a packaged app, verify model download, activation,
   local inference, Web Search, session delete, session revert, Reset Amentia, and
   plugin install/disable/remove before adding more connector surface area.
@@ -268,6 +283,13 @@ Exit gates:
 - Scope decision: after the Notion proof is stable, either close M14 and move to
   M15 or add exactly one more connector to test whether the generic contract
   truly holds. Do not start a broad catalog first.
+
+Immediate next work:
+
+1. Prove fresh installed-app model deployment end to end from the DMG.
+2. Capture the Notion reference connector proof in the evidence file above.
+3. Run one product clarity pass on model, session, plugin, and settings surfaces.
+4. Close M14 only after the installed-app and connector proofs are green.
 
 ## M15: Cowork Continuity
 
