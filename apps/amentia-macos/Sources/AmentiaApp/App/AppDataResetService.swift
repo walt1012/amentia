@@ -145,7 +145,7 @@ enum AppDataResetError: LocalizedError, Equatable {
     case .symbolicLink(let path):
       return "Refusing to delete app data through a symbolic link: \(path)"
     case .credentialCleanupFailed(let status):
-      return "Failed to remove saved connection credentials from Keychain: \(status)"
+      return "Failed to remove saved connection sign-ins. Status: \(status)"
     }
   }
 }

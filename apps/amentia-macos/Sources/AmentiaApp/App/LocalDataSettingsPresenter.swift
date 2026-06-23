@@ -34,7 +34,7 @@ enum LocalDataSettingsPresenter {
     LocalDataSettingsSummary(
       storageSummary: storageSummary(downloadedModelBytes: snapshot.downloadedModelBytes),
       ownershipDetail:
-        "Amentia keeps downloaded models, sessions, plugins, connection credentials, preferences, caches, and window state on this Mac. Project folders are never deleted here.",
+        "Amentia keeps downloaded models, sessions, plugins, saved connection sign-ins, preferences, caches, and window layout on this Mac. Project folders are never deleted here.",
       uninstallDetail:
         "Removing Amentia.app does not remove this data. Use Reset Amentia when you want a fresh first-run setup.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
@@ -43,7 +43,7 @@ enum LocalDataSettingsPresenter {
       deleteButtonTitle: "Delete All Amentia Data...",
       confirmationTitle: "Delete All Amentia Data on This Mac?",
       confirmationMessage:
-        "Amentia will remove all app-owned local data from this Mac: downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, and saved app state. Your project folders and repositories will not be deleted.",
+        "Amentia will remove Amentia data from this Mac: downloaded models, sessions, plugins, saved connection sign-ins, paused downloads, preferences, caches, and saved window layout. Your project folders and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
     )
   }
@@ -53,7 +53,7 @@ enum LocalDataSettingsPresenter {
       runtimeDetail: "Reset Amentia. Restart Amentia to set up again.",
       timelineTitle: "Amentia Reset",
       timelineBody:
-        "Amentia removed all app-owned local data, including downloaded models, sessions, plugins, connection credentials, paused downloads, preferences, caches, saved app state, and app-owned folders. Project folders on disk were not deleted.",
+        "Amentia removed Amentia data, including downloaded models, sessions, plugins, saved connection sign-ins, paused downloads, preferences, caches, saved window layout, and Amentia support folders. Project folders on disk were not deleted.",
       attributes: [
         "appSupportPath": result.appSupportPath,
         "remainingAppOwnedDirectoryCount": "\(result.remainingAppOwnedDirectoryCount)",
@@ -66,7 +66,7 @@ enum LocalDataSettingsPresenter {
       return "Downloaded models use \(LocalModelByteFormatter.string(downloadedModelBytes)) on this Mac."
     }
 
-    return "No downloaded model files yet. Sessions, plugins, connections, preferences, and caches stay on this Mac."
+    return "No downloaded model files yet. Sessions, plugins, saved connections, preferences, and caches stay on this Mac."
   }
 
   private static func blockedDetail(canDeleteLocalData: Bool) -> String? {

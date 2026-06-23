@@ -7,9 +7,11 @@ final class SessionChangePresenterTests: XCTestCase {
 
     XCTAssertEqual(prompt.title, "Delete Session?")
     XCTAssertEqual(prompt.confirmButtonTitle, "Delete Session")
-    XCTAssertTrue(prompt.message.contains("messages, timeline, and pending approvals"))
+    XCTAssertTrue(prompt.message.contains("chat history, activity cards, and unfinished permission requests"))
     XCTAssertTrue(prompt.message.contains("Project files and repositories will not be deleted"))
     XCTAssertTrue(prompt.message.contains("use Review Session Changes before deleting"))
+    XCTAssertFalse(prompt.message.contains("timeline"))
+    XCTAssertFalse(prompt.message.contains("approval"))
   }
 
   func testRevertPromptAllowsCleanRecordedChanges() {

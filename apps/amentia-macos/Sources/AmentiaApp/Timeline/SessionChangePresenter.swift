@@ -44,7 +44,7 @@ enum SessionChangePresenter {
     SessionDeletePrompt(
       title: "Delete Session?",
       message: """
-      Amentia will delete this session's messages, timeline, and pending approvals.
+      Amentia will delete this session's chat history, activity cards, and unfinished permission requests.
 
       Project files and repositories will not be deleted or reverted.
       If you want to undo files Amentia saved, use Review Session Changes before deleting the session.

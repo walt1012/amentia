@@ -30,12 +30,12 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       summary.storageSummary,
-      "No downloaded model files yet. Sessions, plugins, connections, preferences, and caches stay on this Mac."
+      "No downloaded model files yet. Sessions, plugins, saved connections, preferences, and caches stay on this Mac."
     )
     XCTAssertTrue(summary.ownershipDetail.contains("plugins"))
-    XCTAssertTrue(summary.ownershipDetail.contains("connection credentials"))
+    XCTAssertTrue(summary.ownershipDetail.contains("saved connection sign-ins"))
     XCTAssertTrue(summary.ownershipDetail.contains("caches"))
-    XCTAssertTrue(summary.ownershipDetail.contains("window state"))
+    XCTAssertTrue(summary.ownershipDetail.contains("window layout"))
     XCTAssertTrue(summary.ownershipDetail.contains("Project folders are never deleted"))
     XCTAssertTrue(summary.uninstallDetail.contains("Removing Amentia.app does not remove this data"))
     XCTAssertTrue(summary.uninstallDetail.contains("Reset Amentia"))
@@ -59,13 +59,13 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(
       summary.confirmationMessage.contains("project folders and repositories will not be deleted")
     )
-    XCTAssertTrue(summary.confirmationMessage.contains("all app-owned local data"))
+    XCTAssertTrue(summary.confirmationMessage.contains("Amentia data"))
     XCTAssertTrue(summary.confirmationMessage.contains("from this Mac"))
     XCTAssertTrue(summary.confirmationMessage.contains("plugins"))
-    XCTAssertTrue(summary.confirmationMessage.contains("connection credentials"))
+    XCTAssertTrue(summary.confirmationMessage.contains("saved connection sign-ins"))
     XCTAssertTrue(summary.confirmationMessage.contains("paused downloads"))
     XCTAssertTrue(summary.confirmationMessage.contains("caches"))
-    XCTAssertTrue(summary.confirmationMessage.contains("saved app state"))
+    XCTAssertTrue(summary.confirmationMessage.contains("saved window layout"))
   }
 
   func testSummaryExplainsBlockedDeletion() {
@@ -96,19 +96,28 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       "Reset Amentia. Restart Amentia to set up again."
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
-    XCTAssertTrue(reset.timelineBody.contains("all app-owned local data"))
+    XCTAssertTrue(reset.timelineBody.contains("Amentia data"))
     XCTAssertTrue(reset.timelineBody.contains("Project folders on disk were not deleted"))
     XCTAssertTrue(reset.timelineBody.contains("plugins"))
-    XCTAssertTrue(reset.timelineBody.contains("connection credentials"))
+    XCTAssertTrue(reset.timelineBody.contains("saved connection sign-ins"))
     XCTAssertTrue(reset.timelineBody.contains("paused downloads"))
     XCTAssertTrue(reset.timelineBody.contains("caches"))
-    XCTAssertTrue(reset.timelineBody.contains("saved app state"))
-    XCTAssertTrue(reset.timelineBody.contains("app-owned folders"))
+    XCTAssertTrue(reset.timelineBody.contains("saved window layout"))
+    XCTAssertTrue(reset.timelineBody.contains("Amentia support folders"))
     XCTAssertEqual(
       reset.attributes["appSupportPath"],
       "/Users/example/Library/Application Support/Amentia"
     )
     XCTAssertEqual(reset.attributes["remainingAppOwnedDirectoryCount"], "0")
+  }
+
+  func testResetCredentialCleanupErrorUsesUserFacingCopy() {
+    let detail = AppDataResetError.credentialCleanupFailed(status: -34018)
+      .localizedDescription
+
+    XCTAssertTrue(detail.contains("saved connection sign-ins"))
+    XCTAssertFalse(detail.contains("credentials"))
+    XCTAssertFalse(detail.contains("Keychain"))
   }
 
   func testSystemResiduePathsIncludeOnlyAmentiaBundle() {

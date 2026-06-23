@@ -199,6 +199,9 @@ Completed baseline:
   surfaces; paths and protocol fields stay secondary.
 - Keep model manager details product-first: default summaries describe context and
   response limits, while runner, path, and package details stay diagnostic.
+- Keep reset and session deletion copy explicit: Amentia data, chat history,
+  activity cards, saved connections, and project folders are described in user
+  terms before destructive actions run.
 - Keep support diagnostics available without letting them dominate the default
   inspector path.
 - Treat Amentia as a fresh app identity: app-owned data lives under `Amentia`,
@@ -291,7 +294,7 @@ Immediate next work:
 
 1. Prove fresh installed-app model deployment end to end from the DMG.
 2. Capture the Notion reference connector proof in the evidence file above.
-3. Continue the product clarity pass on session, plugin, and settings surfaces.
+3. Continue the product clarity pass on plugin and advanced settings surfaces.
 4. Close M14 only after the installed-app and connector proofs are green.
 
 ## M15: Cowork Continuity
