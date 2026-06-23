@@ -8,6 +8,8 @@ import json
 import sys
 from pathlib import Path
 
+from installed_app_proof import load_json_object as load_installed_app_json
+from installed_app_proof import validate_installed_app_evidence
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
 from release_artifacts import sha256_hex
@@ -26,6 +28,7 @@ REQUIRED_TRUE_CHECKS = (
   "approvalDiffReceiptInspected",
   "restartRecoveryVerified",
   "noAmentiaLoginRequired",
+  "installedAppProofValidated",
   "acceptedForVisiblePrerelease",
 )
 REQUIRED_TEXT_FIELDS = (
@@ -41,12 +44,18 @@ REQUIRED_TEXT_FIELDS = (
   "webSearchProof",
   "approvalReceipt",
   "restartRecoveryProof",
+  "installedAppProofEvidence",
   "acceptedBy",
   "acceptedAt",
 )
 
 
-def validate_manual_acceptance_evidence(data: dict[str, object], *, tag: str) -> None:
+def validate_manual_acceptance_evidence(
+  data: dict[str, object],
+  *,
+  tag: str,
+  installed_app_proof: dict[str, object] | None = None,
+) -> None:
   validate_public_release_tag(tag)
   require_equal(data, "tag", tag)
   require_string(data, "sourceCommit", length=40)
@@ -60,6 +69,9 @@ def validate_manual_acceptance_evidence(data: dict[str, object], *, tag: str) ->
     require_string(data, field)
   for check in REQUIRED_TRUE_CHECKS:
     require_true(data, check)
+  if installed_app_proof is not None:
+    validate_installed_app_evidence(installed_app_proof)
+    require_installed_app_proof_matches(data, installed_app_proof, tag=tag)
 
 
 def manual_acceptance_template(
@@ -93,6 +105,8 @@ def manual_acceptance_template(
     "restartRecoveryProof": "",
     "restartRecoveryVerified": False,
     "noAmentiaLoginRequired": False,
+    "installedAppProofValidated": False,
+    "installedAppProofEvidence": "",
     "acceptedForVisiblePrerelease": False,
     "acceptedBy": "",
     "acceptedAt": "",
@@ -263,6 +277,29 @@ def require_git_sha(value: str, label: str) -> None:
     raise RuntimeError(f"{label} must be a 40-character Git SHA hex digest")
 
 
+def require_installed_app_proof_matches(
+  data: dict[str, object],
+  installed_app_proof: dict[str, object],
+  *,
+  tag: str,
+) -> None:
+  expected_dmg_name = str(data["dmgAssetName"]).strip()
+  expected_checksum = str(data["checksum"]).strip().lower()
+  expected_model_id = str(data["selectedModelId"]).strip()
+  checks = (
+    ("releaseTag", tag),
+    ("dmgName", expected_dmg_name),
+    ("dmgSha256", expected_checksum),
+    ("modelId", expected_model_id),
+  )
+  for key, expected in checks:
+    actual = installed_app_proof.get(key)
+    if actual != expected:
+      raise RuntimeError(
+        f"manual acceptance installed-app proof {key} must be {expected!r}, got {actual!r}"
+      )
+
+
 def load_json(path: Path) -> dict[str, object]:
   data = json.loads(path.read_text(encoding="utf-8"))
   if not isinstance(data, dict):
@@ -279,6 +316,7 @@ def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--tag", required=True)
   parser.add_argument("--evidence", type=Path)
+  parser.add_argument("--installed-app-proof", type=Path)
   parser.add_argument("--template-output", type=Path)
   parser.add_argument("--asset-dir", type=Path)
   parser.add_argument("--source-commit", default="")
@@ -309,7 +347,13 @@ def main() -> int:
       return 0
     if args.evidence is None:
       raise RuntimeError("manual acceptance validation requires --evidence")
-    validate_manual_acceptance_evidence(load_json(args.evidence), tag=args.tag)
+    if args.installed_app_proof is None:
+      raise RuntimeError("manual acceptance validation requires --installed-app-proof")
+    validate_manual_acceptance_evidence(
+      load_json(args.evidence),
+      tag=args.tag,
+      installed_app_proof=load_installed_app_json(args.installed_app_proof),
+    )
   except Exception as error:
     print(f"manual acceptance contract failed: {error}", file=sys.stderr)
     return 1

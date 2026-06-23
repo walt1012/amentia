@@ -439,7 +439,8 @@ Decision:
 ## Evidence To Record
 - Approval and diff receipt inspected.
 - Restart recovery result.
-- Generate a structured manual acceptance JSON receipt with `python3 scripts/manual_acceptance_contract.py --tag {TAG} --asset-dir <downloaded-assets> --template-output manual-acceptance.json`, fill it, then validate it with `python3 scripts/manual_acceptance_contract.py --tag {TAG} --evidence manual-acceptance.json`.
+- Generate an installed-app proof with `python3 scripts/installed_app_proof.py --template-output m14-installed-app-proof.json`, fill it from the same run, then validate it with `python3 scripts/installed_app_proof.py --evidence m14-installed-app-proof.json`.
+- Generate a structured manual acceptance JSON receipt with `python3 scripts/manual_acceptance_contract.py --tag {TAG} --asset-dir <downloaded-assets> --template-output manual-acceptance.json`, fill it, then validate it with `python3 scripts/manual_acceptance_contract.py --tag {TAG} --evidence manual-acceptance.json --installed-app-proof m14-installed-app-proof.json`.
 """
 
 

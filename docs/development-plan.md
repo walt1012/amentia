@@ -270,6 +270,8 @@ Completed baseline:
 - Installed-app proof now has a CI-covered evidence contract for the DMG,
   verified model deployment, local inference, Web Search, session cleanup, Reset
   Amentia, plugin lifecycle, and unexpected residue checks.
+- Manual release acceptance now validates that installed-app proof and cross-checks
+  the candidate tag, DMG name, checksum, and selected model before publishing.
 
 Exit gates:
 
