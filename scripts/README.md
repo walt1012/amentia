@@ -22,24 +22,15 @@ define release, CI, package, model, or workflow behavior.
   `manual_acceptance_contract.py` enforce the four public assets, dry-run-first
   evidence, draft/visible safety, downloaded-release rehearsal, and fresh-Mac
   manual acceptance gate.
+- Evidence contracts stay lightweight: `evidence_contracts.py` only removes
+  duplicated JSON and field checks used by release proof scripts.
 - Runtime and model checks: `runtime_smoke_test.py` and
   `validate_model_pack.py` cover the runtime protocol surface and curated local
   model metadata.
-- Installed-app proof: `installed_app_proof.py` validates the M14 installed-app
-  acceptance evidence before M14 closes, including DMG checksum verification,
-  local model deployment, local inference, Web Search proof, session cleanup,
-  Reset Amentia, plugin lifecycle, and unexpected residue checks. Accepted
-  evidence belongs in `docs/evidence/m14-installed-app-proof.json` after a real
-  installed-app run.
-- Milestone evidence: `milestone_evidence.py` validates accepted proof JSON files
-  committed under `docs/evidence` and can require every M14 proof before closing
-  the milestone.
-- Connector proof: `reference_connector_proof.py` validates the M14 Notion
-  reference connector acceptance evidence before broader connector work starts,
-  including non-placeholder proof text, UTC acceptance time, and storage plus
-  local credential handle cleanup. Accepted evidence belongs in
-  `docs/evidence/m14-reference-connector-proof.json` after a real installed-app
-  run.
+- Installed-app proof: `installed_app_proof.py` validates the release acceptance
+  receipt for a real installed app, including DMG checksum verification, local
+  model deployment, local inference, Web Search proof, session cleanup, Reset
+  Amentia, plugin lifecycle, and unexpected residue checks.
 - Tests: `test_*.py` files are lightweight contract tests for the scripts above
   and should stay runnable without Rust or Swift toolchains.
 

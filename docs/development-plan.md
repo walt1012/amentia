@@ -75,7 +75,7 @@ files cosmetically.
 
 ## Current State
 
-Active milestone: **M14 Connector and Skill Platform**.
+Active milestone: **M15 Cowork Continuity**.
 
 Implemented foundations:
 
@@ -101,30 +101,29 @@ Implemented foundations:
   guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
   transparent-corner macOS icon packaging, and split CI as the source of truth.
 
-Current proof gaps:
+Current transition gates:
 
-- Installed-app model deployment is the first gate. A fresh installed DMG must
-  download, verify, activate, self-check, and invoke a local model before more
-  connector breadth is added.
-- User-owned cleanup is the second gate. Session delete, session revert, plugin
-  removal, connection credential clearing, and Reset Amentia must leave no
-  app-owned residue outside the intended support, cache, preference, saved-state,
-  and local credential locations.
-- Product clarity is the third gate. Default UI should stay human and calm; raw
-  protocol names, manifest strings, hashes, internal paths, and schema details
-  belong only in diagnostics or reveal-on-demand proof.
+- Maintainer-installed app verification has accepted the model deployment and
+  reference connector paths. Do not keep milestone-specific proof machinery
+  after the milestone closes.
+- Architecture cleanup is now the first gate before M15 feature growth. Remove
+  stale code, collapse duplicated contracts, and split or merge only when
+  ownership becomes clearer.
+- Product clarity remains a continuous gate. Default UI should stay human and
+  calm; raw protocol names, manifest strings, hashes, internal paths, and schema
+  details belong only in diagnostics or reveal-on-demand proof.
 
 Current constraints:
 
-- Installed-app blockers beat platform expansion: first-run model download and
-  activation, packaged backend launch, human default UI, visible session
-  deletion, and Reset Amentia must stay reliable before more M14 connector surface
+- Installed-app reliability beats platform expansion: first-run model download
+  and activation, packaged backend launch, human default UI, visible session
+  deletion, and Reset Amentia must stay reliable before broader connector surface
   area.
 - Treat M13 as the installed-app quality baseline; only return to product polish
   when real use exposes confusing copy, stale UI, or release blockers.
 - Keep Web Search as retrieval; generic local document RAG remains deferred.
-- Keep M14 focused on safe local extension execution before broad connector
-  catalogs, marketplaces, or remote transports.
+- Keep post-M14 platform growth focused on safe local extension execution before
+  broad connector catalogs, marketplaces, or remote transports.
 - Do not bundle Git, model weights, package-manager payloads, extra
   architectures, or unused runtimes.
 - Release assets stay limited to the DMG, checksum, `README-FIRST.txt`, and
@@ -137,8 +136,8 @@ Current constraints:
 
 Goal: ship a usable macOS installer from GitHub Releases.
 
-Status: packaging baseline complete; Amentia needs a fresh installed-app
-acceptance pass before the next visible public tag.
+Status: packaging baseline complete; each visible public tag still needs fresh
+release acceptance evidence.
 
 Completed:
 
@@ -155,14 +154,14 @@ Required evidence:
 - The GitHub Release exposes exactly the four public assets and final publish
   validation passes against the live release.
 - Release plan, release manifest, `README-FIRST.txt`, release notes, packaged
-  smoke proof, manual acceptance receipt, and downloaded-asset rehearsal must
+  smoke receipt, manual acceptance receipt, and downloaded-asset rehearsal must
   describe the same user path for each visible release.
 - CI stays fast, split, strict, and understandable enough to block release
   contract drift.
 
 ## M13: Product Quality and Identity
 
-Status: baseline established; installed-app proof remains active.
+Status: baseline established; quality bar remains active.
 
 Goal: make the shipped app feel intentional, maintainable, and worthy of daily
 use before expanding the platform surface.
@@ -236,7 +235,8 @@ Remaining quality bar:
 
 ## M14: Connector and Skill Platform
 
-Status: active.
+Status: complete by maintainer-installed-app validation; milestone-specific proof
+machinery has been removed.
 
 Goal: make third-party local plugins safe and useful without building a
 marketplace too early.
@@ -267,58 +267,34 @@ Completed baseline:
   the default path.
 - Plugin action, connection, workflow, skill, and setup details use product
   labels instead of log-style field names in default summaries.
-- Installed-app proof now has a CI-covered evidence contract for the DMG,
-  verified model deployment, local inference, Web Search, session cleanup, Reset
-  Amentia, plugin lifecycle, and unexpected residue checks.
-- Manual release acceptance now validates that installed-app proof and cross-checks
+- Manual release acceptance validates the installed-app receipt and cross-checks
   the candidate tag, DMG name, checksum, and selected model before publishing.
-- Accepted M14 evidence committed under `docs/evidence` is CI-validated, and M14
-  closure can require both installed-app and reference connector proof files.
 
-Exit gates:
+Retained guardrails:
 
-- Reference connector proof: install or refresh the Notion bundle, authorize it,
-  run one useful action or workflow, show a receipt, clear the credential, remove
-  the plugin, verify no stale local credential state remains, and capture the
-  result with `scripts/reference_connector_proof.py`. Store the accepted
-  evidence under `docs/evidence/m14-reference-connector-proof.json` only after a
-  real installed-app run. Keep the evidence workflow documented in
-  `docs/evidence/README.md`. The proof must reject placeholders, use a UTC
-  acceptance timestamp, and explicitly cover storage and local credential handle
-  cleanup.
-- Installed-app proof: in a packaged app, verify model download, activation,
-  local inference, Web Search, session delete, session revert, Reset Amentia, and
-  plugin install/disable/remove before adding more connector surface area. Store
-  accepted evidence under `docs/evidence/m14-installed-app-proof.json` only after
-  a real installed-app run and validate it with `scripts/installed_app_proof.py`.
-- Runner proof: actions, connector workflows, skills, MCP metadata, and checks
-  must have bounded output, timeout or cancellation behavior where execution is
-  possible, product-facing errors, and CI coverage for failure paths.
-- Product clarity proof: plugin, timeline, model, session, and settings surfaces
-  must remain understandable to a non-developer by default, with technical
-  detail available only through reveal or diagnostics paths.
-- Scope decision: after the Notion proof is stable, either close M14 and move to
-  M15 or add exactly one more connector to test whether the generic contract
-  truly holds. Do not start a broad catalog first.
-
-Immediate next work:
-
-1. Fill and validate the installed-app proof from a fresh DMG run.
-2. Capture the Notion reference connector proof in the evidence file above.
-3. Continue the product clarity pass on advanced settings and installed-app
-   proof surfaces.
-4. Close M14 only after `scripts/milestone_evidence.py --require-all` is green.
+- Release acceptance keeps one installed-app receipt path for visible builds.
+  Milestone-specific proof scripts do not remain after their milestone closes.
+- Runner proof, product clarity, bounded output, timeout or cancellation, and
+  product-facing errors remain required for new plugin execution surfaces.
+- Do not start broad connector catalog work until one more real connector proves
+  the generic contract beyond Notion.
 
 ## M15: Cowork Continuity
 
+Status: active.
+
 Goal: make Amentia better over time without turning it into a remote server agent.
 
-- Start only after the M14 exit gates are green in a packaged app.
+Immediate work:
+
+- Finish a structural cleanup pass after the rename and M14 proof work: remove
+  stale code, shared-script duplication, dead release scaffolding, and confusing
+  product surfaces without cosmetic file churn.
 - Add a local follow-up queue for user-approved next actions.
-- Add scheduled work only after approvals, sandbox policy, and receipts
-  work headlessly and fail closed.
 - Add cross-session recall through bounded memory and session search before any
   local document RAG.
+- Add scheduled work only after approvals, sandbox policy, and receipts work
+  headlessly and fail closed.
 - Keep background work explicit, pausable, and easy to inspect from the app.
 - Do not add messaging gateways, remote control channels, or multi-agent
   orchestration until the local single-agent experience is excellent.

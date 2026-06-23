@@ -53,7 +53,7 @@ def valid_payload() -> dict[str, object]:
     "restartRecoveryVerified": True,
     "noAmentiaLoginRequired": True,
     "installedAppProofValidated": True,
-    "installedAppProofEvidence": "docs/evidence/m14-installed-app-proof.json",
+    "installedAppProofEvidence": "m14-installed-app-proof.json",
     "acceptedForVisiblePrerelease": True,
     "acceptedBy": "Maintainer",
     "acceptedAt": "2026-06-08T00:00:00Z",

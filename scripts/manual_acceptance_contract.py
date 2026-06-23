@@ -8,6 +8,12 @@ import json
 import sys
 from pathlib import Path
 
+from evidence_contracts import load_json_object
+from evidence_contracts import require_equal as require_contract_equal
+from evidence_contracts import require_sha256_hex as require_contract_sha256_hex
+from evidence_contracts import require_string as require_contract_string
+from evidence_contracts import require_true as require_contract_true
+from evidence_contracts import write_json
 from installed_app_proof import load_json_object as load_installed_app_json
 from installed_app_proof import validate_installed_app_evidence
 from package_contract import DEFAULT_MODEL_ID
@@ -229,9 +235,7 @@ def require_manifest_string(
 
 
 def require_equal(data: dict[str, object], key: str, expected: str) -> None:
-  actual = data.get(key)
-  if actual != expected:
-    raise RuntimeError(f"manual acceptance {key} must be {expected!r}, got {actual!r}")
+  require_contract_equal(data, key, expected, label="manual acceptance")
 
 
 def require_string(
@@ -241,19 +245,17 @@ def require_string(
   length: int | None = None,
   prefix: str | None = None,
 ) -> None:
-  actual = data.get(key)
-  if not isinstance(actual, str) or not actual.strip():
-    raise RuntimeError(f"manual acceptance {key} must be a non-empty string")
-  value = actual.strip()
-  if length is not None and len(value) != length:
-    raise RuntimeError(f"manual acceptance {key} must be {length} characters")
-  if prefix is not None and not value.startswith(prefix):
-    raise RuntimeError(f"manual acceptance {key} must start with {prefix}")
+  require_contract_string(
+    data,
+    key,
+    label="manual acceptance",
+    length=length,
+    prefix=prefix,
+  )
 
 
 def require_true(data: dict[str, object], key: str) -> None:
-  if data.get(key) is not True:
-    raise RuntimeError(f"manual acceptance {key} must be true")
+  require_contract_true(data, key, label="manual acceptance")
 
 
 def require_sha256(data: dict[str, object], key: str) -> None:
@@ -262,11 +264,7 @@ def require_sha256(data: dict[str, object], key: str) -> None:
 
 
 def require_sha256_hex(value: str, label: str) -> None:
-  normalized = value.strip().lower()
-  if len(normalized) != 64 or any(
-    character not in "0123456789abcdef" for character in normalized
-  ):
-    raise RuntimeError(f"{label} must be a SHA-256 hex digest")
+  require_contract_sha256_hex(value, label=label)
 
 
 def require_git_sha(value: str, label: str) -> None:
@@ -301,15 +299,7 @@ def require_installed_app_proof_matches(
 
 
 def load_json(path: Path) -> dict[str, object]:
-  data = json.loads(path.read_text(encoding="utf-8"))
-  if not isinstance(data, dict):
-    raise RuntimeError("manual acceptance receipt must be a JSON object")
-  return data
-
-
-def write_json(path: Path, data: dict[str, object]) -> None:
-  path.parent.mkdir(parents=True, exist_ok=True)
-  path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+  return load_json_object(path, label="manual acceptance receipt")
 
 
 def main() -> int:
