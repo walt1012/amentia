@@ -131,8 +131,13 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("plugin prompt pack capability")
     && validation_error.contains("matching capability")
   {
-    return "Add the matching capability shown in the error, or remove the legacy prompt_pack alias."
-      .to_string();
+    let skill_capability = validation_error
+      .split('`')
+      .nth(3)
+      .unwrap_or("skill:<id>");
+    return format!(
+      "Add the matching capability `{skill_capability}` shown in the error, or remove the legacy prompt_pack alias."
+    );
   }
   if validation_error.contains("plugin connector workflow")
     && validation_error.contains("must declare at least one")
