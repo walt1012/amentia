@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 
@@ -72,6 +73,9 @@ def validate_reference_connector_evidence(data: dict[str, object]) -> None:
     require_true(data, check)
   for field in REQUIRED_TEXT_FIELDS:
     require_string(data, field)
+    reject_placeholder_text(data[field], field)
+  require_utc_timestamp(data["acceptedAt"])
+  require_credential_cleanup_proof(data["credentialClearProof"])
   require_allowed_action(data["actionOrWorkflowId"])
   for field in REQUIRED_EMPTY_LIST_FIELDS:
     require_empty_list(data, field)
@@ -106,6 +110,38 @@ def require_string(data: dict[str, object], key: str) -> None:
   actual = data.get(key)
   if not isinstance(actual, str) or not actual.strip():
     raise RuntimeError(f"reference connector {key} must be a non-empty string")
+
+
+def reject_placeholder_text(value: object, key: str) -> None:
+  if not isinstance(value, str):
+    raise RuntimeError(f"reference connector {key} must be a non-empty string")
+  normalized = value.strip().lower()
+  placeholder_values = {"todo", "tbd", "n/a", "na", "none", "placeholder"}
+  if normalized in placeholder_values or normalized.startswith("todo") or "fill" in normalized:
+    raise RuntimeError(f"reference connector {key} must not be placeholder text")
+
+
+def require_utc_timestamp(value: object) -> None:
+  if not isinstance(value, str):
+    raise RuntimeError("reference connector acceptedAt must be a UTC timestamp")
+  try:
+    datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+  except ValueError as error:
+    raise RuntimeError(
+      "reference connector acceptedAt must use UTC ISO format like 2026-06-22T00:00:00Z"
+    ) from error
+
+
+def require_credential_cleanup_proof(value: object) -> None:
+  if not isinstance(value, str):
+    raise RuntimeError("reference connector credentialClearProof must be a non-empty string")
+  normalized = value.lower()
+  mentions_storage = "storage" in normalized or "sqlite" in normalized
+  mentions_local_handles = "local credential" in normalized or "credential handle" in normalized
+  if not mentions_storage or not mentions_local_handles:
+    raise RuntimeError(
+      "reference connector credentialClearProof must mention storage cleanup and local credential handles"
+    )
 
 
 def require_empty_list(data: dict[str, object], key: str) -> None:

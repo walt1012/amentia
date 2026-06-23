@@ -26,7 +26,9 @@ define release, CI, package, model, or workflow behavior.
   `validate_model_pack.py` cover the runtime protocol surface and curated local
   model metadata.
 - Connector proof: `reference_connector_proof.py` validates the M14 Notion
-  reference connector acceptance evidence before broader connector work starts.
+  reference connector acceptance evidence before broader connector work starts,
+  including non-placeholder proof text, UTC acceptance time, and storage plus
+  local credential handle cleanup.
 - Tests: `test_*.py` files are lightweight contract tests for the scripts above
   and should stay runnable without Rust or Swift toolchains.
 

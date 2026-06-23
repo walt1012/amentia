@@ -253,7 +253,9 @@ Exit gates:
 - Reference connector proof: install or refresh the Notion bundle, authorize it,
   run one useful action or workflow, show a receipt, clear the credential, remove
   the plugin, verify no stale local credential state remains, and capture the
-  result with `scripts/reference_connector_proof.py`.
+  result with `scripts/reference_connector_proof.py`. The proof must reject
+  placeholders, use a UTC acceptance timestamp, and explicitly cover storage and
+  local credential handle cleanup.
 - Installed-app proof: in a packaged app, verify model download, activation,
   local inference, Web Search, session delete, session revert, Reset Amentia, and
   plugin install/disable/remove before adding more connector surface area.

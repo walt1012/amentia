@@ -35,7 +35,9 @@ def valid_payload() -> dict[str, object]:
     "receiptInspected": True,
     "receiptProof": "Timeline showed a Notion workflow receipt with remote proof.",
     "credentialCleared": True,
-    "credentialClearProof": "Plugin manager showed Notion needs sign in after clearing.",
+    "credentialClearProof": (
+      "Storage showed no connector credential row and local credential handles were empty after clearing."
+    ),
     "pluginRemoved": True,
     "pluginRemovalProof": "The Notion bundle no longer appears in installed plugins.",
     "remainingConnectorCredentialIds": [],
@@ -111,6 +113,32 @@ def assert_rejects_unknown_action() -> None:
   expect_failure(payload, "actionOrWorkflowId")
 
 
+def assert_rejects_placeholder_evidence_text() -> None:
+  payload = valid_payload()
+  payload["receiptProof"] = "TODO: fill after testing"
+  expect_failure(payload, "placeholder")
+
+  payload = valid_payload()
+  payload["pluginRemovalProof"] = "N/A"
+  expect_failure(payload, "placeholder")
+
+
+def assert_rejects_non_utc_acceptance_time() -> None:
+  payload = valid_payload()
+  payload["acceptedAt"] = "2026-06-22"
+  expect_failure(payload, "acceptedAt")
+
+  payload = valid_payload()
+  payload["acceptedAt"] = "2026-06-22T00:00:00+08:00"
+  expect_failure(payload, "acceptedAt")
+
+
+def assert_rejects_cleanup_proof_without_storage_and_local_handles() -> None:
+  payload = valid_payload()
+  payload["credentialClearProof"] = "Plugin manager showed Notion needs sign in after clearing."
+  expect_failure(payload, "credentialClearProof")
+
+
 def assert_cli_template_and_validation() -> None:
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -165,6 +193,9 @@ def main() -> int:
   assert_rejects_incomplete_steps()
   assert_rejects_stale_credentials()
   assert_rejects_unknown_action()
+  assert_rejects_placeholder_evidence_text()
+  assert_rejects_non_utc_acceptance_time()
+  assert_rejects_cleanup_proof_without_storage_and_local_handles()
   assert_cli_template_and_validation()
   print("reference connector proof tests passed")
   return 0
