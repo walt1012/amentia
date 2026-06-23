@@ -268,7 +268,8 @@ Exit gates:
   the plugin, verify no stale local credential state remains, and capture the
   result with `scripts/reference_connector_proof.py`. Store the accepted
   evidence under `docs/evidence/m14-reference-connector-proof.json` only after a
-  real installed-app run. The proof must reject placeholders, use a UTC
+  real installed-app run. Keep the evidence workflow documented in
+  `docs/evidence/README.md`. The proof must reject placeholders, use a UTC
   acceptance timestamp, and explicitly cover storage and local credential handle
   cleanup.
 - Installed-app proof: in a packaged app, verify model download, activation,

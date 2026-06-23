@@ -28,7 +28,9 @@ define release, CI, package, model, or workflow behavior.
 - Connector proof: `reference_connector_proof.py` validates the M14 Notion
   reference connector acceptance evidence before broader connector work starts,
   including non-placeholder proof text, UTC acceptance time, and storage plus
-  local credential handle cleanup.
+  local credential handle cleanup. Accepted evidence belongs in
+  `docs/evidence/m14-reference-connector-proof.json` after a real installed-app
+  run.
 - Tests: `test_*.py` files are lightweight contract tests for the scripts above
   and should stay runnable without Rust or Swift toolchains.
 
