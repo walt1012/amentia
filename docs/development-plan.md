@@ -287,10 +287,9 @@ Goal: make Amentia better over time without turning it into a remote server agen
 
 Immediate work:
 
-- Finish a structural cleanup pass after the rename and M14 acceptance work: remove
-  stale code, shared-script duplication, and confusing product surfaces without
-  cosmetic file churn. Keep release gates focused on public assets, downloaded
-  rehearsal, and manual acceptance.
+- Continue structural cleanup after the rename and M14 acceptance work: keep
+  release metadata and user-visible UI on receipt language, remove stale code and
+  shared-script duplication, and avoid cosmetic file churn.
 - Add a local follow-up queue for user-approved next actions.
 - Add cross-session recall through bounded memory and session search before any
   local document RAG.

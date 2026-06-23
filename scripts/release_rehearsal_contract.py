@@ -192,7 +192,7 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
     "manualPrereleaseChecks": list(MANUAL_PRERELEASE_CHECKS),
     "packagedSmokeReceipt": {
       "phrase": PACKAGED_FIRST_RUN_RECEIPT_PHRASE,
-      "proofScope": smoke_receipt["proofScope"],
+      "receiptScope": smoke_receipt["receiptScope"],
       "checkCount": len(smoke_receipt["checkIds"]),
       "journey": list(smoke_receipt["journey"]),
       "packageMetadata": dict(smoke_receipt["packageMetadata"]),
@@ -246,7 +246,7 @@ Decision:
 ## Required Manual Checks
 {manual_acceptance}
 
-## Evidence To Record
+## Receipt To Record
 - Fresh Mac or clean macOS user profile used.
 - Checksum verification result.
 - Gatekeeper path used.
@@ -295,7 +295,7 @@ Result: `{summary["result"]}`
 - App package model delivery: `{summary["appPackage"]["modelDelivery"]}`
 - First app-open contract: `{summary["appPackage"]["firstAppOpenActionContract"]}`
 - Packaged receipt: `{summary["packagedSmokeReceipt"]["phrase"]}`
-- Receipt scope: `{summary["packagedSmokeReceipt"]["proofScope"]}`
+- Receipt scope: `{summary["packagedSmokeReceipt"]["receiptScope"]}`
 - Receipt checks: `{summary["packagedSmokeReceipt"]["checkCount"]}`
 - Smoke package metadata: `matches app package metadata`
 

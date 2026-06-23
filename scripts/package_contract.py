@@ -130,7 +130,7 @@ PACKAGED_SMOKE_JOURNEY = (
     ),
   },
 )
-PACKAGED_SMOKE_PROOF_SCOPE = (
+PACKAGED_SMOKE_RECEIPT_SCOPE = (
   "model setup, workspace, first cowork request, Web Search, approval, "
   "connector, sandbox, and Amentia recovery checks"
 )

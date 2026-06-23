@@ -7,7 +7,7 @@ from package_contract import (
   DEFAULT_LOCAL_EXECUTION_SAFETY_MODE,
   DEFAULT_MODEL_ID,
   MINIMUM_SYSTEM_VERSION,
-  PACKAGED_SMOKE_PROOF_SCOPE,
+  PACKAGED_SMOKE_RECEIPT_SCOPE,
   SUPPORTED_ARCH,
 )
 from release_copy_contract import (
@@ -93,8 +93,8 @@ def main() -> int:
   require_contains(first_run_path_copy(), "approve a safe local change")
   require_contains(first_run_path_copy(), "inspect the timeline receipt")
   require_contains(first_run_receipt_copy(), PACKAGED_FIRST_RUN_RECEIPT_PHRASE)
-  require_contains(first_run_receipt_copy(), PACKAGED_SMOKE_PROOF_SCOPE)
-  require_contains(PACKAGED_SMOKE_PROOF_SCOPE, "first cowork request")
+  require_contains(first_run_receipt_copy(), PACKAGED_SMOKE_RECEIPT_SCOPE)
+  require_contains(PACKAGED_SMOKE_RECEIPT_SCOPE, "first cowork request")
   require_contains(installer_assets_copy("v0.1.0"), "Amentia-v0.1.0-macos-x86_64.dmg")
   require_contains(installer_assets_copy("v0.1.0"), "Amentia-v0.1.0-release-manifest.json")
   require_contains(installer_assets_copy("ci-0123456789ab"), "Amentia-macos-x86_64.dmg")
@@ -207,7 +207,7 @@ def main() -> int:
   require_contains(guide, "app package metadata")
   require_contains(guide, "smoke package metadata")
   require_contains(guide, "first-run contract")
-  require_contains(guide, PACKAGED_SMOKE_PROOF_SCOPE)
+  require_contains(guide, PACKAGED_SMOKE_RECEIPT_SCOPE)
   require_contains(guide, release_size_budget_copy())
   require_contains(guide, "sandbox status")
   require_contains(guide, "process-only fallback")

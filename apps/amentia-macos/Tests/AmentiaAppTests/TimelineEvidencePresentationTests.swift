@@ -390,7 +390,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertEqual(summary?.title, "Approval accepted")
     XCTAssertEqual(summary?.tone, .ready)
     XCTAssertTrue(summary?.detail.contains("`docs/output.txt`") == true)
-    XCTAssertTrue(summary?.detail.contains("Review the proof") == true)
+    XCTAssertTrue(summary?.detail.contains("Review the receipt") == true)
   }
 
   func testApprovalOutcomeSummarizesDeniedActionWithoutRetryConfusion() {
@@ -444,7 +444,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "Context Compaction",
     ])
     XCTAssertTrue(sections[0].body.contains("Project: Amentia"))
-    XCTAssertTrue(sections[1].body.contains("Saved source proof: yes"))
+    XCTAssertTrue(sections[1].body.contains("Saved source receipt: yes"))
     XCTAssertTrue(
       sections[1].body.contains("Why Amentia searched: fresh public information was useful")
     )
@@ -585,11 +585,11 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       """
       Search mode: search result sources
       Opened source pages: no
-      Saved source proof: yes
+      Saved source receipt: yes
       Why Amentia searched: fresh public information was useful
       Sources: Amentia
       Links: https://example.com/amentia
-      Proof type: saved search results
+      Source type: saved search results
       """
     )
   }
@@ -638,13 +638,13 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     XCTAssertTrue(summary?.contains("Approval before external write: yes") == true)
     XCTAssertTrue(summary?.contains("Source file: docs/handoff.md") == true)
     XCTAssertTrue(
-      summary?.contains("External proof: not sent yet (Notion confirmation)") == true
+      summary?.contains("External confirmation: not sent yet (Notion confirmation)") == true
     )
     XCTAssertTrue(
       summary?.contains("Notion Create Page: ready for review in review before write.") == true
     )
     XCTAssertTrue(summary?.contains("Target: docs/handoff.md") == true)
-    XCTAssertTrue(summary?.contains("Proof: review completed") == true)
+    XCTAssertTrue(summary?.contains("Confirmation: review completed") == true)
     XCTAssertTrue(summary?.contains("Next step: Publish to Notion") == true)
     XCTAssertFalse(summary?.contains("Next step: Publish to Notion (") == true)
     XCTAssertTrue(
@@ -690,7 +690,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       ))
     )
 
-    XCTAssertTrue(summary?.contains("External proof: completed (Notion confirmation)") == true)
+    XCTAssertTrue(summary?.contains("External confirmation: completed (Notion confirmation)") == true)
     XCTAssertTrue(summary?.contains("Service: Notion via Notion Create Page") == true)
     XCTAssertTrue(
       summary?.contains("Notion page: page-123 | https://www.notion.so/page-123") == true
@@ -734,10 +734,10 @@ final class TimelineEvidencePresentationTests: XCTestCase {
 
     XCTAssertTrue(
       summary?.contains(
-        "Notion Create Page: needs retry in finished without trusted proof."
+        "Notion Create Page: needs retry in finished without trusted confirmation."
       ) == true
     )
-    XCTAssertTrue(summary?.contains("Proof: missing") == true)
+    XCTAssertTrue(summary?.contains("Confirmation: missing") == true)
     XCTAssertTrue(summary?.contains("Recovery: retry available") == true)
     XCTAssertTrue(
       summary?.contains("Publish issue: Amentia could not verify the external result") == true
@@ -848,7 +848,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
 
     XCTAssertTrue(summary?.contains("Confirmation: message-123") == true)
     XCTAssertTrue(
-      summary?.contains("Proof link: https://chat.example.com/messages/message-123") == true
+      summary?.contains("Confirmation link: https://chat.example.com/messages/message-123") == true
     )
     XCTAssertFalse(summary?.contains("Notion page") == true)
     XCTAssertEqual(action?.title, "Open Message")

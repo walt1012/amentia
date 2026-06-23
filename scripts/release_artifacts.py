@@ -24,7 +24,7 @@ from package_contract import (
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
   PACKAGED_SMOKE_JOURNEY,
-  PACKAGED_SMOKE_PROOF_SCOPE,
+  PACKAGED_SMOKE_RECEIPT_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   AMENTIA_ACCOUNT_REQUIRED,
   RELEASE_SIGNING_MODES,
@@ -57,7 +57,7 @@ FIRST_RUN_CONTRACT = {
   "sandbox": "status-visible",
   "firstAppOpen": FIRST_APP_OPEN_CONTRACT_ID,
   "approval": "review-before-local-change",
-  "proof": "timeline-proof",
+  "receipt": "timeline-receipt",
   "nextAction": "runtime-readiness",
 }
 GITHUB_RUN_ID_PATTERN = re.compile(r"^[1-9][0-9]*$")
@@ -652,7 +652,7 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
       "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
       "kind": PACKAGED_SMOKE_RECEIPT_KIND,
       "result": "passed",
-      "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+      "receiptScope": PACKAGED_SMOKE_RECEIPT_SCOPE,
       "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
       "journey": packaged_smoke_journey(),
     }
@@ -663,8 +663,8 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
     raise RuntimeError("Packaged smoke receipt kind is unsupported")
   if receipt.get("result") != "passed":
     raise RuntimeError("Packaged smoke receipt must record a passed result")
-  if receipt.get("proofScope") != PACKAGED_SMOKE_PROOF_SCOPE:
-    raise RuntimeError("Packaged smoke receipt proof scope does not match the first-run contract")
+  if receipt.get("receiptScope") != PACKAGED_SMOKE_RECEIPT_SCOPE:
+    raise RuntimeError("Packaged smoke receipt scope does not match the first-run contract")
   checks = receipt.get("checks")
   if not isinstance(checks, list):
     raise RuntimeError("Packaged smoke receipt checks must be a list")
@@ -686,7 +686,7 @@ def packaged_smoke_receipt_summary(smoke_receipt_path: Path | None) -> dict:
     "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
-    "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+    "receiptScope": PACKAGED_SMOKE_RECEIPT_SCOPE,
     "checkIds": check_ids,
     "journey": journey,
     "packageMetadata": validate_smoke_receipt_package_metadata(
@@ -704,7 +704,7 @@ def validate_packaged_smoke_receipt_summary(value: object, label: str) -> None:
     "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
-    "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+    "receiptScope": PACKAGED_SMOKE_RECEIPT_SCOPE,
     "checkIds": list(PACKAGED_SMOKE_REQUIRED_CHECK_IDS),
     "journey": packaged_smoke_journey(),
   }

@@ -105,7 +105,7 @@ enum TimelineContextReceiptPresenter {
     var lines = [
       "Search mode: \(readableSourceMode(sourceMode))",
       "Opened source pages: \(yesNo(pageFetch))",
-      "Saved source proof: \(yesNo(snapshotAvailable))",
+      "Saved source receipt: \(yesNo(snapshotAvailable))",
     ]
     if let reason = entry.attributes["routingReason"] {
       lines.append("Why Amentia searched: \(readableRoutingReason(reason))")
@@ -117,7 +117,7 @@ enum TimelineContextReceiptPresenter {
       lines.append("Links: \(sourceUrls)")
     }
     if let snapshotKind = entry.attributes["sourceSnapshotKind"] {
-      lines.append("Proof type: \(readableSnapshotKind(snapshotKind))")
+      lines.append("Source type: \(readableSnapshotKind(snapshotKind))")
     }
 
     return TimelineContextReceiptSection(

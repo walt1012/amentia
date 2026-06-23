@@ -29,7 +29,7 @@ from release_artifacts import (
   FIRST_RUN_CONTRACT,
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
-  PACKAGED_SMOKE_PROOF_SCOPE,
+  PACKAGED_SMOKE_RECEIPT_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   checksum_text,
   packaged_smoke_journey,
@@ -66,13 +66,13 @@ def write_smoke_receipt(path: Path, package_metadata: dict) -> Path:
         "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
         "kind": PACKAGED_SMOKE_RECEIPT_KIND,
         "result": "passed",
-        "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+        "receiptScope": PACKAGED_SMOKE_RECEIPT_SCOPE,
         "packageMetadata": package_metadata,
         "journey": packaged_smoke_journey(),
         "checks": [
           {
             "id": check_id,
-            "proof": f"{check_id} proof",
+            "receipt": f"{check_id} receipt",
           }
           for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
         ],
@@ -236,13 +236,13 @@ def main() -> int:
     if manifest["verification"]["workflowRunId"] != WORKFLOW_RUN_ID:
       raise AssertionError("release manifest should record the workflow run id")
     if manifest["verification"]["packagedSmoke"] != "mounted-dmg-before-upload":
-      raise AssertionError("release manifest should record the packaged smoke proof")
+      raise AssertionError("release manifest should record the packaged smoke run")
     if manifest["verification"]["packagedSmokeReceipt"]["checkIds"] != list(
       PACKAGED_SMOKE_REQUIRED_CHECK_IDS
     ):
       raise AssertionError("release manifest should record packaged smoke receipt checks")
-    if manifest["verification"]["packagedSmokeReceipt"]["proofScope"] != PACKAGED_SMOKE_PROOF_SCOPE:
-      raise AssertionError("release manifest should summarize packaged smoke proof scope")
+    if manifest["verification"]["packagedSmokeReceipt"]["receiptScope"] != PACKAGED_SMOKE_RECEIPT_SCOPE:
+      raise AssertionError("release manifest should summarize packaged smoke receipt scope")
     if manifest["verification"]["packagedSmokeReceipt"]["journey"] != packaged_smoke_journey():
       raise AssertionError("release manifest should summarize packaged smoke journey")
     if "sha256" not in manifest["verification"]["packagedSmokeReceipt"]:
@@ -392,7 +392,7 @@ def main() -> int:
       smoke_metadata_from_package_manifest(package_manifest),
     )
     wrong_scope_data = json.loads(wrong_scope_receipt.read_text(encoding="utf-8"))
-    wrong_scope_data["proofScope"] = "workspace only"
+    wrong_scope_data["receiptScope"] = "workspace only"
     wrong_scope_receipt.write_text(json.dumps(wrong_scope_data), encoding="utf-8")
     assert_raises(
       lambda: release_manifest(

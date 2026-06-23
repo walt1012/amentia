@@ -152,7 +152,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedPluginSection: some View {
     if let pluginSummary = viewModel.selectedEntryPluginSummary() {
-      DisclosureGroup("Connection Proof", isExpanded: $selectedPluginExpanded) {
+      DisclosureGroup("Connection Status", isExpanded: $selectedPluginExpanded) {
         Text(pluginSummary)
           .font(.caption)
           .foregroundColor(.secondary)
@@ -167,7 +167,7 @@ struct InspectorPane: View {
   @ViewBuilder
   private var selectedSandboxSection: some View {
     if let sandboxSummary = viewModel.selectedEntrySandboxSummary() {
-      DisclosureGroup("Safety Proof", isExpanded: $selectedSandboxExpanded) {
+      DisclosureGroup("Safety Receipt", isExpanded: $selectedSandboxExpanded) {
         Text(sandboxSummary)
           .font(.caption)
           .foregroundColor(.secondary)

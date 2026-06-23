@@ -24,7 +24,7 @@ from package_contract import (
   PACKAGED_SMOKE_RECEIPT_KIND,
   PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
   PACKAGED_SMOKE_JOURNEY,
-  PACKAGED_SMOKE_PROOF_SCOPE,
+  PACKAGED_SMOKE_RECEIPT_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   PROHIBITED_MODEL_SUFFIXES,
   SANDBOX_CONTRACT,
@@ -84,7 +84,7 @@ REQUIRED_DATABASE_TABLES = {
   "workspace_state",
 }
 REQUIRED_SCHEMA_VERSION = 10
-PACKAGED_SMOKE_PROOF_BY_CHECK_ID = {
+PACKAGED_SMOKE_RECEIPT_BY_CHECK_ID = {
   "mountedDmgAppBundle": "Mounted DMG exposes Amentia.app and install guide.",
   "appLaunch": "Packaged app launches and starts amentia-runtime-bin.",
   "runtimeProtocol": "Bundled runtime initializes through JSON-RPC.",
@@ -94,9 +94,9 @@ PACKAGED_SMOKE_PROOF_BY_CHECK_ID = {
   "firstCoworkTurn": "First cowork request produces timeline output.",
   "webSearchExecution": "Web Search runs through the packaged fixture.",
   "approvalDenied": "Denied workspace write does not mutate files.",
-  "approvalApproved": "Approved workspace write applies with diff proof.",
+  "approvalApproved": "Approved workspace write applies with a diff receipt.",
   "connectorAuthorization": "Reference connector credential can be authorized.",
-  "connectorExecution": "Reference connector produces remote proof.",
+  "connectorExecution": "Reference connector produces remote confirmation.",
   "runnerMemoryCapture": "Connector runner memory is persisted.",
   "runtimeRecovery": "Runtime restarts and restores state.",
   "sandboxReadiness": "Sandbox readiness is visible in runtime checks.",
@@ -227,7 +227,7 @@ def parse_args() -> argparse.Namespace:
   parser.add_argument(
     "--receipt-output",
     type=Path,
-    help="Optional JSON receipt describing the packaged first-run smoke proof.",
+    help="Optional JSON receipt describing the packaged first-run smoke run.",
   )
   return parser.parse_args()
 
@@ -1339,7 +1339,7 @@ def validate_packaged_mcp_plugin_command(
     )
 
   notion_api.malform_next_page_create()
-  missing_proof_publish = send_runtime_request(
+  missing_confirmation_publish = send_runtime_request(
     process,
     40,
     "plugin/commandRun",
@@ -1349,25 +1349,29 @@ def validate_packaged_mcp_plugin_command(
       "input": json.dumps(
         {
           "parentPageId": NOTION_PARENT_PAGE_URL,
-          "title": "Packaged Smoke Missing Proof Page",
+          "title": "Packaged Smoke Missing Confirmation Page",
           "body": "The fake API will omit the trusted Notion URL.",
         }
       ),
     },
   )
-  missing_proof_approvals = missing_proof_publish["result"]["pendingApprovals"]
-  if len(missing_proof_approvals) != 1:
-    raise RuntimeError("Packaged Notion missing-proof publish should request one approval.")
-  missing_proof_result = send_runtime_request(
+  missing_confirmation_approvals = missing_confirmation_publish["result"][
+    "pendingApprovals"
+  ]
+  if len(missing_confirmation_approvals) != 1:
+    raise RuntimeError(
+      "Packaged Notion missing-confirmation publish should request one approval."
+    )
+  missing_confirmation_result = send_runtime_request(
     process,
     41,
     "approval/respond",
     {
-      "approvalId": missing_proof_approvals[0]["id"],
+      "approvalId": missing_confirmation_approvals[0]["id"],
       "decision": "approved",
     },
   )
-  missing_proof_items = missing_proof_result["result"]["items"]
+  missing_confirmation_items = missing_confirmation_result["result"]["items"]
   if not any(
     item["kind"] == "pluginResult"
     and item["title"] == "Notion Publish Needs Retry"
@@ -1379,11 +1383,11 @@ def validate_packaged_mcp_plugin_command(
     and "may have completed" in item.get("attributes", {}).get("retryInputHint", "")
     and item.get("attributes", {}).get("connectorWorkflowStage") == "failedBeforeProof"
     and item.get("attributes", {}).get("connectorWorkflowProof") == "missing"
-    for item in missing_proof_items
+    for item in missing_confirmation_items
   ):
     raise RuntimeError(
-      "Packaged Notion missing-proof publish did not protect remote proof. "
-      f"Items: {timeline_item_summary(missing_proof_items)}"
+      "Packaged Notion missing-confirmation publish did not protect the remote confirmation. "
+      f"Items: {timeline_item_summary(missing_confirmation_items)}"
     )
 
   publish = send_runtime_request(
@@ -1402,7 +1406,7 @@ def validate_packaged_mcp_plugin_command(
           "Created from packaged smoke after user approval.",
           "",
           "- [x] Connector approval completed",
-          "- Review Notion proof",
+          "- Review Notion confirmation",
         ]
       ),
     },
@@ -1453,7 +1457,7 @@ def validate_packaged_mcp_plugin_command(
     for item in published_items
   ):
     raise RuntimeError(
-      "Packaged Notion publish did not return completed remote proof. "
+      "Packaged Notion publish did not return a completed remote confirmation. "
       f"Items: {timeline_item_summary(published_items)}"
     )
 
@@ -1916,13 +1920,13 @@ def write_packaged_smoke_receipt(
     "schemaVersion": PACKAGED_SMOKE_RECEIPT_SCHEMA_VERSION,
     "kind": PACKAGED_SMOKE_RECEIPT_KIND,
     "result": "passed",
-    "proofScope": PACKAGED_SMOKE_PROOF_SCOPE,
+    "receiptScope": PACKAGED_SMOKE_RECEIPT_SCOPE,
     "packageMetadata": package_metadata,
     "journey": list(PACKAGED_SMOKE_JOURNEY),
     "checks": [
       {
         "id": check_id,
-        "proof": PACKAGED_SMOKE_PROOF_BY_CHECK_ID[check_id],
+        "receipt": PACKAGED_SMOKE_RECEIPT_BY_CHECK_ID[check_id],
       }
       for check_id in PACKAGED_SMOKE_REQUIRED_CHECK_IDS
     ],

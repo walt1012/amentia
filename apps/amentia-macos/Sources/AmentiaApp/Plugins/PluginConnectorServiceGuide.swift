@@ -10,7 +10,7 @@ enum PluginConnectorServiceGuide {
         "Notion setup: create an internal Notion integration and copy its internal integration token.",
         "Paste that token, then share every target parent page with the integration before publishing.",
         "Amentia keeps the token local, passes it only to the local Notion plugin runner, and does not claim OAuth yet.",
-        "Authorization stores the token; the first publish still verifies the token, page sharing, and Notion response proof.",
+        "Authorization stores the token; the first publish still verifies the token, page sharing, and Notion response confirmation.",
       ].joined(separator: "\n")
     default:
       return nil

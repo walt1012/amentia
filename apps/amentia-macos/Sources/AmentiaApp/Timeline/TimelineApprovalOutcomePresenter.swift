@@ -17,7 +17,7 @@ enum TimelineApprovalOutcomePresenter {
     case "approved":
       return TimelineApprovalOutcomeSummary(
         title: "Approval accepted",
-        detail: "Amentia is executing \(target). Review the proof that follows.",
+        detail: "Amentia is executing \(target). Review the receipt that follows.",
         tone: .ready
       )
     case "denied":

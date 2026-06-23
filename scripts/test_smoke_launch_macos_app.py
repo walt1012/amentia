@@ -15,7 +15,7 @@ from package_contract import (
   MODEL_WEIGHTS_BUNDLED,
   PACKAGE_MANIFEST_SCHEMA_VERSION,
   PACKAGED_SMOKE_JOURNEY,
-  PACKAGED_SMOKE_PROOF_SCOPE,
+  PACKAGED_SMOKE_RECEIPT_SCOPE,
   PACKAGED_SMOKE_REQUIRED_CHECK_IDS,
   AMENTIA_ACCOUNT_REQUIRED,
   SANDBOX_CONTRACT,
@@ -136,8 +136,8 @@ def main() -> int:
       raise AssertionError("packaged smoke receipt should record its schema")
     if receipt["kind"] != PACKAGED_SMOKE_RECEIPT_KIND:
       raise AssertionError("packaged smoke receipt should record its kind")
-    if receipt["proofScope"] != PACKAGED_SMOKE_PROOF_SCOPE:
-      raise AssertionError("packaged smoke receipt should record its proof scope")
+    if receipt["receiptScope"] != PACKAGED_SMOKE_RECEIPT_SCOPE:
+      raise AssertionError("packaged smoke receipt should record its receipt scope")
     if receipt["packageMetadata"]["firstAppOpenActionContract"] != FIRST_APP_OPEN_CONTRACT_ID:
       raise AssertionError("packaged smoke receipt should record package first app-open action")
     if receipt["journey"] != packaged_smoke_journey():

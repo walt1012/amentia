@@ -3,7 +3,7 @@ import Foundation
 @testable import AmentiaApp
 import XCTest
 
-final class LocalModelFirstUseProofTests: XCTestCase {
+final class LocalModelFirstUseTests: XCTestCase {
   func testDownloadedModelValidatesAndPreparesActivationManifest() throws {
     let rootURL = try temporaryDirectory()
     defer {
@@ -12,8 +12,8 @@ final class LocalModelFirstUseProofTests: XCTestCase {
 
     let modelURL = rootURL
       .appendingPathComponent("catalog", isDirectory: true)
-      .appendingPathComponent("first-use-proof", isDirectory: true)
-      .appendingPathComponent("first-use-proof.gguf")
+      .appendingPathComponent("first-use-case", isDirectory: true)
+      .appendingPathComponent("first-use-case.gguf")
     let expectedSizeBytes: Int64 = 64 * 1024 * 1024
     let expectedSHA256 = try writeGGUFFixture(at: modelURL, sizeBytes: expectedSizeBytes)
     let model = localModelSummary(
@@ -62,8 +62,8 @@ final class LocalModelFirstUseProofTests: XCTestCase {
 
     let modelURL = rootURL
       .appendingPathComponent("catalog", isDirectory: true)
-      .appendingPathComponent("resume-proof", isDirectory: true)
-      .appendingPathComponent("resume-proof.gguf")
+      .appendingPathComponent("resume-case", isDirectory: true)
+      .appendingPathComponent("resume-case.gguf")
     try FileManager.default.createDirectory(
       at: modelURL.deletingLastPathComponent(),
       withIntermediateDirectories: true
@@ -119,8 +119,8 @@ final class LocalModelFirstUseProofTests: XCTestCase {
 
     let modelURL = rootURL
       .appendingPathComponent("catalog", isDirectory: true)
-      .appendingPathComponent("waiting-proof", isDirectory: true)
-      .appendingPathComponent("waiting-proof.gguf")
+      .appendingPathComponent("waiting-case", isDirectory: true)
+      .appendingPathComponent("waiting-case.gguf")
     let model = localModelSummary(
       modelURL: modelURL,
       sizeBytes: 128 * 1024 * 1024,
@@ -153,8 +153,8 @@ final class LocalModelFirstUseProofTests: XCTestCase {
 
     let modelURL = rootURL
       .appendingPathComponent("catalog", isDirectory: true)
-      .appendingPathComponent("downloaded-only-proof", isDirectory: true)
-      .appendingPathComponent("downloaded-only-proof.gguf")
+      .appendingPathComponent("downloaded-only-case", isDirectory: true)
+      .appendingPathComponent("downloaded-only-case.gguf")
     let model = localModelSummary(
       modelURL: modelURL,
       sizeBytes: 128 * 1024 * 1024,
@@ -202,8 +202,8 @@ final class LocalModelFirstUseProofTests: XCTestCase {
 
     let modelURL = rootURL
       .appendingPathComponent("catalog", isDirectory: true)
-      .appendingPathComponent("launch-integrity-proof", isDirectory: true)
-      .appendingPathComponent("launch-integrity-proof.gguf")
+      .appendingPathComponent("launch-integrity-case", isDirectory: true)
+      .appendingPathComponent("launch-integrity-case.gguf")
     let expectedSizeBytes: Int64 = 64 * 1024 * 1024
     let expectedSHA256 = try writeGGUFFixture(at: modelURL, sizeBytes: expectedSizeBytes)
     let model = localModelSummary(
@@ -255,8 +255,8 @@ final class LocalModelFirstUseProofTests: XCTestCase {
 
     let modelURL = rootURL
       .appendingPathComponent("catalog", isDirectory: true)
-      .appendingPathComponent("legacy-stamp-proof", isDirectory: true)
-      .appendingPathComponent("legacy-stamp-proof.gguf")
+      .appendingPathComponent("legacy-stamp-case", isDirectory: true)
+      .appendingPathComponent("legacy-stamp-case.gguf")
     let expectedSizeBytes: Int64 = 64 * 1024 * 1024
     let expectedSHA256 = try writeGGUFFixture(at: modelURL, sizeBytes: expectedSizeBytes)
     let model = localModelSummary(
@@ -312,8 +312,8 @@ final class LocalModelFirstUseProofTests: XCTestCase {
     sha256: String
   ) -> LocalModelSummary {
     LocalModelSummary(
-      id: "first-use-proof-\(UUID().uuidString)",
-      displayName: "First Use Proof Model",
+      id: "first-use-case-\(UUID().uuidString)",
+      displayName: "First Use Case Model",
       description: "Small deterministic fixture for the local model manager path.",
       fileName: modelURL.lastPathComponent,
       downloadURL: "https://example.com/models/\(modelURL.lastPathComponent)",

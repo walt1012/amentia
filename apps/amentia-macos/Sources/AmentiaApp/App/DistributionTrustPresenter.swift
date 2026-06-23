@@ -229,7 +229,7 @@ enum DistributionTrustPresenter {
     let identity = identitySummary(metadata)
     let execution = localExecutionSummary(metadata)
     let source = sourceSummary(metadata.sourceCommit)
-    let releaseProof = [
+    let releaseReceipt = [
       identity,
       modelDelivery,
       weightPolicy,
@@ -247,7 +247,7 @@ enum DistributionTrustPresenter {
         title: "Verified Installer",
         summary: "Signed and notarized for \(platform).",
         detail: "Install from the DMG, launch normally, then choose one verified local model. Amentia does not require an Amentia account.",
-        advancedDetail: "Distribution proof: Developer ID signed and notarized; \(releaseProof).",
+        advancedDetail: "Distribution receipt: Developer ID signed and notarized; \(releaseReceipt).",
         setupDetail: nil
       )
     case "ad-hoc-not-notarized":
@@ -255,7 +255,7 @@ enum DistributionTrustPresenter {
         title: "Manual Open Required",
         summary: "This prerelease may need one extra macOS approval before first launch.",
         detail: "If macOS blocks Amentia, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Amentia.app and choose Open. After that, setup continues in app.",
-        advancedDetail: "Distribution proof: ad-hoc signed and not notarized for \(platform); \(releaseProof).",
+        advancedDetail: "Distribution receipt: ad-hoc signed and not notarized for \(platform); \(releaseReceipt).",
         setupDetail: "Installer trust: if macOS blocks Amentia, open System Settings > Privacy & Security and choose Open Anyway, or Control-click Amentia.app and choose Open."
       )
     case "unsigned-local-build":
@@ -263,7 +263,7 @@ enum DistributionTrustPresenter {
         title: "Local Development Build",
         summary: "This build was made locally and may need manual macOS approval.",
         detail: "Use this build only for development or explicit testing. Public users should install the latest GitHub Release.",
-        advancedDetail: "Distribution proof: unsigned local build for \(platform); \(releaseProof).",
+        advancedDetail: "Distribution receipt: unsigned local build for \(platform); \(releaseReceipt).",
         setupDetail: "Installer trust: this local build may require manual macOS approval before first launch."
       )
     default:

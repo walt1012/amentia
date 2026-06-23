@@ -96,7 +96,7 @@ enum TimelineConnectorEvidencePresenter {
       lines.append("Target: \(target)")
     }
     if let proof = attributes["connectorWorkflowProof"] {
-      lines.append("Proof: \(readableProofKind(proof))")
+      lines.append("Confirmation: \(readableProofKind(proof))")
     }
     if let recovery = attributes["connectorWorkflowRecovery"] {
       lines.append("Recovery: \(readableRecovery(recovery))")
@@ -227,19 +227,19 @@ enum TimelineConnectorEvidencePresenter {
   ) {
     if attributes["remoteProofStatus"] != nil || attributes["remoteProofKind"] != nil {
       let proofStatus = attributes["remoteProofStatus"] ?? "unknown"
-      let proofKind = attributes["remoteProofKind"] ?? "unknown proof"
+      let proofKind = attributes["remoteProofKind"] ?? "unknown confirmation"
       lines.append(
-        "External proof: \(readableStatus(proofStatus)) (\(readableProofKind(proofKind)))"
+        "External confirmation: \(readableStatus(proofStatus)) (\(readableProofKind(proofKind)))"
       )
     }
     if let proofTitle = attributes["remoteProofTitle"] {
-      lines.append("Proof title: \(proofTitle)")
+      lines.append("Confirmation title: \(proofTitle)")
     }
     if let proofID = attributes["remoteProofId"] {
       lines.append("Confirmation: \(proofID)")
     }
     if let proofURL = attributes["remoteProofUrl"] {
-      lines.append("Proof link: \(proofURL)")
+      lines.append("Confirmation link: \(proofURL)")
     }
 
     appendNotionProofSummary(attributes: attributes, to: &lines)
@@ -325,7 +325,7 @@ enum TimelineConnectorEvidencePresenter {
 
     let service = serviceName(attributes: attributes)
     return TimelineExternalActionSummary(
-      title: attributes["remoteProofActionTitle"] ?? "Open \(service) Proof",
+      title: attributes["remoteProofActionTitle"] ?? "Open \(service) Confirmation",
       copyTitle: attributes["remoteProofCopyTitle"] ?? "Copy Link",
       url: url
     )
@@ -382,7 +382,7 @@ enum TimelineConnectorEvidencePresenter {
     }
 
     return TimelineProofSummary(
-      title: attributes["remoteProofTitle"] ?? "\(serviceName(attributes: attributes)) proof confirmed",
+      title: attributes["remoteProofTitle"] ?? "\(serviceName(attributes: attributes)) confirmation recorded",
       detail: parts.joined(separator: " | ")
     )
   }
@@ -442,7 +442,7 @@ enum TimelineConnectorEvidencePresenter {
     case "blockedBeforeWrite":
       return "blocked before external write"
     case "failedBeforeProof":
-      return "finished without trusted proof"
+      return "finished without trusted confirmation"
     case "completed":
       return "completed"
     default:

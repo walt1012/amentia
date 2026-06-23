@@ -153,14 +153,14 @@ def main() -> int:
     if "do-not-publish-visible-ad-hoc" not in summary["releaseDecision"]["publishGate"]:
       raise AssertionError("release rehearsal summary should guard visible ad-hoc publish")
     if summary["appPackage"]["firstAppOpenActionContract"] != FIRST_APP_OPEN_CONTRACT_ID:
-      raise AssertionError("release rehearsal summary should record app package first app-open proof")
+      raise AssertionError("release rehearsal summary should record app package first app-open contract")
     if (
       summary["packagedSmokeReceipt"]["packageMetadata"]["firstAppOpenActionContract"]
       != FIRST_APP_OPEN_CONTRACT_ID
     ):
       raise AssertionError("release rehearsal summary should record smoke package metadata")
     if summary["packagedSmokeReceipt"]["packageMetadataMatched"] is not True:
-      raise AssertionError("release rehearsal summary should prove smoke package metadata match")
+      raise AssertionError("release rehearsal summary should confirm smoke package metadata match")
     if summary["packagedSmokeReceipt"]["journey"] != packaged_smoke_journey():
       raise AssertionError("release rehearsal summary should include packaged smoke journey")
     manual_checks = "\n".join(summary["manualPrereleaseChecks"])
@@ -189,11 +189,11 @@ def main() -> int:
     if "## First App Open" not in markdown:
       raise AssertionError("release rehearsal markdown should include first app open checks")
     if "First app-open contract" not in markdown:
-      raise AssertionError("release rehearsal markdown should include package contract proof")
+      raise AssertionError("release rehearsal markdown should include package contract")
     if "Gatekeeper" not in markdown or "Open Anyway" not in markdown:
       raise AssertionError("release rehearsal markdown should include Gatekeeper guidance")
     if "Smoke package metadata: `matches app package metadata`" not in markdown:
-      raise AssertionError("release rehearsal markdown should include smoke metadata match proof")
+      raise AssertionError("release rehearsal markdown should include smoke metadata match")
     if "## Packaged Smoke Journey" not in markdown or "Web Search retrieval" not in markdown:
       raise AssertionError("release rehearsal markdown should include smoke journey stages")
     if "## Manual Prerelease Acceptance" not in markdown:

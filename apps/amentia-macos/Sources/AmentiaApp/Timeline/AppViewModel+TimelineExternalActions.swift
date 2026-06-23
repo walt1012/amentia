@@ -79,9 +79,9 @@ extension AppViewModel {
     }
 
     if NSWorkspace.shared.open(action.url) {
-      runtimeDetail = "Opened external proof: \(action.title)."
+      runtimeDetail = "Opened external confirmation: \(action.title)."
     } else {
-      runtimeDetail = "Could not open external proof: \(action.url.absoluteString)."
+      runtimeDetail = "Could not open external confirmation: \(action.url.absoluteString)."
     }
   }
 
