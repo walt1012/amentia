@@ -7,6 +7,7 @@ fn validate_manifest_accepts_typed_capabilities_and_permissions() {
   let mut manifest = manifest(
     vec![
       "prompt_pack:workspace.notes",
+      "skill:workspace.notes",
       "settings:workspace.preferences",
     ],
     vec!["file.read", "file.write"],
@@ -169,9 +170,9 @@ fn validate_manifest_rejects_prompt_pack_without_skill_entry() {
 
   let error = validate_manifest(&manifest).expect_err("prompt pack needs a skill entry");
 
-  assert!(error
-    .to_string()
-    .contains("plugin prompt pack capability `prompt_pack:workspace.notes` must map to a skill entry"));
+  assert!(error.to_string().contains(
+    "plugin prompt pack capability `prompt_pack:workspace.notes` must map to a skill entry"
+  ));
 }
 
 #[test]

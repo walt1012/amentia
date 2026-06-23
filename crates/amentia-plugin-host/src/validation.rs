@@ -131,7 +131,7 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("plugin prompt pack capability")
     && validation_error.contains("matching capability")
   {
-    return "Add the matching skill capability shown in the error, or remove the legacy prompt_pack alias."
+    return "Add the matching capability shown in the error, or remove the legacy prompt_pack alias."
       .to_string();
   }
   if validation_error.contains("plugin connector workflow")
@@ -318,7 +318,11 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
     let Some(("prompt_pack", prompt_pack_id)) = capability.split_once(':') else {
       continue;
     };
-    if !manifest.skills.iter().any(|skill| skill.id == prompt_pack_id) {
+    if !manifest
+      .skills
+      .iter()
+      .any(|skill| skill.id == prompt_pack_id)
+    {
       anyhow::bail!(
         "plugin prompt pack capability `{}` must map to a skill entry",
         capability
