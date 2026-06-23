@@ -267,6 +267,9 @@ Completed baseline:
   the default path.
 - Plugin action, connection, workflow, skill, and setup details use product
   labels instead of log-style field names in default summaries.
+- Installed-app proof now has a CI-covered evidence contract for the DMG,
+  verified model deployment, local inference, Web Search, session cleanup, Reset
+  Amentia, plugin lifecycle, and unexpected residue checks.
 
 Exit gates:
 
@@ -281,7 +284,9 @@ Exit gates:
   cleanup.
 - Installed-app proof: in a packaged app, verify model download, activation,
   local inference, Web Search, session delete, session revert, Reset Amentia, and
-  plugin install/disable/remove before adding more connector surface area.
+  plugin install/disable/remove before adding more connector surface area. Store
+  accepted evidence under `docs/evidence/m14-installed-app-proof.json` only after
+  a real installed-app run and validate it with `scripts/installed_app_proof.py`.
 - Runner proof: actions, connector workflows, skills, MCP metadata, and checks
   must have bounded output, timeout or cancellation behavior where execution is
   possible, product-facing errors, and CI coverage for failure paths.
@@ -294,7 +299,7 @@ Exit gates:
 
 Immediate next work:
 
-1. Prove fresh installed-app model deployment end to end from the DMG.
+1. Fill and validate the installed-app proof from a fresh DMG run.
 2. Capture the Notion reference connector proof in the evidence file above.
 3. Continue the product clarity pass on advanced settings and installed-app
    proof surfaces.

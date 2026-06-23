@@ -25,6 +25,12 @@ define release, CI, package, model, or workflow behavior.
 - Runtime and model checks: `runtime_smoke_test.py` and
   `validate_model_pack.py` cover the runtime protocol surface and curated local
   model metadata.
+- Installed-app proof: `installed_app_proof.py` validates the M14 installed-app
+  acceptance evidence before M14 closes, including DMG checksum verification,
+  local model deployment, local inference, Web Search proof, session cleanup,
+  Reset Amentia, plugin lifecycle, and unexpected residue checks. Accepted
+  evidence belongs in `docs/evidence/m14-installed-app-proof.json` after a real
+  installed-app run.
 - Connector proof: `reference_connector_proof.py` validates the M14 Notion
   reference connector acceptance evidence before broader connector work starts,
   including non-placeholder proof text, UTC acceptance time, and storage plus
