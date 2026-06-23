@@ -391,7 +391,7 @@ enum PluginStatusDisplay {
     }
 
     if let workflow = execution.workflow {
-      return "workflow ready: \(workflow.workflowLabel)"
+      return "Workflow ready: \(workflow.workflowLabel)"
     }
 
     switch execution.kind {

@@ -265,6 +265,8 @@ Completed baseline:
 - Plugin manager surfaces expose capability meaning progressively. Source paths,
   manifest keys, raw event names, routes, hashes, and storage details stay out of
   the default path.
+- Plugin action, connection, workflow, skill, and setup details use product
+  labels instead of log-style field names in default summaries.
 
 Exit gates:
 
@@ -294,7 +296,8 @@ Immediate next work:
 
 1. Prove fresh installed-app model deployment end to end from the DMG.
 2. Capture the Notion reference connector proof in the evidence file above.
-3. Continue the product clarity pass on plugin and advanced settings surfaces.
+3. Continue the product clarity pass on advanced settings and installed-app
+   proof surfaces.
 4. Close M14 only after the installed-app and connector proofs are green.
 
 ## M15: Cowork Continuity

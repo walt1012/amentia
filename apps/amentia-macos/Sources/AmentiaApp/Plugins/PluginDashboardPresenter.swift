@@ -55,7 +55,7 @@ enum PluginDashboardPresenter {
         let hasValidationIssue = plugin.validationError != nil || plugin.validationHint != nil
         let validation = hasValidationIssue ? "needs attention" : "ready"
         let hint = plugin.validationHint
-          .map { " | fix: \(PluginValidationCopy.userFacingRepairHint($0))" } ?? ""
+          .map { " | Fix: \(PluginValidationCopy.userFacingRepairHint($0))" } ?? ""
         return "\(plugin.displayName) \(plugin.version) | \(PluginStatusDisplay.pluginStatus(plugin.status)) | \(plugin.sourceLabel) | \(capabilities) | \(validation)\(hint)"
       }
       .joined(separator: "\n")
@@ -345,7 +345,7 @@ enum PluginDashboardPresenter {
       let workflowLabels = connector.workflows
         .map(\.workflowLabel)
         .joined(separator: ", ")
-      parts.append("workflows: \(workflowLabels)")
+      parts.append("Workflows: \(workflowLabels)")
     }
 
     return parts.joined(separator: " | ")
@@ -368,26 +368,26 @@ enum PluginDashboardPresenter {
   ) -> String {
     var parts = [
       "\(command.pluginDisplayName): \(command.title)",
-      "status: \(PluginStatusDisplay.commandStatus(command.runStatus))"
+      "Status: \(PluginStatusDisplay.commandStatus(command.runStatus))"
     ]
 
     if command.approvalRequired {
-      parts.append("approval")
+      parts.append("Needs approval")
     }
     if !command.requiredInputFieldNames.isEmpty {
       let inputs = command.requiredInputFieldNames
         .map(PluginStatusDisplay.inputFieldLabel)
         .joined(separator: ", ")
-      parts.append("input: \(inputs)")
+      parts.append("Input: \(inputs)")
     }
     if !command.visibleConnectorIds.isEmpty {
-      parts.append("connections: \(connectorStatusList(command, connectors: connectors))")
+      parts.append("Connections: \(connectorStatusList(command, connectors: connectors))")
     }
     if let runBlocker = command.runBlocker, command.runStatus != "ready" {
-      parts.append("blocked: \(runBlocker)")
+      parts.append("Blocked: \(runBlocker)")
     }
     if let repairHint = command.runRepairHint, command.runStatus != "ready" {
-      parts.append("fix: \(repairHint)")
+      parts.append("Fix: \(repairHint)")
     }
 
     return parts.joined(separator: " | ")
@@ -422,16 +422,16 @@ enum PluginDashboardPresenter {
   private static func skillDetail(_ skill: PluginSkillSummary) -> String {
     var parts = [
       "\(skill.pluginDisplayName): \(skill.description)",
-      "status: \(PluginStatusDisplay.skillStatus(skill.status))"
+      "Status: \(PluginStatusDisplay.skillStatus(skill.status))"
     ]
     if let preview = PluginSkillDisplay.previewLine(skill.preview) {
-      parts.append("preview: \(preview)")
+      parts.append("Preview: \(preview)")
     }
     if let runBlocker = skill.runBlocker {
-      parts.append("blocked: \(runBlocker)")
+      parts.append("Blocked: \(runBlocker)")
     }
     if let runRepairHint = skill.runRepairHint {
-      parts.append("fix: \(runRepairHint)")
+      parts.append("Fix: \(runRepairHint)")
     }
     return parts.joined(separator: " | ")
   }

@@ -719,10 +719,70 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let detail = PluginDashboardPresenter.pluginDetailSummary(snapshot)
 
     XCTAssertTrue(detail.contains("needs attention"))
-    XCTAssertTrue(detail.contains("fix: Check the plugin setup file, then refresh the plugin."))
+    XCTAssertTrue(detail.contains("Fix: Check the plugin setup file, then refresh the plugin."))
     XCTAssertFalse(detail.contains("/tmp/notion"))
     XCTAssertFalse(detail.contains("amentia-plugin.json"))
     XCTAssertFalse(detail.contains("displayName"))
+  }
+
+  func testPluginDashboardDetailsAvoidLogStyleLabels() {
+    let command = pluginCommandSummary(
+      requiredConnectorIds: [],
+      execution: PluginCommandExecutionSummary(
+        kind: "mcp.remote.createPage",
+        driver: "node",
+        entrypoint: nil,
+        workflowID: nil,
+        workflow: nil,
+        input: PluginCommandEnvelopeSummary(envelope: "json", fields: [
+          PluginCommandEnvelopeFieldSummary(
+            name: "input",
+            required: true,
+            description: "Draft text"
+          )
+        ]),
+        output: nil,
+        supported: true
+      )
+    )
+    let snapshot = pluginDashboardSnapshot(commands: [command])
+
+    let detail = PluginDashboardPresenter.commandDetailSummary(snapshot)
+
+    XCTAssertTrue(detail.contains("Status:"))
+    XCTAssertTrue(detail.contains("Input:"))
+    XCTAssertFalse(detail.contains("status:"))
+    XCTAssertFalse(detail.contains("input:"))
+    XCTAssertFalse(detail.contains("blocked:"))
+    XCTAssertFalse(detail.contains("fix:"))
+  }
+
+  func testPluginWorkflowSummaryAvoidsLogStyleLabels() {
+    let execution = PluginCommandExecutionSummary(
+      kind: "mcp.remote.createPage",
+      driver: "node",
+      entrypoint: nil,
+      workflowID: "notion.create-page",
+      workflow: PluginCommandWorkflowSummary(
+        workflowID: "notion.create-page",
+        displayName: "Create Page",
+        connectorID: "notion::main",
+        service: "notion",
+        action: "createPage",
+        maxAgentSteps: 2,
+        stages: ["inspectBeforeWrite", "completed"],
+        statuses: ["inspected", "success"],
+        commandIDs: ["pages.create"]
+      ),
+      input: nil,
+      output: nil,
+      supported: true
+    )
+
+    let summary = PluginStatusDisplay.executionSummary(execution)
+
+    XCTAssertTrue(summary.contains("Workflow ready"))
+    XCTAssertFalse(summary.contains("workflow ready:"))
   }
 
   func testPluginCapabilityPresenterHidesRawMetadata() {
