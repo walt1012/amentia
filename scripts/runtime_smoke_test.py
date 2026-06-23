@@ -457,9 +457,11 @@ def main() -> int:
   (plugin_dir / "review-assistant").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "notion-connector").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "workspace-notes" / "commands").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "workspace-notes" / "skills").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "commands").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "shell-recorder" / "hooks").mkdir(parents=True, exist_ok=True)
   (plugin_dir / "review-assistant" / "commands").mkdir(parents=True, exist_ok=True)
+  (plugin_dir / "review-assistant" / "skills").mkdir(parents=True, exist_ok=True)
   write_json_file(
     plugin_dir / "workspace-notes" / "amentia-plugin.json",
     {
@@ -473,7 +475,15 @@ def main() -> int:
       "capabilities": [
         "command:workspace.capture-note",
         "prompt_pack:workspace.notes",
+        "skill:workspace.notes",
         "settings:workspace.preferences",
+      ],
+      "skills": [
+        {
+          "id": "workspace.notes",
+          "description": "Guidance for concise reusable workspace notes.",
+          "path": "skills/workspace-notes.md",
+        },
       ],
       "permissions": [
         "file.read",
@@ -481,6 +491,10 @@ def main() -> int:
       ],
       "defaultEnabled": True,
     },
+  )
+  (plugin_dir / "workspace-notes" / "skills" / "workspace-notes.md").write_text(
+    "Use this skill to capture concise reusable workspace notes.\n",
+    encoding="utf-8",
   )
   write_json_file(
     plugin_dir / "notion-connector" / "amentia-plugin.json",
@@ -598,7 +612,15 @@ def main() -> int:
       "capabilities": [
         "command:review.inspect-diff",
         "prompt_pack:review.prompts",
+        "skill:review.prompts",
         "tool:diff.summaries",
+      ],
+      "skills": [
+        {
+          "id": "review.prompts",
+          "description": "Guidance for review-first inspection of local code changes.",
+          "path": "skills/review-prompts.md",
+        },
       ],
       "permissions": [
         "file.read",
@@ -606,6 +628,10 @@ def main() -> int:
       ],
       "defaultEnabled": True,
     },
+  )
+  (plugin_dir / "review-assistant" / "skills" / "review-prompts.md").write_text(
+    "Use this skill to review local changes for bugs, regressions, and missing tests.\n",
+    encoding="utf-8",
   )
   write_json_file(
     plugin_dir / "review-assistant" / "commands" / "review.inspect-diff.json",

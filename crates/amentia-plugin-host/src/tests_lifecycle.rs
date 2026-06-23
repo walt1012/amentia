@@ -10,6 +10,7 @@ fn discover_plugins_in_roots_merges_local_and_bundled_catalogs() {
   let bundled_plugin_dir = bundled_root.join("bundled").join("workspace-notes");
   let local_plugin_dir = local_root.join("focus-review");
   fs::create_dir_all(&bundled_plugin_dir).expect("create bundled plugin dir");
+  fs::create_dir_all(bundled_plugin_dir.join("skills")).expect("create bundled skills dir");
   fs::create_dir_all(&local_plugin_dir).expect("create local plugin dir");
   fs::write(
     bundled_plugin_dir.join("amentia-plugin.json"),
@@ -19,12 +20,24 @@ fn discover_plugins_in_roots_merges_local_and_bundled_catalogs() {
   "displayName": "Workspace Notes",
   "description": "Bundled plugin",
   "author": { "name": "Amentia" },
-  "capabilities": ["prompt_pack:workspace.notes"],
+  "capabilities": ["prompt_pack:workspace.notes", "skill:workspace.notes"],
+  "skills": [
+    {
+      "id": "workspace.notes",
+      "description": "Use workspace notes.",
+      "path": "skills/workspace-notes.md"
+    }
+  ],
   "permissions": ["file.read"],
   "defaultEnabled": true
 }"#,
   )
   .expect("write bundled manifest");
+  fs::write(
+    bundled_plugin_dir.join("skills/workspace-notes.md"),
+    "Use this skill to keep workspace notes concise.",
+  )
+  .expect("write bundled skill file");
   fs::write(
     local_plugin_dir.join("amentia-plugin.json"),
     r#"{

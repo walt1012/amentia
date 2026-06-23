@@ -369,6 +369,7 @@ fn build_command_registry_loads_enabled_plugin_commands() {
   let plugin_dir = plugin_root.join("workspace-notes");
   let commands_dir = plugin_dir.join("commands");
   fs::create_dir_all(&commands_dir).expect("create commands dir");
+  fs::create_dir_all(plugin_dir.join("skills")).expect("create skills dir");
   fs::write(
     plugin_dir.join("amentia-plugin.json"),
     r#"{
@@ -379,7 +380,15 @@ fn build_command_registry_loads_enabled_plugin_commands() {
   "author": { "name": "Amentia" },
   "capabilities": [
     "command:workspace.capture-note",
-    "prompt_pack:workspace.notes"
+    "prompt_pack:workspace.notes",
+    "skill:workspace.notes"
+  ],
+  "skills": [
+    {
+      "id": "workspace.notes",
+      "description": "Use workspace notes.",
+      "path": "skills/workspace-notes.md"
+    }
   ],
   "permissions": [
     "file.read",
@@ -389,6 +398,11 @@ fn build_command_registry_loads_enabled_plugin_commands() {
 }"#,
   )
   .expect("write plugin manifest");
+  fs::write(
+    plugin_dir.join("skills/workspace-notes.md"),
+    "Use this skill to keep workspace notes concise.",
+  )
+  .expect("write skill file");
   fs::write(
     commands_dir.join("workspace.capture-note.json"),
     r#"{
