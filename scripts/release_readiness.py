@@ -12,7 +12,6 @@ from pathlib import Path
 
 from release_identity import validate_public_release_tag
 from release_artifacts import release_installer_asset_names
-from release_evidence_contract import expected_evidence_names
 from release_state import ReleaseState
 from release_state import plan_release_state
 from release_state import validate_manual_acceptance_gate
@@ -28,6 +27,15 @@ REQUIRED_RELEASE_INPUTS = (
   "publish_untrusted_ad_hoc",
   "manual_acceptance_confirmed",
   "manual_acceptance_evidence",
+)
+DRY_RUN_EXTRA_ARTIFACT_NAMES = (
+  "release-readiness.md",
+  "release-readiness.json",
+  "release-plan.md",
+  "release-plan.json",
+  "release-dry-run-rehearsal.md",
+  "release-dry-run-rehearsal.json",
+  "release-dry-run-manual-acceptance.md",
 )
 
 
@@ -185,13 +193,13 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   ci_lookup_command = readiness_ci_lookup_command(readiness)
   dry_run_lookup_command = readiness_dry_run_artifact_lookup_command(readiness)
   dry_run_download_command = readiness_dry_run_download_command(readiness)
-  dry_run_validation_command = readiness_dry_run_validation_command(readiness)
+  dry_run_artifact_command = readiness_dry_run_artifact_verification_command(readiness)
   post_acceptance_command = readiness_post_acceptance_publish_command(readiness)
   tag_commands = "\n".join(readiness_tag_commands(readiness))
   remote_tag_command = readiness_remote_tag_verification_command(readiness)
   checklist = "\n".join(f"- [ ] {item}" for item in readiness_checklist(readiness))
-  dry_run_evidence = "\n".join(
-    f"- `{name}`" for name in expected_evidence_names("dry-run", readiness.tag)
+  dry_run_artifacts = "\n".join(
+    f"- `{name}`" for name in expected_dry_run_artifact_names(readiness.tag)
   )
   if not blockers:
     blockers = "- None"
@@ -232,8 +240,8 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 {ci_lookup_command}
 ```
 
-## Expected Dry-Run Evidence
-{dry_run_evidence}
+## Expected Dry-Run Artifact Contents
+{dry_run_artifacts}
 
 ## Next Command
 ```bash
@@ -244,7 +252,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 ```bash
 {dry_run_lookup_command}
 {dry_run_download_command}
-{dry_run_validation_command}
+{dry_run_artifact_command}
 ```
 
 ## Post-Acceptance Publish Command
@@ -277,13 +285,13 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "manualAcceptanceEvidence": readiness.manual_acceptance_evidence,
     "preDispatchChecklist": readiness_checklist(readiness),
     "expectedPublicAssets": list(release_installer_asset_names(readiness.tag)),
-    "expectedDryRunEvidence": list(expected_evidence_names("dry-run", readiness.tag)),
+    "expectedDryRunArtifactContents": list(expected_dry_run_artifact_names(readiness.tag)),
     "tagCommands": readiness_tag_commands(readiness),
     "remoteTagVerificationCommand": readiness_remote_tag_verification_command(readiness),
     "successfulCiLookupCommand": readiness_ci_lookup_command(readiness),
     "dryRunArtifactLookupCommand": readiness_dry_run_artifact_lookup_command(readiness),
     "dryRunArtifactDownloadCommand": readiness_dry_run_download_command(readiness),
-    "dryRunEvidenceValidationCommand": readiness_dry_run_validation_command(readiness),
+    "dryRunArtifactVerificationCommand": readiness_dry_run_artifact_verification_command(readiness),
     "postAcceptancePublishCommand": readiness_post_acceptance_publish_command(readiness),
     "blockers": list(readiness.blockers),
     "nextCommand": readiness_next_command(readiness),
@@ -309,7 +317,7 @@ def readiness_checklist(readiness: ReleaseReadiness) -> list[str]:
     "Use manual dry-run only when rehearsing release assets without mutating the draft release.",
     f"Use the dry-run artifact lookup command to find the release-dry-run-{readiness.tag} workflow run.",
     f"Download the release-dry-run-{readiness.tag} workflow artifact after the dry-run passes.",
-    "Run the dry-run evidence validation command before manual acceptance.",
+    "Run the dry-run artifact verification command before manual acceptance.",
     "Download the DMG, checksum, install guide, and manifest into one folder before verifying the DMG checksum, release manifest, release plan, rehearsal summary, and manual acceptance receipt template.",
     "Complete fresh-Mac manual acceptance, validate the installed-app proof, and validate the receipt before any visible ad-hoc prerelease.",
     "Use the post-acceptance publish command only after a validated manual acceptance receipt is recorded.",
@@ -379,18 +387,20 @@ def readiness_dry_run_download_command(readiness: ReleaseReadiness) -> str:
   )
 
 
-def readiness_dry_run_validation_command(readiness: ReleaseReadiness) -> str:
+def expected_dry_run_artifact_names(tag: str) -> tuple[str, ...]:
+  return release_installer_asset_names(tag) + DRY_RUN_EXTRA_ARTIFACT_NAMES
+
+
+def readiness_dry_run_artifact_verification_command(readiness: ReleaseReadiness) -> str:
   artifact_dir = f"release-dry-run-{readiness.tag}"
-  lines = [
-    "python3 scripts/release_evidence_contract.py \\",
-    "  --mode dry-run \\",
-    f"  --tag {shell_quote(readiness.tag)} \\",
-  ]
-  evidence_names = expected_evidence_names("dry-run", readiness.tag)
-  for index, name in enumerate(evidence_names):
-    suffix = " \\" if index < len(evidence_names) - 1 else ""
-    lines.append(f"  --evidence {shell_quote(f'{artifact_dir}/{name}')}{suffix}")
-  return "\n".join(lines)
+  return "\n".join(
+    [
+      "python3 scripts/release_rehearsal_contract.py \\",
+      f"  --tag {shell_quote(readiness.tag)} \\",
+      f"  --asset-dir {shell_quote(artifact_dir)} \\",
+      "  --allow-extra-assets",
+    ]
+  )
 
 
 def readiness_post_acceptance_publish_command(readiness: ReleaseReadiness) -> str:

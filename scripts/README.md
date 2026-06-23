@@ -16,12 +16,11 @@ define release, CI, package, model, or workflow behavior.
   DMG, package metadata, bundled resources, app launch smoke, and optional
   Developer ID distribution shape.
 - Release: `release_identity.py`, `release_text.py`,
-  `release_copy_contract.py`, `release_artifacts.py`,
-  `release_readiness.py`, `release_state.py`, `release_evidence_contract.py`,
-  `release_rehearsal_contract.py`, `release_publish_contract.py`, and
+  `release_copy_contract.py`, `release_artifacts.py`, `release_readiness.py`,
+  `release_state.py`, `release_rehearsal_contract.py`, `release_publish_contract.py`, and
   `manual_acceptance_contract.py` enforce the four public assets, dry-run-first
-  evidence, draft/visible safety, downloaded-release rehearsal, and fresh-Mac
-  manual acceptance gate.
+  release rehearsal, draft/visible safety, downloaded-release rehearsal, and
+  fresh-Mac manual acceptance gate.
 - Evidence contracts stay lightweight: `evidence_contracts.py` only removes
   duplicated JSON and field checks used by release proof scripts.
 - Runtime and model checks: `runtime_smoke_test.py` and

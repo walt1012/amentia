@@ -162,7 +162,6 @@ def validate_ci_workflow(text: str) -> list[WorkflowIssue]:
       "python3 scripts/test_release_readiness.py",
       "python3 scripts/test_release_publish_contract.py",
       "python3 scripts/test_release_rehearsal_contract.py",
-      "python3 scripts/test_release_evidence_contract.py",
       "python3 scripts/test_package_contract.py",
       "python3 scripts/test_release_identity.py",
       "python3 scripts/test_sign_macos_app_for_distribution.py",
@@ -458,7 +457,6 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
       WorkflowIssue(RELEASE_WORKFLOW, "release state helper must receive --title")
     )
   validate_release_shared_input_contract(release_block, issues)
-  validate_release_evidence_step_contracts(release_block, issues)
   for term in (
     "Plan GitHub Release state",
     'cat release-state.env >> "$GITHUB_ENV"',
@@ -497,9 +495,6 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "--json-output release-dry-run-rehearsal.json",
     'cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
     'cat release-dry-run-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"',
-    "Validate release dry-run evidence",
-    "python3 scripts/release_evidence_contract.py",
-    "--mode dry-run",
     "artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-macos-x86_64.dmg",
     "artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-macos-x86_64.dmg.sha256",
     "artifacts/macos/Amentia-${{ env.RELEASE_TAG }}-release-manifest.json",
@@ -530,7 +525,6 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "Rehearse downloaded GitHub Release assets\n        if: env.RELEASE_DRY_RUN != 'true'",
     "Apply final GitHub Release visibility\n        if: env.RELEASE_DRY_RUN != 'true'",
     "Validate final GitHub Release\n        if: env.RELEASE_DRY_RUN != 'true'",
-    "Validate release rehearsal evidence\n        if: env.RELEASE_DRY_RUN != 'true'",
     "Upload release rehearsal summary\n        if: always() && env.RELEASE_DRY_RUN != 'true'",
     "-X PATCH",
     "--input release-state.json",
@@ -646,13 +640,6 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   )
   require_release_order(
     release_block,
-    "Validate release dry-run evidence",
-    "Upload release dry-run assets",
-    "release dry-run evidence validation must pass before dry-run assets are uploaded",
-    issues,
-  )
-  require_release_order(
-    release_block,
     'gh release download "$RELEASE_TAG"',
     "--asset-dir release-download",
     "release assets must be downloaded before rehearsal validation",
@@ -661,15 +648,8 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
   require_release_order(
     release_block,
     "--asset-dir release-download",
-    "Validate release rehearsal evidence",
-    "release download rehearsal must pass before publish rehearsal evidence validation",
-    issues,
-  )
-  require_release_order(
-    release_block,
-    "Validate release rehearsal evidence",
     "-X PATCH",
-    "publish rehearsal evidence validation must pass before final release state patch",
+    "release download rehearsal must pass before final release state patch",
     issues,
   )
   require_release_order(
@@ -695,7 +675,6 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "--json-output release-rehearsal.json",
     'cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"',
     'cat release-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"',
-    "--mode publish-rehearsal",
     "uses: actions/upload-artifact@v7",
     "release-rehearsal-${{ env.RELEASE_TAG }}",
     "release-plan.md",
@@ -786,58 +765,6 @@ def validate_release_shared_input_contract(
           WorkflowIssue(
             RELEASE_WORKFLOW,
             f"{label} helper must receive shared release input {term}",
-          )
-        )
-
-
-def validate_release_evidence_step_contracts(
-  release_block: str,
-  issues: list[WorkflowIssue],
-) -> None:
-  expected_by_step = (
-    (
-      "Validate release dry-run evidence",
-      "dry-run evidence validation",
-      (
-        "--mode dry-run",
-        '--tag "$RELEASE_TAG"',
-        'artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg',
-        'artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg.sha256',
-        "artifacts/macos/README-FIRST.txt",
-        'artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json',
-        "release-readiness.md",
-        "release-readiness.json",
-        "release-plan.md",
-        "release-plan.json",
-        "release-dry-run-rehearsal.md",
-        "release-dry-run-rehearsal.json",
-        "release-dry-run-manual-acceptance.md",
-      ),
-    ),
-    (
-      "Validate release rehearsal evidence",
-      "publish rehearsal evidence validation",
-      (
-        "--mode publish-rehearsal",
-        '--tag "$RELEASE_TAG"',
-        "release-readiness.md",
-        "release-readiness.json",
-        "release-plan.md",
-        "release-plan.json",
-        "release-rehearsal.md",
-        "release-rehearsal.json",
-        "release-manual-acceptance.md",
-      ),
-    ),
-  )
-  for step_name, label, expected_terms in expected_by_step:
-    step_text = step_text_containing(release_block, step_name)
-    for term in expected_terms:
-      if term not in step_text:
-        issues.append(
-          WorkflowIssue(
-            RELEASE_WORKFLOW,
-            f"{label} step is missing {term}",
           )
         )
 

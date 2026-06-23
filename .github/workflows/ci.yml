@@ -145,9 +145,6 @@ jobs:
       - name: Test release rehearsal contract
         run: python3 scripts/test_release_rehearsal_contract.py
 
-      - name: Test release evidence contract
-        run: python3 scripts/test_release_evidence_contract.py
-
       - name: Test release identity helper
         run: python3 scripts/test_release_identity.py
 

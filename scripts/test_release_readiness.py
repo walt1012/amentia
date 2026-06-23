@@ -54,15 +54,15 @@ def assert_ready_dry_run_report() -> None:
     "## CI Lookup",
     f"--commit {VALID_COMMIT}",
     f'select(.headSha == "{VALID_COMMIT}"',
-    "## Expected Dry-Run Evidence",
+    "## Expected Dry-Run Artifact Contents",
     "Amentia-v0.1.0-macos-x86_64.dmg",
     "release-dry-run-rehearsal.json",
     "gh workflow run release.yml",
     "-f dry_run=true",
     "## Dry-Run Artifact Verification",
-    "python3 scripts/release_evidence_contract.py",
-    "--mode dry-run",
-    "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
+    "python3 scripts/release_rehearsal_contract.py",
+    "--asset-dir release-dry-run-v0.1.0",
+    "--allow-extra-assets",
     "Download the DMG, checksum, install guide, and manifest into one folder",
     "## Post-Acceptance Publish Command",
     "Use only after the generated manual acceptance receipt is filled and validated.",
@@ -108,8 +108,8 @@ def assert_ready_dry_run_report() -> None:
     raise AssertionError("readiness JSON should include the pre-dispatch checklist")
   if "Amentia-v0.1.0-macos-x86_64.dmg" not in payload.get("expectedPublicAssets", []):
     raise AssertionError("readiness JSON should include expected public assets")
-  if "release-dry-run-rehearsal.json" not in payload.get("expectedDryRunEvidence", []):
-    raise AssertionError("readiness JSON should include expected dry-run evidence")
+  if "release-dry-run-rehearsal.json" not in payload.get("expectedDryRunArtifactContents", []):
+    raise AssertionError("readiness JSON should include expected dry-run artifact contents")
   if payload.get("tagCommands") != [
     f"git tag v0.1.0 {VALID_COMMIT}",
     "git push origin v0.1.0",
@@ -153,16 +153,15 @@ def assert_ready_dry_run_report() -> None:
   ):
     if phrase not in download_command:
       raise AssertionError(f"readiness JSON dry-run download should include {phrase}")
-  validation_command = str(payload.get("dryRunEvidenceValidationCommand", ""))
+  validation_command = str(payload.get("dryRunArtifactVerificationCommand", ""))
   for phrase in (
-    "python3 scripts/release_evidence_contract.py",
-    "--mode dry-run",
+    "python3 scripts/release_rehearsal_contract.py",
     "--tag v0.1.0",
-    "release-dry-run-v0.1.0/Amentia-v0.1.0-macos-x86_64.dmg",
-    "release-dry-run-v0.1.0/release-dry-run-manual-acceptance.md",
+    "--asset-dir release-dry-run-v0.1.0",
+    "--allow-extra-assets",
   ):
     if phrase not in validation_command:
-      raise AssertionError(f"readiness JSON dry-run validation should include {phrase}")
+      raise AssertionError(f"readiness JSON dry-run artifact verification should include {phrase}")
   publish_command = str(payload.get("postAcceptancePublishCommand", ""))
   for phrase in (
     "gh workflow run release.yml",
@@ -364,7 +363,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     "manual dry-run",
     "dry-run artifact lookup command",
     "release-dry-run-v0.1.0",
-    "dry-run evidence validation command",
+    "dry-run artifact verification command",
     "fresh-Mac manual acceptance",
     "validate the receipt",
     "post-acceptance publish command",

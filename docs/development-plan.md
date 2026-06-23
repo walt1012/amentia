@@ -21,7 +21,7 @@ Amentia is a small, strong, local-first macOS cowork agent for real daily work.
 
 Amentia learns from Codex and Claude Code at durable boundaries: workspace context,
 bounded tools, Web Search, approvals, sandbox visibility, session continuity,
-reviewable evidence, and MCP-style local connections.
+reviewable receipts, and MCP-style local connections.
 
 Amentia also learns from Hermes Agent, but only where it supports the local macOS
 cowork goal:
@@ -68,7 +68,7 @@ The daily loop is:
   connector metadata, and bundle lifecycle.
 
 Memory owns meaning and ranking. Storage owns durable records. Connector
-evidence stays generic at protocol and timeline layers; service-specific detail
+receipts stay generic at protocol and timeline layers; service-specific detail
 belongs in connector attributes and narrow presenter adapters. Refactor only
 when ownership, contracts, or user-facing clarity improve; do not split or merge
 files cosmetically.
@@ -104,8 +104,8 @@ Implemented foundations:
 Current transition gates:
 
 - Maintainer-installed app verification has accepted the model deployment and
-  reference connector paths. Do not keep milestone-specific proof machinery
-  after the milestone closes.
+  reference connector paths. Milestone-specific proof machinery stays out of the
+  active path after the milestone closes.
 - Architecture cleanup is now the first gate before M15 feature growth. Remove
   stale code, collapse duplicated contracts, and split or merge only when
   ownership becomes clearer.
@@ -136,8 +136,8 @@ Current constraints:
 
 Goal: ship a usable macOS installer from GitHub Releases.
 
-Status: packaging baseline complete; each visible public tag still needs fresh
-release acceptance evidence.
+Status: packaging baseline complete; each visible public tag still needs a
+fresh release acceptance receipt.
 
 Completed:
 
@@ -147,7 +147,7 @@ Completed:
   verification, and package metadata stay in `README-FIRST.txt` and the release
   manifest.
 
-Required evidence:
+Release acceptance:
 
 - A fresh unsigned install completes the daily cowork loop without hosted model
   dependency or manual model import.
@@ -288,8 +288,9 @@ Goal: make Amentia better over time without turning it into a remote server agen
 Immediate work:
 
 - Finish a structural cleanup pass after the rename and M14 proof work: remove
-  stale code, shared-script duplication, dead release scaffolding, and confusing
-  product surfaces without cosmetic file churn.
+  stale code, shared-script duplication, and confusing product surfaces without
+  cosmetic file churn. Keep release gates focused on public assets, downloaded
+  rehearsal, and manual acceptance.
 - Add a local follow-up queue for user-approved next actions.
 - Add cross-session recall through bounded memory and session search before any
   local document RAG.

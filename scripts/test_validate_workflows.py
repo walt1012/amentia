@@ -76,8 +76,6 @@ jobs:
         run: python3 scripts/test_release_publish_contract.py
       - name: Test release rehearsal contract
         run: python3 scripts/test_release_rehearsal_contract.py
-      - name: Test release evidence contract
-        run: python3 scripts/test_release_evidence_contract.py
       - name: Test installer artifact contract
         run: python3 scripts/test_installer_artifact_contract.py
       - name: Test manual acceptance contract
@@ -428,23 +426,6 @@ jobs:
             --json-output release-dry-run-rehearsal.json
           cat release-dry-run-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
           cat release-dry-run-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
-      - name: Validate release dry-run evidence
-        if: env.RELEASE_DRY_RUN == 'true'
-        run: |
-          python3 scripts/release_evidence_contract.py \\
-            --mode dry-run \\
-            --tag "$RELEASE_TAG" \\
-            --evidence "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg" \\
-            --evidence "artifacts/macos/Amentia-$RELEASE_TAG-macos-x86_64.dmg.sha256" \\
-            --evidence artifacts/macos/README-FIRST.txt \\
-            --evidence "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json" \\
-            --evidence release-readiness.md \\
-            --evidence release-readiness.json \\
-            --evidence release-plan.md \\
-            --evidence release-plan.json \\
-            --evidence release-dry-run-rehearsal.md \\
-            --evidence release-dry-run-rehearsal.json \\
-            --evidence release-dry-run-manual-acceptance.md
       - name: Upload release dry-run assets
         if: env.RELEASE_DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -489,19 +470,6 @@ jobs:
             --json-output release-rehearsal.json
           cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"
           cat release-manual-acceptance.md >> "$GITHUB_STEP_SUMMARY"
-      - name: Validate release rehearsal evidence
-        if: env.RELEASE_DRY_RUN != 'true'
-        run: |
-          python3 scripts/release_evidence_contract.py \\
-            --mode publish-rehearsal \\
-            --tag "$RELEASE_TAG" \\
-            --evidence release-readiness.md \\
-            --evidence release-readiness.json \\
-            --evidence release-plan.md \\
-            --evidence release-plan.json \\
-            --evidence release-rehearsal.md \\
-            --evidence release-rehearsal.json \\
-            --evidence release-manual-acceptance.md
       - name: Apply final GitHub Release visibility
         if: env.RELEASE_DRY_RUN != 'true'
         run: |
@@ -693,18 +661,6 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_release_rehearsal_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - name: Test release evidence contract\n"
-        "        run: python3 scripts/test_release_evidence_contract.py\n",
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "test_release_evidence_contract.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -1118,62 +1074,6 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        "      - name: Validate release dry-run evidence",
-        "      - name: Missing release dry-run evidence",
-        1,
-      ),
-    )
-    assert_issue(issue_messages(root), "release workflow stage boundary")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "--evidence release-plan.md",
-        "--missing-release-plan-md",
-        1,
-      ),
-    )
-    assert_issue(issue_messages(root), "dry-run evidence validation step")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "--evidence release-manual-acceptance.md",
-        "--missing-release-manual-acceptance-md",
-        1,
-      ),
-    )
-    assert_issue(issue_messages(root), "publish rehearsal evidence validation step")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "      - name: Upload release dry-run assets",
-        "      - name: Upload release dry-run assets moved",
-        1,
-      ).replace(
-        "      - name: Validate release dry-run evidence",
-        "      - name: Upload release dry-run assets",
-        1,
-      ).replace(
-        "      - name: Upload release dry-run assets moved",
-        "      - name: Validate release dry-run evidence",
-        1,
-      ),
-    )
-    assert_issue(issue_messages(root), "dry-run evidence validation")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
         "scripts/release_publish_contract.py",
         "scripts/missing_release_publish_contract.py",
       ),
@@ -1202,7 +1102,7 @@ def main() -> int:
         1,
       ),
     )
-    assert_issue(issue_messages(root), "publish rehearsal evidence validation")
+    assert_issue(issue_messages(root), "release download rehearsal")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -1351,18 +1251,6 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "manual-acceptance-evidence")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "      - name: Validate release rehearsal evidence",
-        "      - name: Missing release rehearsal evidence",
-        1,
-      ),
-    )
-    assert_issue(issue_messages(root), "final release state patch")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
