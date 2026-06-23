@@ -197,6 +197,8 @@ Completed baseline:
 - Keep timeline and inspector evidence product-first: domain presenters own copy
   and proof for runtime, model, session, plugin, connection, and action
   surfaces; paths and protocol fields stay secondary.
+- Keep model manager details product-first: default summaries describe context and
+  response limits, while runner, path, and package details stay diagnostic.
 - Keep support diagnostics available without letting them dominate the default
   inspector path.
 - Treat Amentia as a fresh app identity: app-owned data lives under `Amentia`,
@@ -289,7 +291,7 @@ Immediate next work:
 
 1. Prove fresh installed-app model deployment end to end from the DMG.
 2. Capture the Notion reference connector proof in the evidence file above.
-3. Run one product clarity pass on model, session, plugin, and settings surfaces.
+3. Continue the product clarity pass on session, plugin, and settings surfaces.
 4. Close M14 only after the installed-app and connector proofs are green.
 
 ## M15: Cowork Continuity

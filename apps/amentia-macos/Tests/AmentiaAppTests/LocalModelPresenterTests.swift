@@ -152,6 +152,42 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(summary.contains("Q4_K_M"))
   }
 
+  func testModelMetricsSummaryAvoidsBackendTerminology() {
+    let selectedModel = model(
+      id: "lfm2.5-350m",
+      displayName: "LFM2.5-350M Q4_K_M",
+      downloaded: true,
+      active: true
+    )
+    let snapshot = statusSnapshot(
+      selectedModel: selectedModel,
+      modelHealth: ModelHealthSummary(
+        packID: selectedModel.id,
+        displayName: selectedModel.displayName,
+        backend: "llama.cpp",
+        status: "ready",
+        detail: "Ready",
+        source: "local",
+        binaryPath: "/Applications/Amentia.app/Contents/Resources/llama-cli",
+        modelPath: selectedModel.installPath,
+        manifestPath: "/tmp/model-pack.json",
+        metrics: [
+          "contextSize": "4096",
+          "modelContextSize": "32768",
+          "maxOutputTokens": "160",
+          "backend": "llama.cpp",
+        ]
+      ),
+      hasActiveCatalogModel: true
+    )
+    let summary = LocalModelStatusPresenter.metricsSummary(snapshot)
+
+    XCTAssertEqual(summary, "Context: 4096 active / 32768 limit. Response limit: 160 tokens.")
+    XCTAssertFalse(summary.contains("Backend"))
+    XCTAssertFalse(summary.contains("llama"))
+    XCTAssertFalse(summary.contains("/Applications"))
+  }
+
   func testFirstUseModelChoiceSummariesExplainCuratedFit() {
     let defaultModel = model(
       id: "lfm2.5-350m",
@@ -400,19 +436,21 @@ final class LocalModelPresenterTests: XCTestCase {
 
   private func statusSnapshot(
     selectedModel: LocalModelSummary,
+    modelHealth: ModelHealthSummary? = nil,
     modelDownloadID: String? = nil,
     pausedModelDownloadID: String? = nil,
-    progress: ModelDownloadProgress? = nil
+    progress: ModelDownloadProgress? = nil,
+    hasActiveCatalogModel: Bool = false
   ) -> LocalModelStatusSnapshot {
     LocalModelStatusSnapshot(
       runtimeState: .ready,
-      modelHealth: nil,
+      modelHealth: modelHealth,
       modelDownloadID: modelDownloadID,
       pausedModelDownloadID: pausedModelDownloadID,
       modelDownloadProgress: progress,
       selectedSetupModelID: selectedModel.id,
       selectedSetupModel: selectedModel,
-      hasActiveCatalogModel: false
+      hasActiveCatalogModel: hasActiveCatalogModel
     )
   }
 
