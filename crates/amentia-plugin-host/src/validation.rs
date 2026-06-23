@@ -131,10 +131,7 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   if validation_error.contains("plugin prompt pack capability")
     && validation_error.contains("matching capability")
   {
-    let skill_capability = validation_error
-      .split('`')
-      .nth(3)
-      .unwrap_or("skill:<id>");
+    let skill_capability = validation_error.split('`').nth(3).unwrap_or("skill:<id>");
     return format!(
       "Add the matching capability `{skill_capability}` shown in the error, or remove the legacy prompt_pack alias."
     );
