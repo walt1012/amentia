@@ -240,7 +240,8 @@ Completed baseline:
   narrow presenters.
 - Skills are bounded, read-only context packs with query selection, strict
   budgets, explicit `skill:<id>` capabilities, reviewable receipts, and a plugin
-  disable path for revocation.
+  disable path for revocation. Legacy `prompt_pack:<id>` entries may remain only
+  as compatibility aliases for declared skills.
 - Checks are verification surfaces with product-facing trigger copy and the same
   plugin disable path, not arbitrary always-on automation.
 - Plugin manager surfaces expose capability meaning progressively. Source paths,

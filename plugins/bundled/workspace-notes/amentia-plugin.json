@@ -9,7 +9,15 @@
   "capabilities": [
     "command:workspace.capture-note",
     "prompt_pack:workspace.notes",
+    "skill:workspace.notes",
     "settings:workspace.preferences"
+  ],
+  "skills": [
+    {
+      "id": "workspace.notes",
+      "description": "Guidance for capturing concise reusable workspace notes and preferences.",
+      "path": "skills/workspace-notes.md"
+    }
   ],
   "permissions": [
     "file.read",

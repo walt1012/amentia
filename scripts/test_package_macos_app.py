@@ -440,6 +440,27 @@ def main() -> int:
       skill_manifest,
       {"skill:notion.workspace"},
     )
+    assert_raises(
+      lambda: assert_bundled_plugin_skill_files(
+        plugin_root,
+        {
+          "skills": [
+            {
+              "id": "other.workspace",
+              "description": "Other guidance.",
+              "path": "skills/notion-workspace.md",
+            }
+          ],
+        },
+        {"prompt_pack:notion.workspace", "skill:other.workspace"},
+      ),
+      "prompt_pack compatibility should point at an explicit skill",
+    )
+    assert_bundled_plugin_skill_files(
+      plugin_root,
+      skill_manifest,
+      {"prompt_pack:notion.workspace", "skill:notion.workspace"},
+    )
 
   with tempfile.TemporaryDirectory(prefix="amentia-package-copy-") as root:
     root_path = Path(root)

@@ -9,7 +9,15 @@
   "capabilities": [
     "command:review.inspect-diff",
     "prompt_pack:review.prompts",
+    "skill:review.prompts",
     "tool:diff.summaries"
+  ],
+  "skills": [
+    {
+      "id": "review.prompts",
+      "description": "Guidance for review-first inspection of local code changes.",
+      "path": "skills/review-prompts.md"
+    }
   ],
   "permissions": [
     "file.read",

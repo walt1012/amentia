@@ -132,10 +132,16 @@ REQUIRED_BUNDLED_PLUGIN_CAPABILITIES = {
     "mcp_server:notion",
     "skill:notion.workspace",
   },
-  "review-assistant": {"command:review.inspect-diff"},
+  "review-assistant": {
+    "command:review.inspect-diff",
+    "skill:review.prompts",
+  },
   "shell-recorder": {"command:shell.summarize-session", "hook:shell.recorder"},
   "web-search": {"tool:web_search"},
-  "workspace-notes": {"command:workspace.capture-note"},
+  "workspace-notes": {
+    "command:workspace.capture-note",
+    "skill:workspace.notes",
+  },
 }
 REQUIRED_APP_COPY_SNIPPETS = (
   f"Start {APP_NAME} to restore model choices",
@@ -1272,6 +1278,14 @@ def assert_bundled_plugin_skill_files(
     skill_id = capability.removeprefix("skill:")
     if skill_id not in declared_skill_ids:
       raise RuntimeError(f"Bundled plugin is missing skill declaration: {capability}")
+  for capability in capabilities:
+    if not capability.startswith("prompt_pack:"):
+      continue
+    skill_id = capability.removeprefix("prompt_pack:")
+    if f"skill:{skill_id}" not in capabilities or skill_id not in declared_skill_ids:
+      raise RuntimeError(
+        f"Bundled plugin prompt_pack compatibility must map to a skill: {capability}"
+      )
 
 
 def assert_bundled_plugin_mcp_server_files(

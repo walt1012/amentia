@@ -102,6 +102,14 @@ def validate_skill_capabilities(
       skill_id in declared_skill_ids,
       f"{plugin_root.name} skill capability {capability} has no skill entry",
     )
+  for capability in capabilities:
+    if not capability.startswith("prompt_pack:"):
+      continue
+    skill_id = capability.removeprefix("prompt_pack:")
+    require(
+      f"skill:{skill_id}" in capabilities and skill_id in declared_skill_ids,
+      f"{plugin_root.name} prompt_pack compatibility {capability} has no skill entry",
+    )
 
 
 def envelope_field_kinds(envelope: object) -> dict[str, str]:
