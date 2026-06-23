@@ -31,7 +31,7 @@ from release_artifacts import release_trust
 from release_artifacts import validate_packaged_smoke_receipt_summary
 from release_copy_contract import (
   FIRST_APP_OPEN_ACTION_COPY,
-  PACKAGED_FIRST_RUN_PROOF_PHRASE,
+  PACKAGED_FIRST_RUN_RECEIPT_PHRASE,
 )
 
 
@@ -50,9 +50,9 @@ MANUAL_PRERELEASE_CHECKS = (
   f"Download and activate one verified local model; {DEFAULT_MODEL_ID} is the default choice.",
   "Open a real project folder and confirm the header or inspector reports project readiness.",
   "Run Understand Project, Pick Next Step, or a short cowork prompt from the first app-open surface.",
-  "Let the model use Web Search when useful and inspect the source proof in the timeline.",
+  "Let the model use Web Search when useful and inspect the source receipt in the timeline.",
   "Approve one safe local project change only after reviewing the diff, then confirm the timeline receipt.",
-  f"Restart {APP_NAME} and confirm {APP_NAME} status, selected project, model state, and recent proof recover.",
+  f"Restart {APP_NAME} and confirm {APP_NAME} status, selected project, model state, and recent receipts recover.",
 )
 RELEASE_DECISION = {
   "automatedRehearsal": "passed",
@@ -191,7 +191,7 @@ def release_rehearsal_summary(manifest: dict, *, tag: str) -> dict:
     "firstAppOpenChecks": list(FIRST_APP_OPEN_CHECKS),
     "manualPrereleaseChecks": list(MANUAL_PRERELEASE_CHECKS),
     "packagedSmokeReceipt": {
-      "phrase": PACKAGED_FIRST_RUN_PROOF_PHRASE,
+      "phrase": PACKAGED_FIRST_RUN_RECEIPT_PHRASE,
       "proofScope": smoke_receipt["proofScope"],
       "checkCount": len(smoke_receipt["checkIds"]),
       "journey": list(smoke_receipt["journey"]),
@@ -252,10 +252,10 @@ Decision:
 - Gatekeeper path used.
 - Model selected and activated.
 - Workspace path used for acceptance.
-- Web Search proof inspected.
+- Web Search receipt inspected.
 - Approval and diff receipt inspected.
 - Restart recovery result.
-- Generate one structured manual acceptance JSON receipt with `python3 scripts/manual_acceptance_contract.py --tag {summary["tag"]} --asset-dir <downloaded-assets> --template-output manual-acceptance.json`, fill it from the same installed-app run, then validate it with `python3 scripts/manual_acceptance_contract.py --tag {summary["tag"]} --evidence manual-acceptance.json`.
+- Generate one structured manual acceptance JSON receipt with `python3 scripts/manual_acceptance_contract.py --tag {summary["tag"]} --asset-dir <downloaded-assets> --template-output manual-acceptance.json`, fill it from the same installed-app run, then validate it with `python3 scripts/manual_acceptance_contract.py --tag {summary["tag"]} --receipt manual-acceptance.json`.
 """
 
 
@@ -294,9 +294,9 @@ Result: `{summary["result"]}`
 - App package source: `{summary["appPackage"]["sourceCommit"]}`
 - App package model delivery: `{summary["appPackage"]["modelDelivery"]}`
 - First app-open contract: `{summary["appPackage"]["firstAppOpenActionContract"]}`
-- Packaged proof: `{summary["packagedSmokeReceipt"]["phrase"]}`
-- Proof scope: `{summary["packagedSmokeReceipt"]["proofScope"]}`
-- Proof checks: `{summary["packagedSmokeReceipt"]["checkCount"]}`
+- Packaged receipt: `{summary["packagedSmokeReceipt"]["phrase"]}`
+- Receipt scope: `{summary["packagedSmokeReceipt"]["proofScope"]}`
+- Receipt checks: `{summary["packagedSmokeReceipt"]["checkCount"]}`
 - Smoke package metadata: `matches app package metadata`
 
 ## Packaged Smoke Journey

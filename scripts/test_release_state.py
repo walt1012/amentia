@@ -76,7 +76,7 @@ def assert_rejects_visible_ad_hoc_without_manual_acceptance() -> None:
       dry_run=False,
       allow_untrusted_ad_hoc=True,
       manual_acceptance_confirmed=False,
-      manual_acceptance_evidence="",
+      manual_acceptance_receipt_url="",
       state=ReleaseState(draft=False, prerelease=True),
     )
   except ValueError:
@@ -91,7 +91,7 @@ def assert_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
       dry_run=False,
       allow_untrusted_ad_hoc=True,
       manual_acceptance_confirmed=True,
-      manual_acceptance_evidence="",
+      manual_acceptance_receipt_url="",
       state=ReleaseState(draft=False, prerelease=True),
     )
   except ValueError:
@@ -114,7 +114,7 @@ def assert_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
         dry_run=False,
         allow_untrusted_ad_hoc=True,
         manual_acceptance_confirmed=True,
-        manual_acceptance_evidence=evidence,
+        manual_acceptance_receipt_url=evidence,
         state=ReleaseState(draft=False, prerelease=True),
       )
     except ValueError:
@@ -134,7 +134,7 @@ def assert_manual_acceptance_gate_allows_safe_modes() -> None:
       dry_run=dry_run,
       allow_untrusted_ad_hoc=True,
       manual_acceptance_confirmed=confirmed,
-      manual_acceptance_evidence=evidence,
+      manual_acceptance_receipt_url=evidence,
       state=ReleaseState(draft=draft, prerelease=signing_mode != "developer-id"),
     )
 
@@ -276,7 +276,7 @@ def assert_release_summary_names_visibility_and_trust() -> None:
     requested_prerelease=False,
     allow_untrusted_ad_hoc=True,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="not recorded",
+    manual_acceptance_receipt_url="not recorded",
     release_exists=False,
     existing_draft=None,
     state=plan_release_state(
@@ -330,7 +330,7 @@ def assert_release_plan_json_preserves_release_decision() -> None:
     requested_prerelease=False,
     allow_untrusted_ad_hoc=True,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="",
+    manual_acceptance_receipt_url="",
     release_exists=False,
     existing_draft=None,
     state=state,
@@ -364,7 +364,7 @@ def assert_release_body_records_visible_ad_hoc_receipt() -> None:
     notes,
     signing_mode="ad-hoc",
     allow_untrusted_ad_hoc=True,
-    manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+    manual_acceptance_receipt_url=ACCEPTANCE_RECEIPT,
     state=ReleaseState(draft=False, prerelease=True),
   )
   if "## Manual Acceptance" not in body:
@@ -375,7 +375,7 @@ def assert_release_body_records_visible_ad_hoc_receipt() -> None:
     notes,
     signing_mode="ad-hoc",
     allow_untrusted_ad_hoc=True,
-    manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+    manual_acceptance_receipt_url=ACCEPTANCE_RECEIPT,
     state=ReleaseState(draft=True, prerelease=True),
   )
   if "## Manual Acceptance" in draft_body:
@@ -414,7 +414,7 @@ def assert_main_writes_release_summary() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "false",
-        "--manual-acceptance-evidence",
+        "--manual-acceptance-receipt-url",
         "",
         "--release-exists",
         "false",
@@ -499,7 +499,7 @@ def assert_main_rejects_unaccepted_visible_ad_hoc_publish() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "false",
-        "--manual-acceptance-evidence",
+        "--manual-acceptance-receipt-url",
         "",
         "--release-exists",
         "false",
@@ -548,7 +548,7 @@ def assert_main_rejects_visible_ad_hoc_without_acceptance_evidence() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "true",
-        "--manual-acceptance-evidence",
+        "--manual-acceptance-receipt-url",
         "",
         "--release-exists",
         "false",
@@ -597,7 +597,7 @@ def assert_main_rejects_visible_ad_hoc_with_placeholder_evidence() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "true",
-        "--manual-acceptance-evidence",
+        "--manual-acceptance-receipt-url",
         "<manual-acceptance-receipt-url>",
         "--release-exists",
         "false",
@@ -646,7 +646,7 @@ def assert_main_allows_accepted_visible_ad_hoc_publish() -> None:
         "true",
         "--manual-acceptance-confirmed",
         "true",
-        "--manual-acceptance-evidence",
+        "--manual-acceptance-receipt-url",
         ACCEPTANCE_RECEIPT,
         "--release-exists",
         "false",

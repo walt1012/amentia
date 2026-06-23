@@ -20,8 +20,8 @@ from release_artifacts import release_installer_asset_names
 from release_copy_contract import (
   FIRST_APP_OPEN_INSTALL_STEP,
   INSTALL_GUIDE_REQUIRED_PHRASES,
-  PACKAGED_FIRST_RUN_PROOF_PHRASE,
-  PACKAGED_FIRST_RUN_PROOF_SCOPE,
+  PACKAGED_FIRST_RUN_RECEIPT_PHRASE,
+  PACKAGED_FIRST_RUN_RECEIPT_SCOPE,
   RELEASE_NOTES_REQUIRED_PHRASES,
   require_release_copy,
   require_release_notes_copy,
@@ -69,7 +69,7 @@ def first_run_path_copy() -> str:
     "First-run path: download the default verified local model "
     f"({DEFAULT_MODEL_ID}), open a project folder, check Web Search and "
     f"project safety, {first_app_open_action_clause()}, approve a safe local "
-    "change only after reviewing it, then inspect the proof shown in the timeline."
+    "change only after reviewing it, then inspect the timeline receipt."
   )
 
 
@@ -80,7 +80,7 @@ def checksum_verification_copy(tag: str) -> str:
     f"then verify the installer before first launch with `shasum -a 256 -c {checksum_name}` "
     f"from that folder. Open {manifest_name} to confirm platform, signing mode, model delivery mode, "
     "app package metadata, smoke package metadata, first-run contract, and "
-    f"{PACKAGED_FIRST_RUN_PROOF_PHRASE}."
+    f"{PACKAGED_FIRST_RUN_RECEIPT_PHRASE}."
   )
 
 
@@ -176,7 +176,7 @@ def install_guide(tag: str, signing_mode: str) -> str:
   local_execution = local_execution_copy()
   first_run_path = first_run_path_copy()
   verification = checksum_verification_copy(tag)
-  first_run_proof = first_run_proof_copy()
+  first_run_receipt = first_run_receipt_copy()
   return f"""{APP_NAME} {tag}
 
 Install
@@ -186,7 +186,7 @@ Install
 4. Open a project folder.
 5. Check that Web Search and project safety are ready.
 6. {FIRST_APP_OPEN_INSTALL_STEP}
-7. Approve a safe local change only after reviewing it, then inspect the proof in the timeline.
+7. Approve a safe local change only after reviewing it, then inspect the timeline receipt.
 8. Follow the next action shown by {APP_NAME}; it comes from {APP_NAME} status, not a static setup checklist.
 
 Trust
@@ -205,7 +205,7 @@ Notes
 - Downloaded models and {APP_NAME} sessions stay in local app data. Use Settings > Storage to reveal data or Reset {APP_NAME} without deleting project folders.
 - The SHA-256 `.sha256` file next to the DMG lets users verify the downloaded installer.
 - The release manifest lists the DMG checksum, sidecar hashes, platform target, source commit, signing mode, model delivery mode, app package metadata, smoke package metadata, and first-run contract.
-- {first_run_proof}
+- {first_run_receipt}
 - The release manifest records the {size_budget} that CI enforces before upload.
 - {APP_NAME} reports sandbox status in app; native sandbox is used when available, otherwise process-only fallback keeps bounded execution visible.
 - Only one local model runs at a time.
@@ -213,10 +213,10 @@ Notes
 """
 
 
-def first_run_proof_copy() -> str:
+def first_run_receipt_copy() -> str:
   return (
-    f"The release manifest includes a {PACKAGED_FIRST_RUN_PROOF_PHRASE} "
-    f"proving the mounted-DMG path reached {PACKAGED_FIRST_RUN_PROOF_SCOPE}."
+    f"The release manifest includes a {PACKAGED_FIRST_RUN_RECEIPT_PHRASE} "
+    f"showing the mounted-DMG path reached {PACKAGED_FIRST_RUN_RECEIPT_SCOPE}."
   )
 
 

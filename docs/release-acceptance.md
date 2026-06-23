@@ -33,7 +33,7 @@ running the app from the downloaded DMG.
 - Download and activate the default local model.
 - Open a workspace.
 - Complete one cowork turn.
-- Inspect Web Search proof.
+- Inspect the Web Search receipt.
 - Approve one safe local action after reviewing the diff receipt.
 - Restart Amentia and confirm recovery.
 - Delete a test session and revert one approved session change.
@@ -46,12 +46,12 @@ running the app from the downloaded DMG.
 ```bash
 python3 scripts/manual_acceptance_contract.py \
   --tag <tag> \
-  --evidence manual-acceptance.json
+  --receipt manual-acceptance.json
 ```
 
 Publish the validated manual acceptance JSON in a repository-scoped HTTPS
 location, such as a GitHub issue created from the release acceptance template.
-Use that exact URL as `manual_acceptance_evidence`.
+Use that exact URL as `manual_acceptance_receipt_url`.
 
 ## Publish Visible Ad-Hoc Prerelease
 
@@ -62,7 +62,7 @@ Run the `Release` workflow manually:
 - `prerelease`: `true`
 - `publish_untrusted_ad_hoc`: `true`
 - `manual_acceptance_confirmed`: `true`
-- `manual_acceptance_evidence`: repository URL for the validated receipt
+- `manual_acceptance_receipt_url`: repository URL for the validated receipt
 - `dry_run`: `false`
 
 If acceptance fails, keep the release draft-only, fix `main`, and cut a new tag.

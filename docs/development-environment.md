@@ -128,7 +128,7 @@ available.
 Internal CI artifacts prove the package shape, but they are not public release
 installers.
 
-The packaged launch smoke is the release-candidate daily-driver proof. It
+The packaged launch smoke is the release-candidate daily-driver receipt. It
 launches the app with isolated support state, probes the bundled runtime,
 verifies first-use model metadata without model weights, opens a workspace,
 creates a thread, sends a deterministic cowork request through the packaged
@@ -166,7 +166,7 @@ modes:
   while manual dry-runs can rehearse assets without mutating that draft. A
   manual run can publish a visible untrusted prerelease when
   `publish_untrusted_ad_hoc=true`, `manual_acceptance_confirmed=true`, and
-  `draft=false` are all set, and `manual_acceptance_evidence` points to the
+  `draft=false` are all set, and `manual_acceptance_receipt_url` points to the
   validated manual acceptance receipt URL. That release must remain marked as a
   prerelease and must explain that macOS Gatekeeper will require manual user
   approval before first launch.
@@ -201,7 +201,7 @@ draft release and refuse to update an already-public release unless
 `publish_untrusted_ad_hoc=true` is set explicitly. A visible ad-hoc prerelease
 also requires `manual_acceptance_confirmed=true`, which means the generated
 manual acceptance receipt was filled and validated after a fresh-Mac run, plus
-`manual_acceptance_evidence` so the release plan records where that receipt
+`manual_acceptance_receipt_url` so the release plan records where that receipt
 lives.
 With that maintainer intent, it may publish an untrusted ad-hoc prerelease for
 users who accept the Gatekeeper warning path. The workflow also refuses to move

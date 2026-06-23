@@ -16,7 +16,7 @@ from release_identity import validate_public_release_tag
 from package_contract import RELEASE_SIGNING_MODES
 from release_state import expected_release_title
 from release_state import parse_bool
-from release_state import validate_manual_acceptance_evidence as validate_manual_acceptance_receipt_url
+from release_state import validate_manual_acceptance_receipt_url
 from release_text import validate_release_notes
 
 
@@ -30,7 +30,7 @@ def validate_published_release(
   expected_prerelease: bool,
   signing_mode: str,
   allow_untrusted_ad_hoc: bool,
-  manual_acceptance_evidence: str = "",
+  manual_acceptance_receipt_url: str = "",
 ) -> None:
   validate_public_release_tag(tag)
   validate_source_commit(source_commit)
@@ -47,7 +47,7 @@ def validate_published_release(
     signing_mode=signing_mode,
     allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
     draft=expected_draft,
-    manual_acceptance_evidence=manual_acceptance_evidence,
+    manual_acceptance_receipt_url=manual_acceptance_receipt_url,
   )
   validate_release_assets(release, tag, draft=expected_draft)
 
@@ -87,7 +87,7 @@ def validate_release_body(
   signing_mode: str,
   allow_untrusted_ad_hoc: bool,
   draft: bool,
-  manual_acceptance_evidence: str = "",
+  manual_acceptance_receipt_url: str = "",
 ) -> None:
   body = release.get("body")
   if not isinstance(body, str) or not body.strip():
@@ -100,15 +100,15 @@ def validate_release_body(
     draft=draft,
   )
   if signing_mode != "developer-id" and allow_untrusted_ad_hoc and not draft:
-    if not manual_acceptance_evidence.strip():
+    if not manual_acceptance_receipt_url.strip():
       raise RuntimeError(
         "Published visible ad-hoc release must include the manual acceptance receipt URL"
       )
-    validate_manual_acceptance_receipt_url(manual_acceptance_evidence)
+    validate_manual_acceptance_receipt_url(manual_acceptance_receipt_url)
     required_terms = (
       "## Manual Acceptance",
       "Visible ad-hoc prerelease acceptance receipt:",
-      manual_acceptance_evidence.strip(),
+      manual_acceptance_receipt_url.strip(),
     )
     missing = [term for term in required_terms if term not in body]
     if missing:
@@ -220,7 +220,7 @@ def main() -> int:
   parser.add_argument("--expected-prerelease")
   parser.add_argument("--signing-mode", choices=sorted(RELEASE_SIGNING_MODES))
   parser.add_argument("--allow-untrusted-ad-hoc")
-  parser.add_argument("--manual-acceptance-evidence", default="")
+  parser.add_argument("--manual-acceptance-receipt-url", default="")
   args = parser.parse_args()
 
   try:
@@ -250,7 +250,7 @@ def main() -> int:
       expected_prerelease=parse_bool(args.expected_prerelease),
       signing_mode=args.signing_mode,
       allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
-      manual_acceptance_evidence=args.manual_acceptance_evidence,
+      manual_acceptance_receipt_url=args.manual_acceptance_receipt_url,
     )
   except Exception as error:
     print(f"published release contract failed: {error}", file=sys.stderr)

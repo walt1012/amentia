@@ -264,7 +264,7 @@ on:
         description: "Confirm the validated manual acceptance receipt passed on a fresh Mac before visible ad-hoc publishing."
         default: false
         type: boolean
-      manual_acceptance_evidence:
+      manual_acceptance_receipt_url:
         description: "HTTPS URL for the validated manual acceptance receipt required before visible ad-hoc publishing."
         default: ""
         type: string
@@ -289,7 +289,7 @@ env:
   RELEASE_PRERELEASE: ${{ github.event_name != 'workflow_dispatch' || inputs.prerelease }}
   RELEASE_ALLOW_UNTRUSTED_AD_HOC: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_untrusted_ad_hoc || false }}
   RELEASE_MANUAL_ACCEPTANCE_CONFIRMED: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_confirmed || false }}
-  RELEASE_MANUAL_ACCEPTANCE_EVIDENCE: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_evidence || '' }}
+  RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.manual_acceptance_receipt_url || '' }}
   RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
 
 jobs:
@@ -323,7 +323,7 @@ jobs:
             --requested-prerelease "$RELEASE_PRERELEASE" \
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \
             --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED" \
-            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
+            --manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"
           cat release-readiness.md >> "$GITHUB_STEP_SUMMARY"
       - name: Audit remote model catalog metadata
         run: python3 scripts/validate_model_pack.py --remote
@@ -403,7 +403,7 @@ jobs:
           --workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           --dry-run "$RELEASE_DRY_RUN"
           --manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"
-          --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
+          --manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"
           cat release-state.env >> "$GITHUB_ENV"
           cat release-plan.md >> "$GITHUB_STEP_SUMMARY"
           gh release view "$RELEASE_TAG" --json databaseId,isDraft,tagName,name,assets > release-existing.json
@@ -493,7 +493,7 @@ jobs:
             --expected-prerelease "$AMENTIA_RELEASE_STATE_PRERELEASE" \\
             --signing-mode "$AMENTIA_RELEASE_SIGNING_MODE" \\
             --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC" \\
-            --manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"
+            --manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"
       - name: Upload release rehearsal summary
         if: always() && env.RELEASE_DRY_RUN != 'true'
         uses: actions/upload-artifact@v7
@@ -880,7 +880,7 @@ def main() -> int:
         "Acceptance artifact, issue, or notes URL",
       ),
     )
-    assert_issue(issue_messages(root), "manual_acceptance_evidence must include HTTPS URL")
+    assert_issue(issue_messages(root), "manual_acceptance_receipt_url must include HTTPS URL")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
@@ -1232,11 +1232,11 @@ def main() -> int:
     write_workflows(
       root,
       release=VALID_RELEASE.replace(
-        '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
-        "--missing-manual-acceptance-evidence",
+        '--manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"',
+        "--missing-manual-acceptance-receipt-url",
       ),
     )
-    assert_issue(issue_messages(root), "manual-acceptance-evidence")
+    assert_issue(issue_messages(root), "manual-acceptance-receipt-url")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)

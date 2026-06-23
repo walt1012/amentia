@@ -380,7 +380,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "cancel-in-progress: false",
     "publish_untrusted_ad_hoc:",
     "manual_acceptance_confirmed:",
-    "manual_acceptance_evidence:",
+    "manual_acceptance_receipt_url:",
     "dry_run:",
     "RELEASE_DRAFT:",
     "RELEASE_DRAFT: ${{ github.event_name != 'workflow_dispatch' || inputs.draft }}",
@@ -388,7 +388,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     "RELEASE_PRERELEASE: ${{ github.event_name != 'workflow_dispatch' || inputs.prerelease }}",
     "RELEASE_ALLOW_UNTRUSTED_AD_HOC:",
     "RELEASE_MANUAL_ACCEPTANCE_CONFIRMED:",
-    "RELEASE_MANUAL_ACCEPTANCE_EVIDENCE:",
+    "RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL:",
     "RELEASE_DRY_RUN:",
     "RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}",
   ):
@@ -466,7 +466,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
     '--dry-run "$RELEASE_DRY_RUN"',
     '--manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"',
-    '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
+    '--manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"',
     'cat release-plan.md >> "$GITHUB_STEP_SUMMARY"',
     "Write release readiness report",
     'python3 scripts/release_readiness.py',
@@ -547,7 +547,7 @@ def validate_release_workflow(text: str) -> list[WorkflowIssue]:
     '--expected-prerelease "$AMENTIA_RELEASE_STATE_PRERELEASE"',
     '--signing-mode "$AMENTIA_RELEASE_SIGNING_MODE"',
     '--allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"',
-    '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
+    '--manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"',
   ):
     if term not in release_block:
       issues.append(
@@ -751,7 +751,7 @@ def validate_release_shared_input_contract(
     '--requested-prerelease "$RELEASE_PRERELEASE"',
     '--allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"',
     '--manual-acceptance-confirmed "$RELEASE_MANUAL_ACCEPTANCE_CONFIRMED"',
-    '--manual-acceptance-evidence "$RELEASE_MANUAL_ACCEPTANCE_EVIDENCE"',
+    '--manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"',
   )
   for anchor, label in (
     ("scripts/release_readiness.py", "release readiness"),
@@ -780,7 +780,7 @@ def validate_release_dispatch_inputs(text: str) -> list[WorkflowIssue]:
       "default: false",
       "type: boolean",
     ),
-    "manual_acceptance_evidence": (
+    "manual_acceptance_receipt_url": (
       "HTTPS URL for the validated manual acceptance receipt",
       'default: ""',
       "type: string",

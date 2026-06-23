@@ -45,7 +45,7 @@ The daily loop is:
 3. Choose a bounded tool, action, connector, or skill.
 4. Explain the action with a compact receipt.
 5. Ask before writes or external effects.
-6. Execute, show proof, remember useful state, and continue.
+6. Execute, show a receipt, remember useful state, and continue.
 
 ## Architecture Boundaries
 
@@ -88,7 +88,7 @@ Implemented foundations:
   receipts, session delete, and session-level change preview/revert.
 - Extension baseline: local plugin registry, installation lifecycle, actions,
   connections, skills, MCP servers, tools, checks, credentials, retries, generic
-  proof surfaces, and Notion as the reference connection.
+  receipt surfaces, and Notion as the reference connection.
 - Product language: normal setup, model, project, session, readiness, timeline,
   inspector, plugin, connection, permission, and local-data paths avoid raw
   protocol names, paths, IDs, hashes, and manifest details by default.
@@ -98,20 +98,20 @@ Implemented foundations:
   sections, settings surfaces, and subtle state-driven motion without fixed dark
   styling.
 - Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
-  guidance, checksum, manifest, package smoke proof, manual acceptance receipt,
+  guidance, checksum, manifest, package smoke receipt, manual acceptance receipt,
   transparent-corner macOS icon packaging, and split CI as the source of truth.
 
 Current transition gates:
 
 - Maintainer-installed app verification has accepted the model deployment and
-  reference connector paths. Milestone-specific proof machinery stays out of the
+  reference connector paths. Milestone-specific acceptance machinery stays out of the
   active path after the milestone closes.
 - Architecture cleanup is now the first gate before M15 feature growth. Remove
   stale code, collapse duplicated contracts, and split or merge only when
   ownership becomes clearer.
 - Product clarity remains a continuous gate. Default UI should stay human and
   calm; raw protocol names, manifest strings, hashes, internal paths, and schema
-  details belong only in diagnostics or reveal-on-demand proof.
+  details belong only in diagnostics or reveal-on-demand receipts.
 
 Current constraints:
 
@@ -174,7 +174,7 @@ Completed baseline:
 - Polish the primary window: native sidebar density, readable timeline width,
   calm inspector sections, and subtle state-driven motion inspired by Codex and
   Claude rather than decorative animation.
-- Keep proof useful but quiet: receipts are human-readable first; protocol
+- Keep receipts useful but quiet: receipts are human-readable first; protocol
   fields, raw counters, hashes, paths, and setup files stay in technical detail
   surfaces or reveal-on-demand actions.
 - Preserve architecture clarity: remove dead code and stale release scaffolding,
@@ -193,8 +193,8 @@ Completed baseline:
 - Keep plugin management clean enough for real users: confirmation dialogs show
   what a plugin can do, what access it needs, and what Amentia will store without
   exposing source paths or manifest capability strings.
-- Keep timeline and inspector evidence product-first: domain presenters own copy
-  and proof for runtime, model, session, plugin, connection, and action
+- Keep timeline and inspector receipts product-first: domain presenters own copy
+  and receipt detail for runtime, model, session, plugin, connection, and action
   surfaces; paths and protocol fields stay secondary.
 - Keep model manager details product-first: default summaries describe context and
   response limits, while runner, path, and package details stay diagnostic.
@@ -236,7 +236,7 @@ Remaining quality bar:
 ## M14: Connector and Skill Platform
 
 Status: complete by maintainer-installed-app validation; milestone-specific
-proof machinery has been removed.
+acceptance machinery has been removed.
 
 Goal: make third-party local plugins safe and useful without building a
 marketplace too early.
@@ -249,12 +249,12 @@ Completed baseline:
   bundle roots, bounds runner output, supervises registry loading, and fails
   closed when setup, credentials, or local secrets are missing.
 - Notion is the reference connection. Its authorization metadata, local token or
-  key handling, missing-secret state, cleanup, timeline proof, retries, and
+  key handling, missing-secret state, cleanup, timeline receipts, retries, and
   receipts exercise the generic connector contract.
 - Executable connector workflow commands declare explicit input and output
   envelopes so third-party bundles do not depend on implicit runner defaults.
-- Connector evidence stays generic in protocol and timeline data. Service names,
-  access scopes, auth type, proof labels, and repair copy are translated by
+- Connector receipts stay generic in protocol and timeline data. Service names,
+  access scopes, auth type, receipt labels, and repair copy are translated by
   narrow presenters.
 - Skills are bounded, read-only context packs with query selection, strict
   budgets, explicit `skill:<id>` capabilities, reviewable receipts, and a plugin
@@ -274,7 +274,7 @@ Retained guardrails:
 
 - Release acceptance keeps one installed-app receipt path for visible builds.
   Milestone-specific acceptance scripts do not remain after their milestone closes.
-- Runner proof, product clarity, bounded output, timeout or cancellation, and
+- Runner receipts, product clarity, bounded output, timeout or cancellation, and
   product-facing errors remain required for new plugin execution surfaces.
 - Do not start broad connector catalog work until one more real connector proves
   the generic contract beyond Notion.
@@ -287,7 +287,7 @@ Goal: make Amentia better over time without turning it into a remote server agen
 
 Immediate work:
 
-- Finish a structural cleanup pass after the rename and M14 proof work: remove
+- Finish a structural cleanup pass after the rename and M14 acceptance work: remove
   stale code, shared-script duplication, and confusing product surfaces without
   cosmetic file churn. Keep release gates focused on public assets, downloaded
   rehearsal, and manual acceptance.

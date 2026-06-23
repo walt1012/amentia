@@ -21,7 +21,7 @@ define release, CI, package, model, or workflow behavior.
   `manual_acceptance_contract.py` enforce the four public assets, dry-run-first
   release rehearsal, draft/visible safety, downloaded-release rehearsal, and
   fresh-Mac manual acceptance gate.
-- Receipt helpers stay lightweight: `evidence_contracts.py` only removes
+- Receipt helpers stay lightweight: `receipt_fields.py` only removes
   duplicated JSON and field checks used by release acceptance scripts.
 - Runtime and model checks: `runtime_smoke_test.py` and
   `validate_model_pack.py` cover the runtime protocol surface and curated local
@@ -34,7 +34,7 @@ define release, CI, package, model, or workflow behavior.
 - Public release assets are exactly the DMG, checksum, `README-FIRST.txt`, and
   release manifest.
 - Internal workflow artifacts may contain executable build products or
-  rehearsal evidence, but they are not user-facing release downloads.
+  rehearsal files, but they are not user-facing release downloads.
 - Tag-push and ordinary manual release runs default to dry-run behavior.
 - Without Developer ID credentials, a visible ad-hoc prerelease requires a
   validated fresh-Mac manual acceptance receipt.

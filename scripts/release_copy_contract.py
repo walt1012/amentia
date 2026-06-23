@@ -11,8 +11,8 @@ from package_contract import (
 )
 
 
-PACKAGED_FIRST_RUN_PROOF_PHRASE = "packaged first-run smoke receipt"
-PACKAGED_FIRST_RUN_PROOF_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
+PACKAGED_FIRST_RUN_RECEIPT_PHRASE = "packaged first-run smoke receipt"
+PACKAGED_FIRST_RUN_RECEIPT_SCOPE = PACKAGED_SMOKE_PROOF_SCOPE
 FIRST_APP_OPEN_ACTION_COPY = (
   "Start with Understand Project, Pick Next Step, or a short cowork prompt."
 )
@@ -47,7 +47,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "Web Search",
   "project safety",
   "approve a safe local change",
-  "inspect the proof",
+  "inspect the timeline receipt",
   "Start coworking",
   "Understand Project",
   "Pick Next Step",
@@ -59,7 +59,7 @@ INSTALL_GUIDE_REQUIRED_PHRASES = (
   "same download folder",
   "shasum -a 256 -c",
   "sidecar hashes",
-  PACKAGED_FIRST_RUN_PROOF_PHRASE,
+  PACKAGED_FIRST_RUN_RECEIPT_PHRASE,
   "source commit",
   "model delivery mode",
   "app package metadata",

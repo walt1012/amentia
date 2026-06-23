@@ -92,7 +92,7 @@ def validate_manual_acceptance_gate(
   dry_run: bool,
   allow_untrusted_ad_hoc: bool,
   manual_acceptance_confirmed: bool,
-  manual_acceptance_evidence: str,
+  manual_acceptance_receipt_url: str,
   state: ReleaseState,
 ) -> None:
   if dry_run or signing_mode == "developer-id" or state.draft:
@@ -104,15 +104,15 @@ def validate_manual_acceptance_gate(
       "Visible ad-hoc prereleases require manual_acceptance_confirmed=true. "
       "Generate and validate the manual acceptance receipt on a fresh Mac before publishing."
     )
-  if not manual_acceptance_evidence.strip():
+  if not manual_acceptance_receipt_url.strip():
     raise ValueError(
       "Visible ad-hoc prereleases require a manual acceptance receipt URL. "
-      "Set manual_acceptance_evidence to a validated receipt URL."
+      "Set manual_acceptance_receipt_url to a validated receipt URL."
     )
-  validate_manual_acceptance_evidence(manual_acceptance_evidence)
+  validate_manual_acceptance_receipt_url(manual_acceptance_receipt_url)
 
 
-def validate_manual_acceptance_evidence(value: str) -> None:
+def validate_manual_acceptance_receipt_url(value: str) -> None:
   normalized = value.strip().lower()
   placeholder_terms = ("<", ">", "todo", "tbd", "not recorded", "placeholder")
   if any(term in normalized for term in placeholder_terms):
@@ -160,7 +160,7 @@ def release_state_summary(
   requested_prerelease: bool,
   allow_untrusted_ad_hoc: bool,
   manual_acceptance_confirmed: bool,
-  manual_acceptance_evidence: str,
+  manual_acceptance_receipt_url: str,
   release_exists: bool,
   existing_draft: bool | None,
   state: ReleaseState,
@@ -193,7 +193,7 @@ def release_state_summary(
 - Requested prerelease: `{str(requested_prerelease).lower()}`
 - Allow visible ad-hoc: `{str(allow_untrusted_ad_hoc).lower()}`
 - Manual acceptance confirmed: `{str(manual_acceptance_confirmed).lower()}`
-- Manual acceptance receipt: {summary_value(manual_acceptance_evidence)}
+- Manual acceptance receipt: {summary_value(manual_acceptance_receipt_url)}
 - Release visibility: `{visibility}`
 - Trust path: {trust_note}
 
@@ -207,12 +207,12 @@ def release_body(
   *,
   signing_mode: str,
   allow_untrusted_ad_hoc: bool,
-  manual_acceptance_evidence: str,
+  manual_acceptance_receipt_url: str,
   state: ReleaseState,
 ) -> str:
   if signing_mode == "developer-id" or state.draft or not allow_untrusted_ad_hoc:
     return notes
-  receipt = manual_acceptance_evidence.strip()
+  receipt = manual_acceptance_receipt_url.strip()
   return (
     notes.rstrip()
     + "\n\n## Manual Acceptance\n\n"
@@ -233,7 +233,7 @@ def release_plan_json(
   requested_prerelease: bool,
   allow_untrusted_ad_hoc: bool,
   manual_acceptance_confirmed: bool,
-  manual_acceptance_evidence: str,
+  manual_acceptance_receipt_url: str,
   release_exists: bool,
   existing_draft: bool | None,
   state: ReleaseState,
@@ -257,7 +257,7 @@ def release_plan_json(
     "requestedPrerelease": requested_prerelease,
     "allowVisibleAdHoc": allow_untrusted_ad_hoc,
     "manualAcceptanceConfirmed": manual_acceptance_confirmed,
-    "manualAcceptanceEvidence": manual_acceptance_evidence.strip(),
+    "manualAcceptanceReceiptUrl": manual_acceptance_receipt_url.strip(),
     "releaseVisibility": release_visibility_label(dry_run=dry_run, state=state),
     "plannedDraft": state.draft,
     "plannedPrerelease": state.prerelease,
@@ -344,7 +344,7 @@ def main() -> int:
   parser.add_argument("--requested-prerelease", required=True)
   parser.add_argument("--allow-untrusted-ad-hoc", required=True)
   parser.add_argument("--manual-acceptance-confirmed", default="false")
-  parser.add_argument("--manual-acceptance-evidence", default="")
+  parser.add_argument("--manual-acceptance-receipt-url", default="")
   parser.add_argument("--release-exists", required=True)
   parser.add_argument("--existing-draft", default="")
   parser.add_argument("--state-output", required=True)
@@ -384,7 +384,7 @@ def main() -> int:
       dry_run=dry_run,
       allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
       manual_acceptance_confirmed=manual_acceptance_confirmed,
-      manual_acceptance_evidence=args.manual_acceptance_evidence,
+      manual_acceptance_receipt_url=args.manual_acceptance_receipt_url,
       state=state,
     )
   except (RuntimeError, ValueError) as error:
@@ -413,7 +413,7 @@ def main() -> int:
           notes,
           signing_mode=args.signing_mode,
           allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
-          manual_acceptance_evidence=args.manual_acceptance_evidence,
+          manual_acceptance_receipt_url=args.manual_acceptance_receipt_url,
           state=state,
         ),
         "draft": state.draft,
@@ -438,7 +438,7 @@ def main() -> int:
         requested_prerelease=requested_prerelease,
         allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
         manual_acceptance_confirmed=manual_acceptance_confirmed,
-        manual_acceptance_evidence=args.manual_acceptance_evidence,
+        manual_acceptance_receipt_url=args.manual_acceptance_receipt_url,
         release_exists=release_exists,
         existing_draft=existing_draft,
         state=state,
@@ -459,7 +459,7 @@ def main() -> int:
         requested_prerelease=requested_prerelease,
         allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
         manual_acceptance_confirmed=manual_acceptance_confirmed,
-        manual_acceptance_evidence=args.manual_acceptance_evidence,
+        manual_acceptance_receipt_url=args.manual_acceptance_receipt_url,
         release_exists=release_exists,
         existing_draft=existing_draft,
         state=state,

@@ -83,7 +83,7 @@ def expect_failure(payload: dict, expected: str) -> None:
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
-      manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+      manual_acceptance_receipt_url=ACCEPTANCE_RECEIPT,
     )
   except Exception as error:
     if expected not in str(error):
@@ -117,7 +117,7 @@ def assert_main_validates_final_release_source_commit() -> None:
         "ad-hoc",
         "--allow-untrusted-ad-hoc",
         "true",
-        "--manual-acceptance-evidence",
+        "--manual-acceptance-receipt-url",
         ACCEPTANCE_RECEIPT,
       ]
       if release_publish_main() != 0:
@@ -140,7 +140,7 @@ def assert_main_validates_final_release_source_commit() -> None:
         "ad-hoc",
         "--allow-untrusted-ad-hoc",
         "true",
-        "--manual-acceptance-evidence",
+        "--manual-acceptance-receipt-url",
         ACCEPTANCE_RECEIPT,
       ]
       with redirect_stderr(StringIO()) as stderr:
@@ -163,7 +163,7 @@ def main() -> int:
     expected_prerelease=True,
     signing_mode="ad-hoc",
     allow_untrusted_ad_hoc=True,
-    manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+    manual_acceptance_receipt_url=ACCEPTANCE_RECEIPT,
   )
   validate_published_release(
     release_payload(signing_mode="developer-id", allow_untrusted_ad_hoc=False),
@@ -246,7 +246,7 @@ def main() -> int:
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
-      manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+      manual_acceptance_receipt_url=ACCEPTANCE_RECEIPT,
     )
   except RuntimeError as error:
     if "tag must point at the source commit" not in str(error):
@@ -270,7 +270,7 @@ def main() -> int:
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
-      manual_acceptance_evidence="https://example.com/manual-acceptance-receipt",
+      manual_acceptance_receipt_url="https://example.com/manual-acceptance-receipt",
     )
   except Exception as error:
     if "repository-scoped" not in str(error):
@@ -335,7 +335,7 @@ def main() -> int:
       expected_prerelease=True,
       signing_mode="ad-hoc",
       allow_untrusted_ad_hoc=True,
-      manual_acceptance_evidence=ACCEPTANCE_RECEIPT,
+      manual_acceptance_receipt_url=ACCEPTANCE_RECEIPT,
     )
 
   assert_main_validates_final_release_source_commit()

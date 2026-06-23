@@ -217,7 +217,7 @@ def main() -> int:
     for phrase in (
       "Checksum verification result",
       "Gatekeeper path used",
-      "Web Search proof inspected",
+      "Web Search receipt inspected",
       "Approval and diff receipt inspected",
       "Restart recovery result",
     ):

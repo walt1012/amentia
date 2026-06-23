@@ -31,7 +31,7 @@ def assert_ready_dry_run_report() -> None:
     requested_prerelease=True,
     allow_untrusted_ad_hoc=False,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="",
+    manual_acceptance_receipt_url="",
   )
   if not readiness.ready:
     raise AssertionError(f"dry-run should be ready: {readiness.blockers}")
@@ -70,7 +70,7 @@ def assert_ready_dry_run_report() -> None:
     "-f draft=false",
     "-f publish_untrusted_ad_hoc=true",
     "-f manual_acceptance_confirmed=true",
-    "-f manual_acceptance_evidence='<manual-acceptance-receipt-url>'",
+    "-f manual_acceptance_receipt_url='<manual-acceptance-receipt-url>'",
     "release_workflow_run_id=\"$(",
     "gh api repos/:owner/:repo/actions/artifacts --paginate",
     'select(.name == "release-dry-run-v0.1.0"',
@@ -170,7 +170,7 @@ def assert_ready_dry_run_report() -> None:
     "-f prerelease=true",
     "-f publish_untrusted_ad_hoc=true",
     "-f manual_acceptance_confirmed=true",
-    "-f manual_acceptance_evidence='<manual-acceptance-receipt-url>'",
+    "-f manual_acceptance_receipt_url='<manual-acceptance-receipt-url>'",
   ):
     if phrase not in publish_command:
       raise AssertionError(f"readiness JSON post-acceptance publish command should include {phrase}")
@@ -190,7 +190,7 @@ def assert_blocks_missing_ci_and_tag() -> None:
     requested_prerelease=True,
     allow_untrusted_ad_hoc=False,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="",
+    manual_acceptance_receipt_url="",
   )
   if readiness.ready:
     raise AssertionError("missing tag and CI should block release readiness")
@@ -218,7 +218,7 @@ def assert_blocks_visible_ad_hoc_without_acceptance() -> None:
     requested_prerelease=True,
     allow_untrusted_ad_hoc=True,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="",
+    manual_acceptance_receipt_url="",
   )
   if readiness.ready:
     raise AssertionError("visible ad-hoc publish should require acceptance")
@@ -240,7 +240,7 @@ def assert_tag_push_draft_release_does_not_claim_visible_release() -> None:
     requested_prerelease=True,
     allow_untrusted_ad_hoc=False,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="",
+    manual_acceptance_receipt_url="",
   )
   if not readiness.ready:
     raise AssertionError(f"tag-push draft release should be ready: {readiness.blockers}")
@@ -269,7 +269,7 @@ def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
     requested_prerelease=True,
     allow_untrusted_ad_hoc=True,
     manual_acceptance_confirmed=True,
-    manual_acceptance_evidence=evidence,
+    manual_acceptance_receipt_url=evidence,
   )
   if not readiness.ready:
     raise AssertionError(f"accepted visible ad-hoc publish should be ready: {readiness.blockers}")
@@ -283,7 +283,7 @@ def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
     "-f prerelease=true",
     "-f publish_untrusted_ad_hoc=true",
     "-f manual_acceptance_confirmed=true",
-    f"-f manual_acceptance_evidence={evidence}",
+    f"-f manual_acceptance_receipt_url={evidence}",
   ):
     if phrase not in report:
       raise AssertionError(f"accepted publish report should include {phrase}")
@@ -294,7 +294,7 @@ def assert_accepted_visible_ad_hoc_report_preserves_inputs() -> None:
     "releaseVisibility": "visible prerelease",
     "allowUntrustedAdHoc": True,
     "manualAcceptanceConfirmed": True,
-    "manualAcceptanceEvidence": evidence,
+    "manualAcceptanceReceiptUrl": evidence,
     "plannedDraft": False,
     "plannedPrerelease": True,
   }
@@ -317,7 +317,7 @@ def assert_rejects_invalid_tag() -> None:
     requested_prerelease=True,
     allow_untrusted_ad_hoc=False,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="",
+    manual_acceptance_receipt_url="",
   )
   if readiness.ready:
     raise AssertionError("invalid release tag should block readiness")
@@ -331,7 +331,7 @@ def assert_required_release_inputs_cover_dispatch_controls() -> None:
     "dry_run",
     "publish_untrusted_ad_hoc",
     "manual_acceptance_confirmed",
-    "manual_acceptance_evidence",
+    "manual_acceptance_receipt_url",
   ):
     if name not in REQUIRED_RELEASE_INPUTS:
       raise AssertionError(f"release readiness should require dispatch input {name}")
@@ -351,7 +351,7 @@ def assert_readiness_checklist_names_release_candidate_flow() -> None:
     requested_prerelease=True,
     allow_untrusted_ad_hoc=False,
     manual_acceptance_confirmed=False,
-    manual_acceptance_evidence="",
+    manual_acceptance_receipt_url="",
   )
   checklist = "\n".join(readiness_checklist(readiness))
   for phrase in (

@@ -14,7 +14,7 @@ from tempfile import TemporaryDirectory
 from manual_acceptance_contract import manual_acceptance_template
 from manual_acceptance_contract import manual_acceptance_template_from_asset_dir
 from manual_acceptance_contract import main as manual_acceptance_main
-from manual_acceptance_contract import validate_manual_acceptance_evidence
+from manual_acceptance_contract import validate_manual_acceptance_receipt
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
 from release_identity import release_actions_run_url
@@ -41,29 +41,29 @@ def valid_payload() -> dict[str, object]:
     "selectedModelId": DEFAULT_MODEL_ID,
     "modelDownloadedAndActivated": True,
     "modelSelfCheckPassed": True,
-    "modelProof": "Downloaded, verified, activated, and self-check passed in the installed app.",
+    "modelReceipt": "Downloaded, verified, activated, and self-check passed in the installed app.",
     "localInferenceCompleted": True,
-    "inferenceProof": "The installed app completed a bounded local inference without hosted model access.",
+    "inferenceReceipt": "The installed app completed a bounded local inference without hosted model access.",
     "workspaceDescription": "Fresh test workspace with a small text file.",
     "workspaceOpened": True,
     "coworkRequest": "Map this workspace and plan the next safe step.",
     "coworkTurnCompleted": True,
-    "webSearchProof": "Timeline showed Web Search source proof.",
-    "webSearchProofInspected": True,
+    "webSearchReceipt": "Timeline showed Web Search source receipt.",
+    "webSearchReceiptInspected": True,
     "approvalReceipt": "Approved one safe diff after reviewing it.",
     "approvalDiffReceiptInspected": True,
-    "restartRecoveryProof": "Restart restored runtime, model, workspace, and recent proof.",
+    "restartRecoveryReceipt": "Restart restored runtime, model, workspace, and recent receipts.",
     "restartRecoveryVerified": True,
     "sessionDeleteVerified": True,
     "sessionRevertVerified": True,
-    "sessionCleanupProof": "Session delete removed the target session and session revert restored approved project changes.",
+    "sessionCleanupReceipt": "Session delete removed the target session and session revert restored approved project changes.",
     "resetAmentiaVerified": True,
-    "resetProof": (
+    "resetReceipt": (
       "Reset Amentia cleared support data, cache files, preferences, saved state, "
       "paused downloads, and local credential handles."
     ),
     "pluginLifecycleVerified": True,
-    "pluginLifecycleProof": "Installed, disabled, and removed the reference plugin from the installed app.",
+    "pluginLifecycleReceipt": "Installed, disabled, and removed the reference plugin from the installed app.",
     "noUnexpectedAppOwnedResidue": True,
     "noAmentiaLoginRequired": True,
     "acceptedForVisiblePrerelease": True,
@@ -74,7 +74,7 @@ def valid_payload() -> dict[str, object]:
 
 def expect_failure(payload: dict[str, object], expected: str) -> None:
   try:
-    validate_manual_acceptance_evidence(payload, tag=TAG)
+    validate_manual_acceptance_receipt(payload, tag=TAG)
   except Exception as error:
     if expected not in str(error):
       raise AssertionError(f"expected {expected!r} in {error!r}")
@@ -267,25 +267,25 @@ def assert_cli_template_and_validation() -> None:
         "manual_acceptance_contract.py",
         "--tag",
         TAG,
-        "--evidence",
+        "--receipt",
         str(evidence_path),
       ]
       if manual_acceptance_main() != 0:
         raise AssertionError("manual acceptance validation CLI should pass")
       invalid_path = root / "invalid.json"
       invalid = valid_payload()
-      invalid["webSearchProofInspected"] = False
+      invalid["webSearchReceiptInspected"] = False
       invalid_path.write_text(json.dumps(invalid), encoding="utf-8")
       sys.argv = [
         "manual_acceptance_contract.py",
         "--tag",
         TAG,
-        "--evidence",
+        "--receipt",
         str(invalid_path),
       ]
       with redirect_stderr(StringIO()) as stderr:
         result = manual_acceptance_main()
-      if result == 0 or "webSearchProofInspected" not in stderr.getvalue():
+      if result == 0 or "webSearchReceiptInspected" not in stderr.getvalue():
         raise AssertionError("manual acceptance CLI should reject incomplete evidence")
       sys.argv = [
         "manual_acceptance_contract.py",
@@ -303,7 +303,7 @@ def assert_cli_template_and_validation() -> None:
 
 
 def main() -> int:
-  validate_manual_acceptance_evidence(valid_payload(), tag=TAG)
+  validate_manual_acceptance_receipt(valid_payload(), tag=TAG)
   expect_failure({**valid_payload(), "tag": "v9.9.9"}, "tag")
   expect_failure({**valid_payload(), "sourceCommit": "short"}, "40 characters")
   expect_failure({**valid_payload(), "sourceCommit": "z" * 40}, "Git SHA hex digest")
@@ -314,9 +314,9 @@ def main() -> int:
   expect_failure({**valid_payload(), "workspaceOpened": False}, "workspaceOpened")
   expect_failure({**valid_payload(), "approvalReceipt": ""}, "approvalReceipt")
   expect_failure({**valid_payload(), "modelSelfCheckPassed": False}, "modelSelfCheckPassed")
-  expect_failure({**valid_payload(), "sessionCleanupProof": ""}, "sessionCleanupProof")
+  expect_failure({**valid_payload(), "sessionCleanupReceipt": ""}, "sessionCleanupReceipt")
   expect_failure({**valid_payload(), "resetAmentiaVerified": False}, "resetAmentiaVerified")
-  expect_failure({**valid_payload(), "pluginLifecycleProof": ""}, "pluginLifecycleProof")
+  expect_failure({**valid_payload(), "pluginLifecycleReceipt": ""}, "pluginLifecycleReceipt")
   assert_template_is_safe_to_fill()
   assert_template_can_be_derived_from_release_assets()
   assert_asset_template_rejects_stale_assets()

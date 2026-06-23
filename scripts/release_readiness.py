@@ -26,7 +26,7 @@ REQUIRED_RELEASE_INPUTS = (
   "dry_run",
   "publish_untrusted_ad_hoc",
   "manual_acceptance_confirmed",
-  "manual_acceptance_evidence",
+  "manual_acceptance_receipt_url",
 )
 DRY_RUN_EXTRA_ARTIFACT_NAMES = (
   "release-readiness.md",
@@ -54,7 +54,7 @@ class ReleaseReadiness:
   allow_untrusted_ad_hoc: bool
   state: ReleaseState
   manual_acceptance_confirmed: bool
-  manual_acceptance_evidence: str
+  manual_acceptance_receipt_url: str
   blockers: tuple[str, ...]
 
   @property
@@ -118,7 +118,7 @@ def plan_readiness(
   requested_prerelease: bool,
   allow_untrusted_ad_hoc: bool,
   manual_acceptance_confirmed: bool,
-  manual_acceptance_evidence: str,
+  manual_acceptance_receipt_url: str,
 ) -> ReleaseReadiness:
   blockers: list[str] = []
   try:
@@ -145,7 +145,7 @@ def plan_readiness(
       dry_run=dry_run,
       allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
       manual_acceptance_confirmed=manual_acceptance_confirmed,
-      manual_acceptance_evidence=manual_acceptance_evidence,
+      manual_acceptance_receipt_url=manual_acceptance_receipt_url,
       state=state,
     )
   except ValueError as error:
@@ -178,7 +178,7 @@ def plan_readiness(
     allow_untrusted_ad_hoc=allow_untrusted_ad_hoc,
     state=state,
     manual_acceptance_confirmed=manual_acceptance_confirmed,
-    manual_acceptance_evidence=manual_acceptance_evidence.strip(),
+      manual_acceptance_receipt_url=manual_acceptance_receipt_url.strip(),
     blockers=tuple(blockers),
   )
 
@@ -187,7 +187,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
   status = "ready" if readiness.ready else "blocked"
   workflow_mode = "dry-run" if readiness.dry_run else "publish"
   visibility = readiness_visibility_label(readiness)
-  evidence = readiness.manual_acceptance_evidence or "not recorded"
+  receipt_url = readiness.manual_acceptance_receipt_url or "not recorded"
   blockers = "\n".join(f"- {blocker}" for blocker in readiness.blockers)
   next_command = readiness_next_command(readiness)
   ci_lookup_command = readiness_ci_lookup_command(readiness)
@@ -217,7 +217,7 @@ def readiness_report(readiness: ReleaseReadiness) -> str:
 - Tag points at source commit: `{str(readiness.tag_points_at_commit).lower()}`
 - Release workflow inputs ready: `{str(readiness.workflow_inputs_ready).lower()}`
 - Manual acceptance confirmed: `{str(readiness.manual_acceptance_confirmed).lower()}`
-- Manual acceptance receipt: {evidence}
+- Manual acceptance receipt: {receipt_url}
 
 ## Blockers
 {blockers}
@@ -282,7 +282,7 @@ def readiness_json(readiness: ReleaseReadiness) -> dict[str, object]:
     "tagPointsAtSourceCommit": readiness.tag_points_at_commit,
     "releaseWorkflowInputsReady": readiness.workflow_inputs_ready,
     "manualAcceptanceConfirmed": readiness.manual_acceptance_confirmed,
-    "manualAcceptanceEvidence": readiness.manual_acceptance_evidence,
+    "manualAcceptanceReceiptUrl": readiness.manual_acceptance_receipt_url,
     "preDispatchChecklist": readiness_checklist(readiness),
     "expectedPublicAssets": list(release_installer_asset_names(readiness.tag)),
     "expectedDryRunArtifactContents": list(expected_dry_run_artifact_names(readiness.tag)),
@@ -407,11 +407,11 @@ def readiness_post_acceptance_publish_command(readiness: ReleaseReadiness) -> st
   if readiness.signing_mode == "developer-id":
     allow_untrusted = False
     manual_confirmed = False
-    manual_evidence = ""
+    manual_receipt_url = ""
   else:
     allow_untrusted = True
     manual_confirmed = True
-    manual_evidence = "<manual-acceptance-receipt-url>"
+    manual_receipt_url = "<manual-acceptance-receipt-url>"
   return "\n".join(
     [
       "gh workflow run release.yml \\",
@@ -421,7 +421,7 @@ def readiness_post_acceptance_publish_command(readiness: ReleaseReadiness) -> st
       "  -f prerelease=true \\",
       f"  -f publish_untrusted_ad_hoc={str(allow_untrusted).lower()} \\",
       f"  -f manual_acceptance_confirmed={str(manual_confirmed).lower()} \\",
-      f"  -f manual_acceptance_evidence={shell_quote(manual_evidence)}",
+      f"  -f manual_acceptance_receipt_url={shell_quote(manual_receipt_url)}",
     ]
   )
 
@@ -443,7 +443,7 @@ def readiness_next_command(readiness: ReleaseReadiness) -> str:
       f"  -f prerelease={str(readiness.requested_prerelease).lower()} \\",
       f"  -f publish_untrusted_ad_hoc={str(readiness.allow_untrusted_ad_hoc).lower()} \\",
       f"  -f manual_acceptance_confirmed={str(readiness.manual_acceptance_confirmed).lower()} \\",
-      f"  -f manual_acceptance_evidence={shell_quote(readiness.manual_acceptance_evidence)}",
+      f"  -f manual_acceptance_receipt_url={shell_quote(readiness.manual_acceptance_receipt_url)}",
     ]
   )
 
@@ -468,7 +468,7 @@ def main() -> int:
   parser.add_argument("--requested-prerelease", default="true")
   parser.add_argument("--allow-untrusted-ad-hoc", default="false")
   parser.add_argument("--manual-acceptance-confirmed", default="false")
-  parser.add_argument("--manual-acceptance-evidence", default="")
+  parser.add_argument("--manual-acceptance-receipt-url", default="")
   args = parser.parse_args()
 
   try:
@@ -485,7 +485,7 @@ def main() -> int:
       requested_prerelease=parse_bool(args.requested_prerelease),
       allow_untrusted_ad_hoc=parse_bool(args.allow_untrusted_ad_hoc),
       manual_acceptance_confirmed=parse_bool(args.manual_acceptance_confirmed),
-      manual_acceptance_evidence=args.manual_acceptance_evidence,
+      manual_acceptance_receipt_url=args.manual_acceptance_receipt_url,
     )
   except (subprocess.CalledProcessError, ValueError) as error:
     print(f"release readiness failed: {error}", file=sys.stderr)

@@ -15,7 +15,7 @@ from release_copy_contract import (
   FIRST_APP_OPEN_CONTRACT_ID,
   FIRST_APP_OPEN_INSTALL_STEP,
   INSTALL_GUIDE_REQUIRED_PHRASES,
-  PACKAGED_FIRST_RUN_PROOF_PHRASE,
+  PACKAGED_FIRST_RUN_RECEIPT_PHRASE,
   RELEASE_NOTES_REQUIRED_PHRASES,
   missing_required_phrases,
   require_install_guide_copy,
@@ -25,7 +25,7 @@ from release_text import (
   first_app_open_action_clause,
   first_app_open_action_sentence,
   first_run_path_copy,
-  first_run_proof_copy,
+  first_run_receipt_copy,
   install_guide,
   installer_assets_copy,
   local_execution_copy,
@@ -78,7 +78,7 @@ def main() -> int:
   require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "first-run contract")
   require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "app package metadata")
   require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), "smoke package metadata")
-  require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), PACKAGED_FIRST_RUN_PROOF_PHRASE)
+  require_contains(" ".join(INSTALL_GUIDE_REQUIRED_PHRASES), PACKAGED_FIRST_RUN_RECEIPT_PHRASE)
   if missing_required_phrases("alpha beta", ("alpha", "gamma")) != ["gamma"]:
     raise AssertionError("release copy missing phrase helper should preserve missing phrases")
   require_release_copy("alpha beta", ("alpha",), "test copy")
@@ -91,9 +91,9 @@ def main() -> int:
   require_contains(first_run_path_copy(), "project safety")
   require_contains(first_run_path_copy(), first_app_open_action_clause())
   require_contains(first_run_path_copy(), "approve a safe local change")
-  require_contains(first_run_path_copy(), "inspect the proof")
-  require_contains(first_run_proof_copy(), PACKAGED_FIRST_RUN_PROOF_PHRASE)
-  require_contains(first_run_proof_copy(), PACKAGED_SMOKE_PROOF_SCOPE)
+  require_contains(first_run_path_copy(), "inspect the timeline receipt")
+  require_contains(first_run_receipt_copy(), PACKAGED_FIRST_RUN_RECEIPT_PHRASE)
+  require_contains(first_run_receipt_copy(), PACKAGED_SMOKE_PROOF_SCOPE)
   require_contains(PACKAGED_SMOKE_PROOF_SCOPE, "first cowork request")
   require_contains(installer_assets_copy("v0.1.0"), "Amentia-v0.1.0-macos-x86_64.dmg")
   require_contains(installer_assets_copy("v0.1.0"), "Amentia-v0.1.0-release-manifest.json")
@@ -107,7 +107,7 @@ def main() -> int:
   require_contains(checksum_verification_copy("v0.1.0"), "app package metadata")
   require_contains(checksum_verification_copy("v0.1.0"), "smoke package metadata")
   require_contains(checksum_verification_copy("v0.1.0"), "first-run contract")
-  require_contains(checksum_verification_copy("v0.1.0"), PACKAGED_FIRST_RUN_PROOF_PHRASE)
+  require_contains(checksum_verification_copy("v0.1.0"), PACKAGED_FIRST_RUN_RECEIPT_PHRASE)
 
   developer_notes = release_notes(
     "v0.1.0",
@@ -129,7 +129,7 @@ def main() -> int:
   require_contains(developer_notes, "Gatekeeper")
   require_contains(developer_notes, "verification steps")
   require_not_contains(developer_notes, first_run_path_copy())
-  require_not_contains(developer_notes, first_run_proof_copy())
+  require_not_contains(developer_notes, first_run_receipt_copy())
   require_not_contains(developer_notes, "Native sandbox")
   require_not_contains(developer_notes, "process-only fallback")
   require_not_contains(developer_notes, "daily-driver next action")
@@ -192,7 +192,7 @@ def main() -> int:
   require_contains(guide, "Open a project folder.")
   require_contains(guide, "Check that Web Search and project safety are ready.")
   require_contains(guide, "Approve a safe local change only after reviewing it")
-  require_contains(guide, "inspect the proof")
+  require_contains(guide, "inspect the timeline receipt")
   require_contains(guide, FIRST_APP_OPEN_INSTALL_STEP)
   require_contains(guide, "Follow the next action")
   require_contains(guide, "Amentia status")
@@ -201,7 +201,7 @@ def main() -> int:
   require_contains(guide, "shasum -a 256 -c Amentia-v0.1.0-macos-x86_64.dmg.sha256")
   require_contains(guide, "verify the downloaded installer")
   require_contains(guide, "sidecar hashes")
-  require_contains(guide, first_run_proof_copy())
+  require_contains(guide, first_run_receipt_copy())
   require_contains(guide, "source commit")
   require_contains(guide, "model delivery mode")
   require_contains(guide, "app package metadata")

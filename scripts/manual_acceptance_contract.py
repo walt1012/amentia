@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate structured manual release acceptance evidence for Amentia."""
+"""Validate structured manual release acceptance receipts for Amentia."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ import json
 import sys
 from pathlib import Path
 
-from evidence_contracts import load_json_object
-from evidence_contracts import require_equal as require_contract_equal
-from evidence_contracts import require_sha256_hex as require_contract_sha256_hex
-from evidence_contracts import require_string as require_contract_string
-from evidence_contracts import require_true as require_contract_true
-from evidence_contracts import write_json
+from receipt_fields import load_json_object
+from receipt_fields import require_equal as require_contract_equal
+from receipt_fields import require_sha256_hex as require_contract_sha256_hex
+from receipt_fields import require_string as require_contract_string
+from receipt_fields import require_true as require_contract_true
+from receipt_fields import write_json
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
 from release_artifacts import sha256_hex
@@ -30,7 +30,7 @@ REQUIRED_TRUE_CHECKS = (
   "localInferenceCompleted",
   "workspaceOpened",
   "coworkTurnCompleted",
-  "webSearchProofInspected",
+  "webSearchReceiptInspected",
   "approvalDiffReceiptInspected",
   "restartRecoveryVerified",
   "sessionDeleteVerified",
@@ -49,22 +49,22 @@ REQUIRED_TEXT_FIELDS = (
   "checksum",
   "gatekeeperPath",
   "selectedModelId",
-  "modelProof",
-  "inferenceProof",
+  "modelReceipt",
+  "inferenceReceipt",
   "workspaceDescription",
   "coworkRequest",
-  "webSearchProof",
+  "webSearchReceipt",
   "approvalReceipt",
-  "restartRecoveryProof",
-  "sessionCleanupProof",
-  "resetProof",
-  "pluginLifecycleProof",
+  "restartRecoveryReceipt",
+  "sessionCleanupReceipt",
+  "resetReceipt",
+  "pluginLifecycleReceipt",
   "acceptedBy",
   "acceptedAt",
 )
 
 
-def validate_manual_acceptance_evidence(
+def validate_manual_acceptance_receipt(
   data: dict[str, object],
   *,
   tag: str,
@@ -105,26 +105,26 @@ def manual_acceptance_template(
     "selectedModelId": DEFAULT_MODEL_ID,
     "modelDownloadedAndActivated": False,
     "modelSelfCheckPassed": False,
-    "modelProof": "",
+    "modelReceipt": "",
     "localInferenceCompleted": False,
-    "inferenceProof": "",
+    "inferenceReceipt": "",
     "workspaceDescription": "",
     "workspaceOpened": False,
     "coworkRequest": "",
     "coworkTurnCompleted": False,
-    "webSearchProof": "",
-    "webSearchProofInspected": False,
+    "webSearchReceipt": "",
+    "webSearchReceiptInspected": False,
     "approvalReceipt": "",
     "approvalDiffReceiptInspected": False,
-    "restartRecoveryProof": "",
+    "restartRecoveryReceipt": "",
     "restartRecoveryVerified": False,
     "sessionDeleteVerified": False,
     "sessionRevertVerified": False,
-    "sessionCleanupProof": "",
+    "sessionCleanupReceipt": "",
     "resetAmentiaVerified": False,
-    "resetProof": "",
+    "resetReceipt": "",
     "pluginLifecycleVerified": False,
-    "pluginLifecycleProof": "",
+    "pluginLifecycleReceipt": "",
     "noUnexpectedAppOwnedResidue": False,
     "noAmentiaLoginRequired": False,
     "acceptedForVisiblePrerelease": False,
@@ -296,7 +296,8 @@ def load_json(path: Path) -> dict[str, object]:
 def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--tag", required=True)
-  parser.add_argument("--evidence", type=Path)
+  parser.add_argument("--receipt", type=Path)
+  parser.add_argument("--evidence", type=Path, help=argparse.SUPPRESS)
   parser.add_argument("--template-output", type=Path)
   parser.add_argument("--asset-dir", type=Path)
   parser.add_argument("--source-commit", default="")
@@ -325,10 +326,11 @@ def main() -> int:
       write_json(args.template_output, template)
       print("Manual acceptance receipt template written")
       return 0
-    if args.evidence is None:
-      raise RuntimeError("manual acceptance validation requires --evidence")
-    validate_manual_acceptance_evidence(
-      load_json(args.evidence),
+    receipt_path = args.receipt or args.evidence
+    if receipt_path is None:
+      raise RuntimeError("manual acceptance validation requires --receipt")
+    validate_manual_acceptance_receipt(
+      load_json(receipt_path),
       tag=args.tag,
     )
   except Exception as error:
