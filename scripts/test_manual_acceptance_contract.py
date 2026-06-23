@@ -15,7 +15,6 @@ from manual_acceptance_contract import manual_acceptance_template
 from manual_acceptance_contract import manual_acceptance_template_from_asset_dir
 from manual_acceptance_contract import main as manual_acceptance_main
 from manual_acceptance_contract import validate_manual_acceptance_evidence
-from installed_app_proof import PROOF_SCOPE as INSTALLED_APP_PROOF_SCOPE
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
 from release_identity import release_actions_run_url
@@ -41,6 +40,10 @@ def valid_payload() -> dict[str, object]:
     "gatekeeperHandled": True,
     "selectedModelId": DEFAULT_MODEL_ID,
     "modelDownloadedAndActivated": True,
+    "modelSelfCheckPassed": True,
+    "modelProof": "Downloaded, verified, activated, and self-check passed in the installed app.",
+    "localInferenceCompleted": True,
+    "inferenceProof": "The installed app completed a bounded local inference without hosted model access.",
     "workspaceDescription": "Fresh test workspace with a small text file.",
     "workspaceOpened": True,
     "coworkRequest": "Map this workspace and plan the next safe step.",
@@ -51,35 +54,6 @@ def valid_payload() -> dict[str, object]:
     "approvalDiffReceiptInspected": True,
     "restartRecoveryProof": "Restart restored runtime, model, workspace, and recent proof.",
     "restartRecoveryVerified": True,
-    "noAmentiaLoginRequired": True,
-    "installedAppProofValidated": True,
-    "installedAppProofEvidence": "m14-installed-app-proof.json",
-    "acceptedForVisiblePrerelease": True,
-    "acceptedBy": "Maintainer",
-    "acceptedAt": "2026-06-08T00:00:00Z",
-  }
-
-
-def valid_installed_app_payload() -> dict[str, object]:
-  return {
-    "appName": "Amentia",
-    "proofScope": INSTALLED_APP_PROOF_SCOPE,
-    "releaseTag": TAG,
-    "dmgName": release_installer_asset_names(TAG)[0],
-    "dmgSha256": CHECKSUM,
-    "dmgChecksumVerified": True,
-    "installedFromDmg": True,
-    "firstLaunchCompleted": True,
-    "modelDownloaded": True,
-    "modelVerified": True,
-    "modelActivated": True,
-    "modelSelfCheckPassed": True,
-    "modelId": DEFAULT_MODEL_ID,
-    "modelProof": "Downloaded, checksum verified, activated, and self-check passed in the installed app.",
-    "localInferenceCompleted": True,
-    "inferenceProof": "The installed app produced a bounded local response without hosted model API access.",
-    "webSearchProofInspected": True,
-    "webSearchProof": "Timeline showed Web Search source proof and the sources were inspected.",
     "sessionDeleteVerified": True,
     "sessionRevertVerified": True,
     "sessionCleanupProof": "Session delete removed the target session and session revert restored approved project changes.",
@@ -90,8 +64,9 @@ def valid_installed_app_payload() -> dict[str, object]:
     ),
     "pluginLifecycleVerified": True,
     "pluginLifecycleProof": "Installed, disabled, and removed the reference plugin from the installed app.",
-    "unexpectedAppOwnedResiduePaths": [],
     "noUnexpectedAppOwnedResidue": True,
+    "noAmentiaLoginRequired": True,
+    "acceptedForVisiblePrerelease": True,
     "acceptedBy": "Maintainer",
     "acceptedAt": "2026-06-08T00:00:00Z",
   }
@@ -119,7 +94,17 @@ def assert_template_is_safe_to_fill() -> None:
     raise AssertionError("template should use the release DMG asset")
   if template["selectedModelId"] != DEFAULT_MODEL_ID:
     raise AssertionError("template should default to the product model")
-  for key in ("checksumVerified", "installedAppProofValidated", "acceptedForVisiblePrerelease"):
+  for key in (
+    "checksumVerified",
+    "modelSelfCheckPassed",
+    "localInferenceCompleted",
+    "sessionDeleteVerified",
+    "sessionRevertVerified",
+    "resetAmentiaVerified",
+    "pluginLifecycleVerified",
+    "noUnexpectedAppOwnedResidue",
+    "acceptedForVisiblePrerelease",
+  ):
     if template[key] is not False:
       raise AssertionError(f"template {key} should be false until manually filled")
 
@@ -242,7 +227,6 @@ def assert_cli_template_and_validation() -> None:
     root = Path(directory)
     template_path = root / "manual-acceptance.json"
     evidence_path = root / "filled-manual-acceptance.json"
-    installed_app_path = root / "installed-app-proof.json"
     asset_template_path = root / "asset-manual-acceptance.json"
     asset_dir = root / "assets"
     write_asset_dir(asset_dir)
@@ -279,15 +263,12 @@ def assert_cli_template_and_validation() -> None:
       if asset_data["checksum"] != CHECKSUM:
         raise AssertionError("asset-derived CLI template should include the DMG checksum")
       evidence_path.write_text(json.dumps(valid_payload()), encoding="utf-8")
-      installed_app_path.write_text(json.dumps(valid_installed_app_payload()), encoding="utf-8")
       sys.argv = [
         "manual_acceptance_contract.py",
         "--tag",
         TAG,
         "--evidence",
         str(evidence_path),
-        "--installed-app-proof",
-        str(installed_app_path),
       ]
       if manual_acceptance_main() != 0:
         raise AssertionError("manual acceptance validation CLI should pass")
@@ -301,41 +282,11 @@ def assert_cli_template_and_validation() -> None:
         TAG,
         "--evidence",
         str(invalid_path),
-        "--installed-app-proof",
-        str(installed_app_path),
       ]
       with redirect_stderr(StringIO()) as stderr:
         result = manual_acceptance_main()
       if result == 0 or "webSearchProofInspected" not in stderr.getvalue():
         raise AssertionError("manual acceptance CLI should reject incomplete evidence")
-      invalid_installed_app_path = root / "invalid-installed-app-proof.json"
-      invalid_installed_app = valid_installed_app_payload()
-      invalid_installed_app["dmgSha256"] = "b" * 64
-      invalid_installed_app_path.write_text(json.dumps(invalid_installed_app), encoding="utf-8")
-      sys.argv = [
-        "manual_acceptance_contract.py",
-        "--tag",
-        TAG,
-        "--evidence",
-        str(evidence_path),
-        "--installed-app-proof",
-        str(invalid_installed_app_path),
-      ]
-      with redirect_stderr(StringIO()) as stderr:
-        result = manual_acceptance_main()
-      if result == 0 or "dmgSha256" not in stderr.getvalue():
-        raise AssertionError("manual acceptance CLI should reject mismatched installed-app proof")
-      sys.argv = [
-        "manual_acceptance_contract.py",
-        "--tag",
-        TAG,
-        "--evidence",
-        str(evidence_path),
-      ]
-      with redirect_stderr(StringIO()) as stderr:
-        result = manual_acceptance_main()
-      if result == 0 or "--installed-app-proof" not in stderr.getvalue():
-        raise AssertionError("manual acceptance CLI should require installed-app proof")
       sys.argv = [
         "manual_acceptance_contract.py",
         "--tag",
@@ -362,6 +313,10 @@ def main() -> int:
   expect_failure({**valid_payload(), "selectedModelId": "other-model"}, "selectedModelId")
   expect_failure({**valid_payload(), "workspaceOpened": False}, "workspaceOpened")
   expect_failure({**valid_payload(), "approvalReceipt": ""}, "approvalReceipt")
+  expect_failure({**valid_payload(), "modelSelfCheckPassed": False}, "modelSelfCheckPassed")
+  expect_failure({**valid_payload(), "sessionCleanupProof": ""}, "sessionCleanupProof")
+  expect_failure({**valid_payload(), "resetAmentiaVerified": False}, "resetAmentiaVerified")
+  expect_failure({**valid_payload(), "pluginLifecycleProof": ""}, "pluginLifecycleProof")
   assert_template_is_safe_to_fill()
   assert_template_can_be_derived_from_release_assets()
   assert_asset_template_rejects_stale_assets()

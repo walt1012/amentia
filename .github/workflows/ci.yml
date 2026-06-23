@@ -172,9 +172,6 @@ jobs:
       - name: Test connector workflow contracts
         run: python3 scripts/test_connector_workflow_contracts.py
 
-      - name: Test installed-app proof contract
-        run: python3 scripts/test_installed_app_proof.py
-
       - name: Test Notion connector contract
         run: python3 scripts/test_notion_connector_contract.py
 

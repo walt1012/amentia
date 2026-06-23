@@ -200,9 +200,9 @@ a normal trusted release. Without Developer ID secrets, tag pushes default to a
 draft release and refuse to update an already-public release unless
 `publish_untrusted_ad_hoc=true` is set explicitly. A visible ad-hoc prerelease
 also requires `manual_acceptance_confirmed=true`, which means the generated
-manual acceptance receipt and installed-app proof were filled and validated after
-a fresh-Mac run, plus `manual_acceptance_evidence` so the release plan records
-where those receipts live.
+manual acceptance receipt was filled and validated after a fresh-Mac run, plus
+`manual_acceptance_evidence` so the release plan records where that receipt
+lives.
 With that maintainer intent, it may publish an untrusted ad-hoc prerelease for
 users who accept the Gatekeeper warning path. The workflow also refuses to move
 an existing public GitHub Release back to draft; withdrawal should be handled

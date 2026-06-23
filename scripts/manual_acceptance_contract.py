@@ -14,8 +14,6 @@ from evidence_contracts import require_sha256_hex as require_contract_sha256_hex
 from evidence_contracts import require_string as require_contract_string
 from evidence_contracts import require_true as require_contract_true
 from evidence_contracts import write_json
-from installed_app_proof import load_json_object as load_installed_app_json
-from installed_app_proof import validate_installed_app_evidence
 from package_contract import DEFAULT_MODEL_ID
 from release_artifacts import release_installer_asset_names
 from release_artifacts import sha256_hex
@@ -28,13 +26,19 @@ REQUIRED_TRUE_CHECKS = (
   "manifestReviewed",
   "gatekeeperHandled",
   "modelDownloadedAndActivated",
+  "modelSelfCheckPassed",
+  "localInferenceCompleted",
   "workspaceOpened",
   "coworkTurnCompleted",
   "webSearchProofInspected",
   "approvalDiffReceiptInspected",
   "restartRecoveryVerified",
+  "sessionDeleteVerified",
+  "sessionRevertVerified",
+  "resetAmentiaVerified",
+  "pluginLifecycleVerified",
+  "noUnexpectedAppOwnedResidue",
   "noAmentiaLoginRequired",
-  "installedAppProofValidated",
   "acceptedForVisiblePrerelease",
 )
 REQUIRED_TEXT_FIELDS = (
@@ -45,12 +49,16 @@ REQUIRED_TEXT_FIELDS = (
   "checksum",
   "gatekeeperPath",
   "selectedModelId",
+  "modelProof",
+  "inferenceProof",
   "workspaceDescription",
   "coworkRequest",
   "webSearchProof",
   "approvalReceipt",
   "restartRecoveryProof",
-  "installedAppProofEvidence",
+  "sessionCleanupProof",
+  "resetProof",
+  "pluginLifecycleProof",
   "acceptedBy",
   "acceptedAt",
 )
@@ -60,7 +68,6 @@ def validate_manual_acceptance_evidence(
   data: dict[str, object],
   *,
   tag: str,
-  installed_app_proof: dict[str, object] | None = None,
 ) -> None:
   validate_public_release_tag(tag)
   require_equal(data, "tag", tag)
@@ -75,9 +82,6 @@ def validate_manual_acceptance_evidence(
     require_string(data, field)
   for check in REQUIRED_TRUE_CHECKS:
     require_true(data, check)
-  if installed_app_proof is not None:
-    validate_installed_app_evidence(installed_app_proof)
-    require_installed_app_proof_matches(data, installed_app_proof, tag=tag)
 
 
 def manual_acceptance_template(
@@ -100,6 +104,10 @@ def manual_acceptance_template(
     "gatekeeperHandled": False,
     "selectedModelId": DEFAULT_MODEL_ID,
     "modelDownloadedAndActivated": False,
+    "modelSelfCheckPassed": False,
+    "modelProof": "",
+    "localInferenceCompleted": False,
+    "inferenceProof": "",
     "workspaceDescription": "",
     "workspaceOpened": False,
     "coworkRequest": "",
@@ -110,9 +118,15 @@ def manual_acceptance_template(
     "approvalDiffReceiptInspected": False,
     "restartRecoveryProof": "",
     "restartRecoveryVerified": False,
+    "sessionDeleteVerified": False,
+    "sessionRevertVerified": False,
+    "sessionCleanupProof": "",
+    "resetAmentiaVerified": False,
+    "resetProof": "",
+    "pluginLifecycleVerified": False,
+    "pluginLifecycleProof": "",
+    "noUnexpectedAppOwnedResidue": False,
     "noAmentiaLoginRequired": False,
-    "installedAppProofValidated": False,
-    "installedAppProofEvidence": "",
     "acceptedForVisiblePrerelease": False,
     "acceptedBy": "",
     "acceptedAt": "",
@@ -275,29 +289,6 @@ def require_git_sha(value: str, label: str) -> None:
     raise RuntimeError(f"{label} must be a 40-character Git SHA hex digest")
 
 
-def require_installed_app_proof_matches(
-  data: dict[str, object],
-  installed_app_proof: dict[str, object],
-  *,
-  tag: str,
-) -> None:
-  expected_dmg_name = str(data["dmgAssetName"]).strip()
-  expected_checksum = str(data["checksum"]).strip().lower()
-  expected_model_id = str(data["selectedModelId"]).strip()
-  checks = (
-    ("releaseTag", tag),
-    ("dmgName", expected_dmg_name),
-    ("dmgSha256", expected_checksum),
-    ("modelId", expected_model_id),
-  )
-  for key, expected in checks:
-    actual = installed_app_proof.get(key)
-    if actual != expected:
-      raise RuntimeError(
-        f"manual acceptance installed-app proof {key} must be {expected!r}, got {actual!r}"
-      )
-
-
 def load_json(path: Path) -> dict[str, object]:
   return load_json_object(path, label="manual acceptance receipt")
 
@@ -306,7 +297,6 @@ def main() -> int:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--tag", required=True)
   parser.add_argument("--evidence", type=Path)
-  parser.add_argument("--installed-app-proof", type=Path)
   parser.add_argument("--template-output", type=Path)
   parser.add_argument("--asset-dir", type=Path)
   parser.add_argument("--source-commit", default="")
@@ -337,12 +327,9 @@ def main() -> int:
       return 0
     if args.evidence is None:
       raise RuntimeError("manual acceptance validation requires --evidence")
-    if args.installed_app_proof is None:
-      raise RuntimeError("manual acceptance validation requires --installed-app-proof")
     validate_manual_acceptance_evidence(
       load_json(args.evidence),
       tag=args.tag,
-      installed_app_proof=load_installed_app_json(args.installed_app_proof),
     )
   except Exception as error:
     print(f"manual acceptance contract failed: {error}", file=sys.stderr)

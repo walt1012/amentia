@@ -24,13 +24,6 @@ python3 scripts/manual_acceptance_contract.py \
 Fill every field after the real install pass. Do not pre-accept a build before
 running the app from the downloaded DMG.
 
-Generate and fill the M14 installed-app proof from the same run:
-
-```bash
-python3 scripts/installed_app_proof.py \
-  --template-output m14-installed-app-proof.json
-```
-
 ## Required Pass
 
 - Verify the DMG checksum from the download folder.
@@ -43,6 +36,9 @@ python3 scripts/installed_app_proof.py \
 - Inspect Web Search proof.
 - Approve one safe local action after reviewing the diff receipt.
 - Restart Amentia and confirm recovery.
+- Delete a test session and revert one approved session change.
+- Run Reset Amentia and confirm no unexpected app-owned residue remains.
+- Install, disable, and remove the reference plugin path used for acceptance.
 - Confirm no Amentia login is required.
 
 ## Validate Receipt
@@ -50,13 +46,12 @@ python3 scripts/installed_app_proof.py \
 ```bash
 python3 scripts/manual_acceptance_contract.py \
   --tag <tag> \
-  --evidence manual-acceptance.json \
-  --installed-app-proof m14-installed-app-proof.json
+  --evidence manual-acceptance.json
 ```
 
-Publish the validated manual acceptance JSON and installed-app proof JSON in a
-repository-scoped HTTPS location, such as a GitHub issue created from the release
-acceptance template. Use that exact URL as `manual_acceptance_evidence`.
+Publish the validated manual acceptance JSON in a repository-scoped HTTPS
+location, such as a GitHub issue created from the release acceptance template.
+Use that exact URL as `manual_acceptance_evidence`.
 
 ## Publish Visible Ad-Hoc Prerelease
 

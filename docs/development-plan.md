@@ -235,8 +235,8 @@ Remaining quality bar:
 
 ## M14: Connector and Skill Platform
 
-Status: complete by maintainer-installed-app validation; milestone-specific proof
-machinery has been removed.
+Status: complete by maintainer-installed-app validation; milestone-specific
+proof machinery has been removed.
 
 Goal: make third-party local plugins safe and useful without building a
 marketplace too early.
@@ -273,7 +273,7 @@ Completed baseline:
 Retained guardrails:
 
 - Release acceptance keeps one installed-app receipt path for visible builds.
-  Milestone-specific proof scripts do not remain after their milestone closes.
+  Milestone-specific acceptance scripts do not remain after their milestone closes.
 - Runner proof, product clarity, bounded output, timeout or cancellation, and
   product-facing errors remain required for new plugin execution surfaces.
 - Do not start broad connector catalog work until one more real connector proves

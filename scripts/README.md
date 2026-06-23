@@ -21,15 +21,11 @@ define release, CI, package, model, or workflow behavior.
   `manual_acceptance_contract.py` enforce the four public assets, dry-run-first
   release rehearsal, draft/visible safety, downloaded-release rehearsal, and
   fresh-Mac manual acceptance gate.
-- Evidence contracts stay lightweight: `evidence_contracts.py` only removes
-  duplicated JSON and field checks used by release proof scripts.
+- Receipt helpers stay lightweight: `evidence_contracts.py` only removes
+  duplicated JSON and field checks used by release acceptance scripts.
 - Runtime and model checks: `runtime_smoke_test.py` and
   `validate_model_pack.py` cover the runtime protocol surface and curated local
   model metadata.
-- Installed-app proof: `installed_app_proof.py` validates the release acceptance
-  receipt for a real installed app, including DMG checksum verification, local
-  model deployment, local inference, Web Search proof, session cleanup, Reset
-  Amentia, plugin lifecycle, and unexpected residue checks.
 - Tests: `test_*.py` files are lightweight contract tests for the scripts above
   and should stay runnable without Rust or Swift toolchains.
 

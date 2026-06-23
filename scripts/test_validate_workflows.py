@@ -90,8 +90,6 @@ jobs:
         run: python3 scripts/test_smoke_launch_macos_app.py
       - name: Test connector workflow contracts
         run: python3 scripts/test_connector_workflow_contracts.py
-      - name: Test installed-app proof contract
-        run: python3 scripts/test_installed_app_proof.py
       - name: Test Notion connector contract
         run: python3 scripts/test_notion_connector_contract.py
       - name: Test distribution validator
@@ -721,18 +719,6 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_notion_connector_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - name: Test installed-app proof contract\n"
-        "        run: python3 scripts/test_installed_app_proof.py\n",
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "test_installed_app_proof.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
