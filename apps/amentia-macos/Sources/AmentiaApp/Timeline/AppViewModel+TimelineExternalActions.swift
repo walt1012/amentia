@@ -10,8 +10,8 @@ extension AppViewModel {
     )
   }
 
-  func timelineProofSummary(from entry: TimelineEntry) -> TimelineProofSummary? {
-    TimelineExternalActionPresenter.proofSummary(attributes: entry.attributes)
+  func timelineReceiptSummary(from entry: TimelineEntry) -> TimelineReceiptSummary? {
+    TimelineExternalActionPresenter.receiptSummary(attributes: entry.attributes)
   }
 
   func timelineApprovalOutcomeSummary(

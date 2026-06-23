@@ -1152,8 +1152,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(removed.body.contains("/Users/example"))
   }
 
-  func testConnectionEvidenceUsesAuthorizationSummary() {
-    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+  func testConnectionReceiptUsesAuthorizationSummary() {
+    let lines = TimelineConnectorReceiptPresenter.summaryLines(attributes: [
       "connectorId": "notion",
       "connectorService": "notion",
       "credentialBinding": "env-bound",
@@ -1167,8 +1167,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("credentialBinding"))
   }
 
-  func testConnectionEvidenceDoesNotTreatStaleMarkerAsAuthorized() {
-    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+  func testConnectionReceiptDoesNotTreatStaleMarkerAsAuthorized() {
+    let lines = TimelineConnectorReceiptPresenter.summaryLines(attributes: [
       "connectorId": "notion",
       "connectorService": "notion",
       "authStatus": "needsAuth",
@@ -1183,8 +1183,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("authorized"))
   }
 
-  func testConnectionEvidenceDoesNotTreatMissingTokenAsAuthorized() {
-    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+  func testConnectionReceiptDoesNotTreatMissingTokenAsAuthorized() {
+    let lines = TimelineConnectorReceiptPresenter.summaryLines(attributes: [
       "connectorId": "notion",
       "connectorService": "notion",
       "credentialPresent": "true",
@@ -1198,8 +1198,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("saved locally"))
   }
 
-  func testConnectionEvidenceDoesNotAskForSignInWhenAuthorizationIsNotRequired() {
-    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+  func testConnectionReceiptDoesNotAskForSignInWhenAuthorizationIsNotRequired() {
+    let lines = TimelineConnectorReceiptPresenter.summaryLines(attributes: [
       "connectorId": "local-preview",
       "connectorService": "local",
       "authRequired": "false",
@@ -1214,8 +1214,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(lines.joined(separator: "\n").contains("needs sign in"))
   }
 
-  func testConnectionEvidenceRequiresSignInWhenAuthorizationHasNoCredential() {
-    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+  func testConnectionReceiptRequiresSignInWhenAuthorizationHasNoCredential() {
+    let lines = TimelineConnectorReceiptPresenter.summaryLines(attributes: [
       "connectorId": "notion",
       "connectorService": "notion",
       "authRequired": "true",
@@ -1229,8 +1229,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
-  func testConnectionEvidenceTreatsLocalBindingAsAvailable() {
-    let lines = TimelineConnectorEvidencePresenter.summaryLines(attributes: [
+  func testConnectionReceiptTreatsLocalBindingAsAvailable() {
+    let lines = TimelineConnectorReceiptPresenter.summaryLines(attributes: [
       "connectorId": "notion",
       "connectorService": "notion",
       "authRequired": "true",

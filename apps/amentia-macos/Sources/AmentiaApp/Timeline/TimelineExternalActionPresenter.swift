@@ -14,7 +14,7 @@ struct TimelineExternalActionSummary: Hashable {
   }
 }
 
-struct TimelineProofSummary: Hashable {
+struct TimelineReceiptSummary: Hashable {
   let title: String
   let detail: String
 }
@@ -24,13 +24,13 @@ enum TimelineExternalActionPresenter {
     attributes: [String: String],
     workspaceRoot: String? = nil
   ) -> TimelineExternalActionSummary? {
-    TimelineConnectorEvidencePresenter.primaryAction(attributes: attributes)
+    TimelineConnectorReceiptPresenter.primaryAction(attributes: attributes)
       ?? webSourceAction(attributes: attributes)
       ?? workspaceFileAction(attributes: attributes, workspaceRoot: workspaceRoot)
   }
 
-  static func proofSummary(attributes: [String: String]) -> TimelineProofSummary? {
-    TimelineConnectorEvidencePresenter.proofSummary(attributes: attributes)
+  static func receiptSummary(attributes: [String: String]) -> TimelineReceiptSummary? {
+    TimelineConnectorReceiptPresenter.receiptSummary(attributes: attributes)
   }
 
   private static func webSourceAction(

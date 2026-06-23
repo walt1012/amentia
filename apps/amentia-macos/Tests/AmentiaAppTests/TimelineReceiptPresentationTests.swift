@@ -1,9 +1,9 @@
 @testable import AmentiaApp
 import XCTest
 
-final class TimelineEvidencePresentationTests: XCTestCase {
+final class TimelineReceiptPresentationTests: XCTestCase {
   func testActionReceiptBadgeShowsAskMode() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "tool": "read_file",
     ])
 
@@ -12,7 +12,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testActionReceiptBadgeShowsApprovalRequired() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "tool": "run_shell",
     ])
 
@@ -21,7 +21,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testActionReceiptBadgeShowsAutoApprovedMode() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "tool": "write_file",
       "actionApprovalPolicy": "autoApproved",
     ])
@@ -31,7 +31,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testWebSearchBadgeLabelsSearchResultAttribution() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "webSearchSourceMode": "searchResultAttribution",
       "pageFetchPerformed": "false",
       "sourceSnapshotAvailable": "false",
@@ -43,7 +43,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testWebSearchBadgeLabelsSearchResultSnapshotWithoutOverstatingFetchDepth() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "webSearchSourceMode": "searchResultAttribution",
       "pageFetchPerformed": "false",
       "sourceSnapshotAvailable": "true",
@@ -56,7 +56,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testRemoteWriteBadgeUsesAmentiaDerivedStatus() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "remoteWriteStatus": "notSent",
     ])
 
@@ -66,7 +66,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testRemoteWriteBadgeLabelsUnconfirmedWritesHonestly() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "remoteWriteStatus": "unconfirmed",
     ])
 
@@ -76,7 +76,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testConnectorWorkflowBadgeSupersedesRemoteWriteDraftNoise() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "connectorWorkflowStatus": "prepared",
       "remoteWriteStatus": "notSent",
     ])
@@ -87,7 +87,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
   }
 
   func testConnectorWorkflowBadgeFlagsRetryNeeded() {
-    let badges = TimelineEvidenceBadgePresenter.badges(attributes: [
+    let badges = TimelineReceiptBadgePresenter.badges(attributes: [
       "connectorWorkflowStatus": "retryNeeded",
       "remoteWriteStatus": "unconfirmed",
     ])
@@ -805,8 +805,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     ))
   }
 
-  func testProofSummaryShowsSuccessfulNotionResult() {
-    let summary = TimelineExternalActionPresenter.proofSummary(attributes: [
+  func testReceiptSummaryShowsSuccessfulNotionResult() {
+    let summary = TimelineExternalActionPresenter.receiptSummary(attributes: [
       "remoteProofKind": "notionApiResponse",
       "remoteProofStatus": "success",
       "notionPageId": "page-123",
@@ -844,7 +844,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       ))
     )
     let action = TimelineExternalActionPresenter.primaryAction(attributes: attributes)
-    let proof = TimelineExternalActionPresenter.proofSummary(attributes: attributes)
+    let receipt = TimelineExternalActionPresenter.receiptSummary(attributes: attributes)
 
     XCTAssertTrue(summary?.contains("Confirmation: message-123") == true)
     XCTAssertTrue(
@@ -852,8 +852,8 @@ final class TimelineEvidencePresentationTests: XCTestCase {
     )
     XCTAssertFalse(summary?.contains("Notion page") == true)
     XCTAssertEqual(action?.title, "Open Message")
-    XCTAssertEqual(proof?.title, "Message sent")
-    XCTAssertTrue(proof?.detail.contains("Confirmation: message-123") == true)
+    XCTAssertEqual(receipt?.title, "Message sent")
+    XCTAssertTrue(receipt?.detail.contains("Confirmation: message-123") == true)
   }
 
   func testExternalActionRejectsUntrustedOrIncompleteProof() {
@@ -875,7 +875,7 @@ final class TimelineEvidencePresentationTests: XCTestCase {
       "notionPageId": "page-123",
       "notionPageUrl": "https://www.notion.so/page-123",
     ]))
-    XCTAssertNil(TimelineExternalActionPresenter.proofSummary(attributes: [
+    XCTAssertNil(TimelineExternalActionPresenter.receiptSummary(attributes: [
       "remoteProofKind": "notionApiResponse",
       "remoteProofStatus": "missing",
       "notionPageId": "page-123",

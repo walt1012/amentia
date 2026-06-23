@@ -24,7 +24,7 @@ struct TimelinePane: View {
             TimelineCard(
               entry: entry,
               isSelected: viewModel.selectedEntryID == entry.id,
-              proofSummary: viewModel.timelineProofSummary(from: entry),
+              receiptSummary: viewModel.timelineReceiptSummary(from: entry),
               approvalOutcomeSummary: viewModel.timelineApprovalOutcomeSummary(from: entry),
               externalActionTitle: viewModel.timelineExternalAction(from: entry)?.title,
               externalCopyActionTitle: viewModel.timelineExternalAction(from: entry)?.copyTitle,

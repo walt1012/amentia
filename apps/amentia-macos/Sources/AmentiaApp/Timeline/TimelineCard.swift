@@ -3,7 +3,7 @@ import SwiftUI
 struct TimelineCard: View {
   let entry: TimelineEntry
   let isSelected: Bool
-  let proofSummary: TimelineProofSummary?
+  let receiptSummary: TimelineReceiptSummary?
   let approvalOutcomeSummary: TimelineApprovalOutcomeSummary?
   let externalActionTitle: String?
   let externalCopyActionTitle: String?
@@ -76,8 +76,8 @@ struct TimelineCard: View {
         .padding(.top, 2)
       }
 
-      if let proofSummary {
-        proofSummaryView(proofSummary)
+      if let receiptSummary {
+        receiptSummaryView(receiptSummary)
       }
 
       if let approvalOutcomeSummary {
@@ -237,14 +237,14 @@ struct TimelineCard: View {
 
   @ViewBuilder
   private var badgeRow: some View {
-    if sandboxBadge != nil || !evidenceBadges.isEmpty {
+    if sandboxBadge != nil || !receiptBadges.isEmpty {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 6) {
           if let sandboxBadge {
             TimelineChip(label: sandboxBadge.label, color: sandboxBadge.tone.color)
           }
 
-          ForEach(evidenceBadges, id: \.self) { badge in
+          ForEach(receiptBadges, id: \.self) { badge in
             TimelineChip(label: badge.label, color: badge.tone.color)
           }
         }
@@ -253,7 +253,7 @@ struct TimelineCard: View {
     }
   }
 
-  private func proofSummaryView(_ summary: TimelineProofSummary) -> some View {
+  private func receiptSummaryView(_ summary: TimelineReceiptSummary) -> some View {
     HStack(alignment: .top, spacing: 8) {
       Image(systemName: "checkmark.seal")
         .foregroundColor(.green)
@@ -430,8 +430,8 @@ struct TimelineCard: View {
     TimelineSandboxBadgePresenter.badge(attributes: entry.attributes)
   }
 
-  private var evidenceBadges: [TimelineEvidenceBadgeSummary] {
-    TimelineEvidenceBadgePresenter.badges(attributes: entry.attributes)
+  private var receiptBadges: [TimelineReceiptBadgeSummary] {
+    TimelineReceiptBadgePresenter.badges(attributes: entry.attributes)
   }
 
   private var contextReceiptSummary: String? {

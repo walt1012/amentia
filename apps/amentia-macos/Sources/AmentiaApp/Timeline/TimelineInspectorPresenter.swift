@@ -91,7 +91,7 @@ enum TimelineInspectorPresenter {
       lines.append("Approval: \(readableIdentifier(action))")
     }
 
-    lines.append(contentsOf: TimelineConnectorEvidencePresenter.summaryLines(
+    lines.append(contentsOf: TimelineConnectorReceiptPresenter.summaryLines(
       attributes: entry.attributes
     ))
     appendPluginConnectorRecoverySummary(entry, to: &lines)
@@ -207,7 +207,7 @@ enum TimelineInspectorPresenter {
       "sourcePath",
       "pluginSourcePath",
     ].contains { key in entry.attributes[key] != nil }
-      || TimelineConnectorEvidencePresenter.hasEvidence(attributes: entry.attributes)
+      || TimelineConnectorReceiptPresenter.hasReceipt(attributes: entry.attributes)
   }
 
   private static func appendPluginInstallSummary(

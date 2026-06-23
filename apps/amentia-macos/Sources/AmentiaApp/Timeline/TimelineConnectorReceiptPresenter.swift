@@ -1,8 +1,8 @@
 import Foundation
 
-enum TimelineConnectorEvidencePresenter {
-  static func hasEvidence(attributes: [String: String]) -> Bool {
-    evidenceKeys.contains { key in attributes[key] != nil }
+enum TimelineConnectorReceiptPresenter {
+  static func hasReceipt(attributes: [String: String]) -> Bool {
+    receiptKeys.contains { key in attributes[key] != nil }
   }
 
   static func summaryLines(attributes: [String: String]) -> [String] {
@@ -18,14 +18,14 @@ enum TimelineConnectorEvidencePresenter {
   }
 
   static func primaryAction(attributes: [String: String]) -> TimelineExternalActionSummary? {
-    notionPageAction(attributes: attributes) ?? genericProofAction(attributes: attributes)
+    notionPageAction(attributes: attributes) ?? genericReceiptAction(attributes: attributes)
   }
 
-  static func proofSummary(attributes: [String: String]) -> TimelineProofSummary? {
-    notionPageProofSummary(attributes: attributes) ?? genericProofSummary(attributes: attributes)
+  static func receiptSummary(attributes: [String: String]) -> TimelineReceiptSummary? {
+    notionPageReceiptSummary(attributes: attributes) ?? genericReceiptSummary(attributes: attributes)
   }
 
-  private static let evidenceKeys = [
+  private static let receiptKeys = [
     "connectorId",
     "connectorIds",
     "connectorStatus",
@@ -126,7 +126,7 @@ enum TimelineConnectorEvidencePresenter {
     )
 
     appendRemoteWriteContinuation(attributes: attributes, to: &lines)
-    appendRemoteProofSummary(attributes: attributes, to: &lines)
+    appendRemoteReceiptSummary(attributes: attributes, to: &lines)
     appendRetrySummary(attributes: attributes, to: &lines)
   }
 
@@ -221,7 +221,7 @@ enum TimelineConnectorEvidencePresenter {
     }
   }
 
-  private static func appendRemoteProofSummary(
+  private static func appendRemoteReceiptSummary(
     attributes: [String: String],
     to lines: inout [String]
   ) {
@@ -242,11 +242,11 @@ enum TimelineConnectorEvidencePresenter {
       lines.append("Confirmation link: \(proofURL)")
     }
 
-    appendNotionProofSummary(attributes: attributes, to: &lines)
+    appendNotionReceiptSummary(attributes: attributes, to: &lines)
     appendTruncationSummary(attributes: attributes, to: &lines)
   }
 
-  private static func appendNotionProofSummary(
+  private static func appendNotionReceiptSummary(
     attributes: [String: String],
     to lines: inout [String]
   ) {
@@ -314,7 +314,7 @@ enum TimelineConnectorEvidencePresenter {
     )
   }
 
-  private static func genericProofAction(
+  private static func genericReceiptAction(
     attributes: [String: String]
   ) -> TimelineExternalActionSummary? {
     guard attributes["remoteProofStatus"] == "success",
@@ -331,9 +331,9 @@ enum TimelineConnectorEvidencePresenter {
     )
   }
 
-  private static func notionPageProofSummary(
+  private static func notionPageReceiptSummary(
     attributes: [String: String]
-  ) -> TimelineProofSummary? {
+  ) -> TimelineReceiptSummary? {
     guard attributes["remoteProofStatus"] == "success",
           attributes["remoteProofKind"] == "notionApiResponse",
           let pageID = attributes["notionPageId"],
@@ -353,15 +353,15 @@ enum TimelineConnectorEvidencePresenter {
       parts.append("Blocks: \(blockCount)")
     }
 
-    return TimelineProofSummary(
+    return TimelineReceiptSummary(
       title: "Notion page created",
       detail: parts.joined(separator: " | ")
     )
   }
 
-  private static func genericProofSummary(
+  private static func genericReceiptSummary(
     attributes: [String: String]
-  ) -> TimelineProofSummary? {
+  ) -> TimelineReceiptSummary? {
     guard attributes["remoteProofStatus"] == "success" else {
       return nil
     }
@@ -381,7 +381,7 @@ enum TimelineConnectorEvidencePresenter {
       return nil
     }
 
-    return TimelineProofSummary(
+    return TimelineReceiptSummary(
       title: attributes["remoteProofTitle"] ?? "\(serviceName(attributes: attributes)) confirmation recorded",
       detail: parts.joined(separator: " | ")
     )

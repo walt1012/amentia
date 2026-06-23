@@ -92,6 +92,8 @@ Implemented foundations:
 - Product language: normal setup, model, project, session, readiness, timeline,
   inspector, plugin, connection, permission, and local-data paths avoid raw
   protocol names, paths, IDs, hashes, and manifest details by default.
+- Timeline presentation internals use receipt terminology so UI copy, tests, and
+  release metadata stay aligned without changing connector protocol fields.
 - Primary window foundations are in place: native sidebar density, calm timeline
   cards, focused composer, readiness, first-run setup, session sidebar
   ownership, model management, project search, plugin management, inspector
