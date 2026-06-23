@@ -31,6 +31,9 @@ define release, CI, package, model, or workflow behavior.
   Reset Amentia, plugin lifecycle, and unexpected residue checks. Accepted
   evidence belongs in `docs/evidence/m14-installed-app-proof.json` after a real
   installed-app run.
+- Milestone evidence: `milestone_evidence.py` validates accepted proof JSON files
+  committed under `docs/evidence` and can require every M14 proof before closing
+  the milestone.
 - Connector proof: `reference_connector_proof.py` validates the M14 Notion
   reference connector acceptance evidence before broader connector work starts,
   including non-placeholder proof text, UTC acceptance time, and storage plus

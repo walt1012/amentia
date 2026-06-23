@@ -3,6 +3,18 @@
 This directory is for human-accepted milestone and release proof. Keep it small,
 specific, and tied to a real installed-app run.
 
+CI validates any accepted JSON evidence committed here:
+
+```bash
+python scripts/milestone_evidence.py
+```
+
+Before closing M14, require both accepted proof files:
+
+```bash
+python scripts/milestone_evidence.py --require-all
+```
+
 ## M14 Installed-App Proof
 
 The accepted installed-app proof belongs at:

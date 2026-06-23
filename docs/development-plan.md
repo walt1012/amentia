@@ -272,6 +272,8 @@ Completed baseline:
   Amentia, plugin lifecycle, and unexpected residue checks.
 - Manual release acceptance now validates that installed-app proof and cross-checks
   the candidate tag, DMG name, checksum, and selected model before publishing.
+- Accepted M14 evidence committed under `docs/evidence` is CI-validated, and M14
+  closure can require both installed-app and reference connector proof files.
 
 Exit gates:
 
@@ -305,7 +307,7 @@ Immediate next work:
 2. Capture the Notion reference connector proof in the evidence file above.
 3. Continue the product clarity pass on advanced settings and installed-app
    proof surfaces.
-4. Close M14 only after the installed-app and connector proofs are green.
+4. Close M14 only after `scripts/milestone_evidence.py --require-all` is green.
 
 ## M15: Cowork Continuity
 

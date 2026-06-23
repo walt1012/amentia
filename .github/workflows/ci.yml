@@ -172,6 +172,12 @@ jobs:
       - name: Test packaged smoke helper
         run: python3 scripts/test_smoke_launch_macos_app.py
 
+      - name: Validate accepted milestone evidence
+        run: python3 scripts/milestone_evidence.py
+
+      - name: Test milestone evidence contract
+        run: python3 scripts/test_milestone_evidence.py
+
       - name: Test connector workflow contracts
         run: python3 scripts/test_connector_workflow_contracts.py
 

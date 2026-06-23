@@ -90,6 +90,10 @@ jobs:
         run: python3 scripts/test_first_app_open_contract.py
       - name: Test packaged smoke helper
         run: python3 scripts/test_smoke_launch_macos_app.py
+      - name: Validate accepted milestone evidence
+        run: python3 scripts/milestone_evidence.py
+      - name: Test milestone evidence contract
+        run: python3 scripts/test_milestone_evidence.py
       - name: Test connector workflow contracts
         run: python3 scripts/test_connector_workflow_contracts.py
       - name: Test installed-app proof contract
@@ -767,6 +771,30 @@ def main() -> int:
       ),
     )
     assert_issue(issue_messages(root), "test_notion_connector_contract.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Validate accepted milestone evidence\n"
+        "        run: python3 scripts/milestone_evidence.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "milestone_evidence.py")
+
+  with TemporaryDirectory() as directory:
+    root = Path(directory)
+    write_workflows(
+      root,
+      ci=VALID_CI.replace(
+        "      - name: Test milestone evidence contract\n"
+        "        run: python3 scripts/test_milestone_evidence.py\n",
+        "",
+      ),
+    )
+    assert_issue(issue_messages(root), "test_milestone_evidence.py")
 
   with TemporaryDirectory() as directory:
     root = Path(directory)
