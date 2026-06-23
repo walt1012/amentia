@@ -737,6 +737,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
         input: PluginCommandEnvelopeSummary(envelope: "json", fields: [
           PluginCommandEnvelopeFieldSummary(
             name: "input",
+            kind: "text",
             required: true,
             description: "Draft text"
           )
