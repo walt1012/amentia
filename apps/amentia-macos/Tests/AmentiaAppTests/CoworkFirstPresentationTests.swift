@@ -483,9 +483,9 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   func testPluginDashboardUsesHumanCapabilityLanguage() {
     let snapshot = pluginDashboardSnapshot()
-    let detail = PluginDashboardPresenter.pluginDetailSummary(snapshot)
-    let registry = PluginDashboardPresenter.registryDetailSummary(snapshot)
-    let permissions = PluginDashboardPresenter.permissionDetailSummary(snapshot)
+    let detail = PluginDashboardDetailPresenter.pluginDetailSummary(snapshot)
+    let registry = PluginDashboardDetailPresenter.registryDetailSummary(snapshot)
+    let permissions = PluginDashboardDetailPresenter.permissionDetailSummary(snapshot)
 
     XCTAssertEqual(PluginDashboardPresenter.pluginCountSummary(snapshot), "1 plugin ready")
     XCTAssertTrue(detail.contains("1 action"))
@@ -517,10 +517,10 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hooks: (0..<8).map { pluginHookSummary(id: "check-\($0)") }
     )
 
-    XCTAssertEqual(PluginDashboardPresenter.capabilityPreview(snapshot).count, 6)
-    XCTAssertEqual(PluginDashboardPresenter.connectorPreview(snapshot).count, 6)
-    XCTAssertEqual(PluginDashboardPresenter.commandPreview(snapshot).count, 6)
-    XCTAssertEqual(PluginDashboardPresenter.hookPreview(snapshot).count, 6)
+    XCTAssertEqual(PluginDashboardPreview.capabilityPreview(snapshot).count, 6)
+    XCTAssertEqual(PluginDashboardPreview.connectorPreview(snapshot).count, 6)
+    XCTAssertEqual(PluginDashboardPreview.commandPreview(snapshot).count, 6)
+    XCTAssertEqual(PluginDashboardPreview.hookPreview(snapshot).count, 6)
     XCTAssertTrue(PluginDashboardPresenter.commandCountSummary(snapshot).contains("8 actions"))
     XCTAssertTrue(PluginDashboardPresenter.hookCountSummary(snapshot).contains("8 checks"))
   }
@@ -541,8 +541,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
       ]
     )
 
-    let connectorDetail = PluginDashboardPresenter.connectorDetailSummary(snapshot)
-    let commandDetail = PluginDashboardPresenter.commandDetailSummary(snapshot)
+    let connectorDetail = PluginDashboardDetailPresenter.connectorDetailSummary(snapshot)
+    let commandDetail = PluginDashboardDetailPresenter.commandDetailSummary(snapshot)
 
     XCTAssertTrue(connectorDetail.contains("Authorization: needs sign in"))
     XCTAssertFalse(connectorDetail.contains("needsAuth"))
@@ -585,7 +585,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
 
     let summary = PluginDashboardPresenter.connectorCountSummary(snapshot)
-    let detail = PluginDashboardPresenter.connectorDetailSummary(snapshot)
+    let detail = PluginDashboardDetailPresenter.connectorDetailSummary(snapshot)
 
     XCTAssertEqual(summary, "1 connection | 1 ready | 1 need sign in")
     XCTAssertTrue(detail.contains("Authorization: needs sign in"))
@@ -682,7 +682,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       ]
     )
 
-    let detail = PluginDashboardPresenter.invalidPluginDetailSummary(snapshot)
+    let detail = PluginDashboardDetailPresenter.invalidPluginDetailSummary(snapshot)
 
     XCTAssertTrue(detail.contains("Setup needs review."))
     XCTAssertFalse(detail.contains("Unknown validation error"))
@@ -716,7 +716,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       ]
     )
 
-    let detail = PluginDashboardPresenter.pluginDetailSummary(snapshot)
+    let detail = PluginDashboardDetailPresenter.pluginDetailSummary(snapshot)
 
     XCTAssertTrue(detail.contains("needs attention"))
     XCTAssertTrue(detail.contains("Fix: Check the plugin setup file, then refresh the plugin."))
@@ -748,7 +748,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
     let snapshot = pluginDashboardSnapshot(commands: [command])
 
-    let detail = PluginDashboardPresenter.commandDetailSummary(snapshot)
+    let detail = PluginDashboardDetailPresenter.commandDetailSummary(snapshot)
 
     XCTAssertTrue(detail.contains("Status:"))
     XCTAssertTrue(detail.contains("Input:"))
@@ -923,7 +923,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       pluginHookSummary(id: "custom::hook:opaque", event: "third_party.raw_event"),
     ])
 
-    let detail = PluginDashboardPresenter.hookDetailSummary(snapshot)
+    let detail = PluginDashboardDetailPresenter.hookDetailSummary(snapshot)
 
     XCTAssertTrue(detail.contains("Runs after shell commands"))
     XCTAssertTrue(detail.contains("Runs during plugin checks"))

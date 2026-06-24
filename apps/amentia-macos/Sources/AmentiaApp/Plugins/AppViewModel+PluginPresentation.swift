@@ -11,7 +11,7 @@ extension AppViewModel {
   }
 
   func pluginDetailSummary() -> String {
-    PluginDashboardPresenter.pluginDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.pluginDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginSurfaceSummary() -> String {
@@ -37,7 +37,7 @@ extension AppViewModel {
   }
 
   func pluginCatalogPreview() -> [PluginSummary] {
-    PluginDashboardPresenter.catalogPreview(pluginDashboardSnapshot)
+    PluginDashboardPreview.catalogPreview(pluginDashboardSnapshot)
   }
 
   func pluginPermissionCountSummary() -> String {
@@ -45,11 +45,11 @@ extension AppViewModel {
   }
 
   func pluginPermissionDetailSummary() -> String {
-    PluginDashboardPresenter.permissionDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.permissionDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginPermissionPreview() -> [PluginSummary] {
-    PluginDashboardPresenter.permissionPreview(pluginDashboardSnapshot)
+    PluginDashboardPreview.permissionPreview(pluginDashboardSnapshot)
   }
 
   func invalidPluginCountSummary() -> String {
@@ -57,11 +57,11 @@ extension AppViewModel {
   }
 
   func invalidPluginDetailSummary() -> String {
-    PluginDashboardPresenter.invalidPluginDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.invalidPluginDetailSummary(pluginDashboardSnapshot)
   }
 
   func invalidPlugins() -> [PluginSummary] {
-    PluginDashboardPresenter.invalidPlugins(pluginDashboardSnapshot)
+    PluginDashboardPreview.invalidPlugins(pluginDashboardSnapshot)
   }
 
   func pluginRegistryCountSummary() -> String {
@@ -69,11 +69,11 @@ extension AppViewModel {
   }
 
   func pluginRegistryDetailSummary() -> String {
-    PluginDashboardPresenter.registryDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.registryDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginCapabilityPreview() -> [PluginCapabilitySummary] {
-    PluginDashboardPresenter.capabilityPreview(pluginDashboardSnapshot)
+    PluginDashboardPreview.capabilityPreview(pluginDashboardSnapshot)
   }
 
   func pluginConnectorCountSummary() -> String {
@@ -81,11 +81,11 @@ extension AppViewModel {
   }
 
   func pluginConnectorDetailSummary() -> String {
-    PluginDashboardPresenter.connectorDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.connectorDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginConnectorPreview() -> [PluginConnectorSummary] {
-    PluginDashboardPresenter.connectorPreview(pluginDashboardSnapshot)
+    PluginDashboardPreview.connectorPreview(pluginDashboardSnapshot)
   }
 
   func pluginCommandCountSummary() -> String {
@@ -93,15 +93,15 @@ extension AppViewModel {
   }
 
   func pluginCommandDetailSummary() -> String {
-    PluginDashboardPresenter.commandDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.commandDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginCommandPreview() -> [PluginCommandSummary] {
-    PluginDashboardPresenter.commandPreview(pluginDashboardSnapshot)
+    PluginDashboardPreview.commandPreview(pluginDashboardSnapshot)
   }
 
   func pluginCommandConnectors(commandID: String) -> [PluginConnectorSummary] {
-    PluginDashboardPresenter.commandConnectors(
+    PluginDashboardPreview.commandConnectors(
       commandID: commandID,
       snapshot: pluginDashboardSnapshot
     )
@@ -112,11 +112,11 @@ extension AppViewModel {
   }
 
   func pluginHookDetailSummary() -> String {
-    PluginDashboardPresenter.hookDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.hookDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginHookPreview() -> [PluginHookSummary] {
-    PluginDashboardPresenter.hookPreview(pluginDashboardSnapshot)
+    PluginDashboardPreview.hookPreview(pluginDashboardSnapshot)
   }
 
   func pluginSkillCountSummary() -> String {
@@ -124,11 +124,11 @@ extension AppViewModel {
   }
 
   func pluginSkillDetailSummary() -> String {
-    PluginDashboardPresenter.skillDetailSummary(pluginDashboardSnapshot)
+    PluginDashboardDetailPresenter.skillDetailSummary(pluginDashboardSnapshot)
   }
 
   func pluginSkillPreview() -> [PluginSkillSummary] {
-    PluginDashboardPresenter.skillPreview(pluginDashboardSnapshot)
+    PluginDashboardPreview.skillPreview(pluginDashboardSnapshot)
   }
 
   func canDisablePluginGuidance(skill: PluginSkillSummary) -> Bool {
