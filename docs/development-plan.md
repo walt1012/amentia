@@ -87,7 +87,7 @@ The current product baseline includes:
 
 ## M15 Cowork Continuity
 
-Status: active.
+Status: active. Current focus: structural cleanup, then local model loop polish.
 
 Goal: make Amentia useful across real sessions without turning it into a remote
 server agent or a code-only assistant.

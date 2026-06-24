@@ -1,8 +1,8 @@
 use super::protocol_adapters::build_protocol_capability_registry;
 use super::test_support::{
   bundled_manifest_plugin_entry, bundled_plugin_entry, create_temp_plugin_bundle,
-  create_temp_workspace, make_test_file_executable, replace_plugin_catalog, request,
-  temp_manifest_plugin_entry,
+  create_temp_workspace, make_test_file_executable, remove_temp_plugin_source,
+  replace_plugin_catalog, request, temp_manifest_plugin_entry,
 };
 use super::*;
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
@@ -94,7 +94,7 @@ fn plugin_command_registry_surfaces_invalid_command_manifests() {
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -176,7 +176,7 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -244,7 +244,7 @@ fn plugin_command_registry_blocks_mcp_commands_with_missing_server() {
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -335,7 +335,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -418,7 +418,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -500,7 +500,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -563,7 +563,7 @@ printf '{"content":"ok"}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -623,7 +623,7 @@ printf '{"content":"ok"}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -766,7 +766,7 @@ printf '{"content":"ok"}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let ready_registry = ready_response
     .result
@@ -880,7 +880,7 @@ printf '{"content":"ok"}\n'
     ),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(registry_response.error.is_none());
   let registry = registry_response
@@ -976,7 +976,7 @@ fn connector_backed_plugin_commands_report_runner_setup_before_connector_auth() 
     ),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(registry_response.error.is_none());
   let registry = registry_response
@@ -1109,7 +1109,7 @@ printf '{"content":"ok"}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -1170,7 +1170,7 @@ fn connector_backed_plugin_commands_report_missing_declared_connectors() {
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -1263,7 +1263,7 @@ printf '{"content":"ok"}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -1353,7 +1353,7 @@ printf '{"content":"ok"}\n'
     request(methods::PLUGIN_COMMAND_REGISTRY, None),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command registry result");
@@ -1440,7 +1440,7 @@ fn plugin_hook_registry_surfaces_invalid_hook_manifests() {
 
   let response = handle_request(&mut context, request(methods::PLUGIN_HOOK_REGISTRY, None));
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("hook registry result");
@@ -1509,7 +1509,7 @@ fn plugin_skill_registry_lists_enabled_plugin_skills() {
 
   let response = handle_request(&mut context, request(methods::PLUGIN_SKILL_REGISTRY, None));
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("skill registry result");
@@ -1877,7 +1877,7 @@ fn plugin_connector_authorize_rejects_missing_secret_for_api_key_spelling_varian
     ),
   );
 
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = response.error.expect("connector auth secret error");
   assert_eq!(error.code, -32058);

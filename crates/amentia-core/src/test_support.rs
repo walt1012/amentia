@@ -64,6 +64,11 @@ pub(crate) fn create_temp_plugin_bundle(
   plugin_dir
 }
 
+pub(crate) fn remove_temp_plugin_source(source_root: &Path) {
+  let root = source_root.parent().expect("plugin root");
+  fs::remove_dir_all(root).expect("cleanup plugin source");
+}
+
 pub(crate) fn replace_plugin_catalog(
   context: &mut RuntimeContext,
   catalog: Vec<PluginCatalogEntry>,

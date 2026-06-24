@@ -1,6 +1,7 @@
 use super::test_support::{
   bundled_manifest_plugin_entry, create_temp_plugin_bundle, create_temp_workspace,
-  make_test_file_executable, replace_plugin_catalog, request, temp_manifest_plugin_entry,
+  make_test_file_executable, remove_temp_plugin_source, replace_plugin_catalog, request,
+  temp_manifest_plugin_entry,
 };
 use super::*;
 use amentia_plugin_host::PluginCatalogEntry;
@@ -1318,16 +1319,16 @@ fn bundled_builtin_plugin_commands_return_owned_results() {
 fn plugin_command_run_rejects_commands_without_execution_contract() {
   let mut context = RuntimeContext::new_in_memory();
   let source_root =
-    create_temp_plugin_bundle("plugin-command-contract", "prompt-only", "Prompt Only");
+    create_temp_plugin_bundle("plugin-command-contract", "contractless", "Contractless");
   let workspace = create_temp_workspace("plugin-command-contract-workspace");
   let plugin_manifest = source_root.join("amentia-plugin.json");
   replace_plugin_catalog(
     &mut context,
     vec![temp_manifest_plugin_entry(
-      "prompt-only",
-      "Prompt Only",
-      "Prompt-only command plugin",
-      &["command:prompt-only.run"],
+      "contractless",
+      "Contractless",
+      "Command plugin without an execution contract",
+      &["command:contractless.run"],
       &["file.read"],
       &plugin_manifest,
     )],
@@ -1358,13 +1359,13 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
       methods::PLUGIN_COMMAND_RUN,
       Some(json!({
         "threadId": "thread-1",
-        "commandId": "prompt-only::prompt-only.run"
+        "commandId": "contractless::contractless.run"
       })),
     ),
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = response.error.expect("command contract error");
   assert_eq!(error.code, -32053);
@@ -1372,8 +1373,8 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
     .message
     .contains("requires an explicit execution contract"));
   let data = error.data.expect("command readiness error data");
-  assert_eq!(data["pluginId"], "prompt-only");
-  assert_eq!(data["commandId"], "prompt-only::prompt-only.run");
+  assert_eq!(data["pluginId"], "contractless");
+  assert_eq!(data["commandId"], "contractless::contractless.run");
   assert_eq!(data["runStatus"], "missingExecution");
   assert!(data["runRepairHint"]
     .as_str()
@@ -1460,7 +1461,7 @@ printf '{"content":"External runner completed."}\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -1584,7 +1585,7 @@ printf '{"content":"runner should not start"}\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = response.error.expect("required input error");
   assert_eq!(error.code, -32053);
@@ -1727,7 +1728,7 @@ printf '{"content":"status ok"}\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -1860,7 +1861,7 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s envKey=%s secr
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -1985,7 +1986,7 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(approval_response.error.is_none());
   let approval_result = approval_response.result.expect("approval result");
@@ -2112,7 +2113,7 @@ fn approval_respond_returns_structured_plugin_command_readiness_error() {
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = approval_response
     .error
@@ -2335,7 +2336,7 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(approval_response.error.is_none());
   let approval_result = approval_response.result.expect("approval result");
@@ -2467,7 +2468,7 @@ JSON
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -2614,7 +2615,7 @@ JSON
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -2738,7 +2739,7 @@ JSON
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -2860,7 +2861,7 @@ JSON
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -2989,7 +2990,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -3127,7 +3128,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = response.error.expect("permission blocker error");
   assert_eq!(error.code, -32053);
@@ -3259,7 +3260,7 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = response.error.expect("permission blocker error");
   assert_eq!(error.code, -32053);
@@ -3346,7 +3347,7 @@ exit 7
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -3468,7 +3469,7 @@ printf '{}\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -3568,7 +3569,7 @@ printf '{"content":'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -3679,7 +3680,7 @@ JSON
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -3777,7 +3778,7 @@ printf 'should not run\n'
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = response.error.expect("runner setup error");
   assert_eq!(error.code, -32053);
@@ -3876,7 +3877,7 @@ JSON
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   assert!(response.error.is_none());
   let result = response.result.expect("command run result");
@@ -3955,7 +3956,7 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
   );
 
   fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
-  fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
+  remove_temp_plugin_source(&source_root);
 
   let error = response.error.expect("runner setup error");
   assert_eq!(error.code, -32053);
