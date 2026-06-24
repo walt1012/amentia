@@ -100,8 +100,9 @@ Implemented foundations:
   names while keeping real domain boundaries intact.
 - Core cleanup now favors direct module ownership over facade-of-facade imports
   for turns, plugin permissions, hooks, lifecycle requests, and readiness.
-- macOS plugin cleanup keeps summary data, dashboard state, and presentation
-  text in separate owners so protocol-shaped data does not become UI glue.
+- macOS plugin cleanup keeps summary data, dashboard state, surface/status
+  display, validation copy, and guidance/check copy in separate owners so
+  protocol-shaped data does not become UI glue.
 - Primary window foundations are in place: native sidebar density, calm timeline
   cards, focused composer, readiness, first-run setup, session sidebar
   ownership, model management, project search, plugin management, inspector
