@@ -18,15 +18,7 @@ enum LocalModelVerificationStampStore {
       expectedSHA256: expectedSHA256,
       localMetadata: localMetadata
     )
-    if storedStamp == currentStamp {
-      return true
-    }
-
-    return storedStamp == legacyVerificationStamp(
-      path: path,
-      expectedSHA256: expectedSHA256,
-      localMetadata: localMetadata
-    )
+    return storedStamp == currentStamp
   }
 
   static func rememberVerifiedModel(
@@ -69,19 +61,6 @@ enum LocalModelVerificationStampStore {
       String(localMetadata.creationMilliseconds),
       String(localMetadata.modificationMilliseconds),
       String(localMetadata.systemFileNumber ?? 0),
-      expectedSHA256.lowercased(),
-    ].joined(separator: "|")
-  }
-
-  private static func legacyVerificationStamp(
-    path: String,
-    expectedSHA256: String,
-    localMetadata: LocalModelFileMetadata
-  ) -> String {
-    [
-      normalizedPath(path),
-      String(localMetadata.sizeBytes),
-      String(localMetadata.modificationMilliseconds),
       expectedSHA256.lowercased(),
     ].joined(separator: "|")
   }

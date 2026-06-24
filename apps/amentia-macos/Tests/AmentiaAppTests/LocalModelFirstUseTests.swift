@@ -232,43 +232,6 @@ final class LocalModelFirstUseTests: XCTestCase {
     }
   }
 
-  func testLegacyVerificationStampKeepsExistingDownloadsVisible() throws {
-    let rootURL = try makeTemporaryDirectory(prefix: "amentia-model-first-use")
-    defer {
-      try? FileManager.default.removeItem(at: rootURL)
-    }
-
-    let modelURL = rootURL
-      .appendingPathComponent("catalog", isDirectory: true)
-      .appendingPathComponent("legacy-stamp-case", isDirectory: true)
-      .appendingPathComponent("legacy-stamp-case.gguf")
-    let expectedSizeBytes: Int64 = 64 * 1024 * 1024
-    let expectedSHA256 = try writeGGUFFixture(at: modelURL, sizeBytes: expectedSizeBytes)
-    let model = localModelSummary(
-      modelURL: modelURL,
-      sizeBytes: expectedSizeBytes,
-      sha256: expectedSHA256
-    )
-    defer {
-      UserDefaults.standard.removeObject(forKey: "amentia.verifiedLocalModel.\(model.id)")
-    }
-
-    let attributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
-    let size = try XCTUnwrap(attributes[.size] as? NSNumber).int64Value
-    let modificationDate = try XCTUnwrap(attributes[.modificationDate] as? Date)
-    let modificationMilliseconds = Int64(modificationDate.timeIntervalSince1970 * 1000)
-    let legacyStamp = [
-      URL(fileURLWithPath: modelURL.path).standardizedFileURL.path,
-      String(size),
-      String(modificationMilliseconds),
-      model.sha256.lowercased(),
-    ].joined(separator: "|")
-    UserDefaults.standard.set(legacyStamp, forKey: "amentia.verifiedLocalModel.\(model.id)")
-
-    let item = localModelCatalogItem(for: model)
-    XCTAssertTrue(LocalModelIntegrity.state(at: modelURL.path, item: item).isVerified)
-  }
-
   private func localModelSummary(
     modelURL: URL,
     sizeBytes: Int64,

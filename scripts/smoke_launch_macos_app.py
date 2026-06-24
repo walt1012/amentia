@@ -207,12 +207,6 @@ def parse_args() -> argparse.Namespace:
   )
   parser.add_argument("app_path", type=Path, help="Path to the packaged Amentia.app bundle.")
   parser.add_argument(
-    "--duration",
-    type=float,
-    default=None,
-    help="Deprecated alias for --stability-duration.",
-  )
-  parser.add_argument(
     "--startup-timeout",
     type=float,
     default=APP_STARTUP_TIMEOUT_SECONDS,
@@ -1946,9 +1940,6 @@ def main() -> int:
   package_metadata = validate_app_bundle(app_path)
   validate_packaged_runtime_protocol(app_path)
   before_runtime_pids = process_ids(RUNTIME_PROCESS_NAME)
-  stability_duration = (
-    args.duration if args.duration is not None else args.stability_duration
-  )
   with tempfile.TemporaryDirectory(prefix="amentia-app-smoke-") as support_root:
     support_dir = Path(support_root)
     app_process = launch_app_process(app_path, support_dir)
@@ -1968,7 +1959,7 @@ def main() -> int:
           validate_app_runtime_stability(
             app_process,
             launched_runtime_pids,
-            stability_duration,
+            args.stability_duration,
           )
           validate_isolated_support_dir(support_dir)
           write_packaged_smoke_receipt(
