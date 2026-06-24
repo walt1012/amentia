@@ -44,7 +44,7 @@ extension AppViewModel {
         focusAfterConnectorAuthorization(pluginID: connector.pluginID)
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginConnectorAuthorized(connector),
+          TimelinePluginEventPresenter.pluginConnectorAuthorized(connector),
           detail: "Connection authorized. Actions were refreshed.",
           preview: "Connection authorized"
         )
@@ -56,7 +56,7 @@ extension AppViewModel {
         }
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error),
+          TimelinePluginEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error),
           detail: error.localizedDescription,
           preview: "Connection authorization failed"
         )
@@ -95,7 +95,7 @@ extension AppViewModel {
         pluginManagerSection = .connectors
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginConnectorCredentialCleared(connector),
+          TimelinePluginEventPresenter.pluginConnectorCredentialCleared(connector),
           detail: "Connection authorization cleared. Actions were refreshed.",
           preview: "Connection authorization cleared"
         )
@@ -107,7 +107,7 @@ extension AppViewModel {
         }
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginConnectorCredentialClearFailed(
+          TimelinePluginEventPresenter.pluginConnectorCredentialClearFailed(
             connectorID: connectorID,
             error: error
           ),

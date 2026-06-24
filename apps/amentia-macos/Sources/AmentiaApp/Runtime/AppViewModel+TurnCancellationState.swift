@@ -46,7 +46,7 @@ extension AppViewModel {
     case .agentTurn, .approvalExecution:
       return TimelineEventPresenter.cancellingTurnDetail
     case .pluginCommand:
-      return TimelineEventPresenter.cancellingPluginCommandDetail
+      return TimelinePluginEventPresenter.cancellingPluginCommandDetail
     }
   }
 
@@ -55,7 +55,7 @@ extension AppViewModel {
     case .agentTurn, .approvalExecution:
       return TimelineEventPresenter.cancellingResponsePreview
     case .pluginCommand:
-      return TimelineEventPresenter.cancellingPluginCommandPreview
+      return TimelinePluginEventPresenter.cancellingPluginCommandPreview
     }
   }
 }

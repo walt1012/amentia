@@ -94,6 +94,8 @@ Implemented foundations:
   protocol names, paths, IDs, hashes, and manifest details by default.
 - Timeline presentation internals use receipt terminology and shared readable
   text helpers so UI copy stays consistent without changing protocol fields.
+- Timeline events separate general session, runtime, model, and memory
+  presentation from plugin lifecycle, connection, and action presentation.
 - Core and macOS cleanup is collapsing thin facade files and misleading legacy
   names while keeping real domain boundaries intact.
 - Core cleanup now favors direct module ownership over facade-of-facade imports

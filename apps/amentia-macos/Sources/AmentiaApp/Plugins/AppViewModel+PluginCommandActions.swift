@@ -30,7 +30,7 @@ extension AppViewModel {
     ) {
       appendBlockedPluginCommand(
         command,
-        detail: TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail
+        detail: TimelinePluginEventPresenter.pluginCommandNeedsExecutionContractDetail
       )
       return
     }
@@ -39,7 +39,7 @@ extension AppViewModel {
         commandID: commandID,
         snapshot: snapshot
       )
-        ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
+        ?? TimelinePluginEventPresenter.pluginCommandNeedsConnectorAuthDetail
       appendBlockedPluginCommand(command, detail: detail)
       return
     }
@@ -195,7 +195,7 @@ extension AppViewModel {
     }
 
     pluginManagerSection = .commands
-    runtimeDetail = TimelineEventPresenter.runningPluginCommandDetail
+    runtimeDetail = TimelinePluginEventPresenter.runningPluginCommandDetail
     let requestID = localExecutionRequests.beginPluginCommandRequest(threadID: request.threadID)
 
     let task = Task {
@@ -231,28 +231,28 @@ extension AppViewModel {
     request: PluginCommandRunRequest
   ) {
     if Task.isCancelled {
-      runtimeDetail = TimelineEventPresenter.pendingPluginCommandCancelledDetail
+      runtimeDetail = TimelinePluginEventPresenter.pendingPluginCommandCancelledDetail
       refreshThreadPreview(
         threadID: request.threadID,
-        preview: TimelineEventPresenter.cancelledPluginCommandPreview
+        preview: TimelinePluginEventPresenter.cancelledPluginCommandPreview
       )
       appendEntry(
         to: request.threadID,
-        TimelineEventPresenter.pluginCommandCancelled()
+        TimelinePluginEventPresenter.pluginCommandCancelled()
       )
       return
     }
 
-    let failureEntry = TimelineEventPresenter.pluginCommandFailed(error: error)
+    let failureEntry = TimelinePluginEventPresenter.pluginCommandFailed(error: error)
     if failureEntry.attributes["pluginCommandStatus"] == "blocked" {
       refreshThreadPreview(
         threadID: request.threadID,
-        preview: TimelineEventPresenter.blockedPluginCommandPreview
+        preview: TimelinePluginEventPresenter.blockedPluginCommandPreview
       )
     } else {
       refreshThreadPreview(
         threadID: request.threadID,
-        preview: TimelineEventPresenter.failedPluginCommandPreview
+        preview: TimelinePluginEventPresenter.failedPluginCommandPreview
       )
     }
     runtimeDetail = error.localizedDescription
@@ -270,7 +270,7 @@ extension AppViewModel {
     runtimeDetail = detail
     appendEntry(
       to: selectedThreadID,
-      TimelineEventPresenter.pluginCommandBlocked(command, detail: detail, input: input)
+      TimelinePluginEventPresenter.pluginCommandBlocked(command, detail: detail, input: input)
     )
   }
 }

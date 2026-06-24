@@ -28,7 +28,7 @@ extension AppViewModel {
       let hasDiagnostics = !snapshot.diagnostics.isEmpty
       appendPluginStatusEntry(
         to: timelineThreadID,
-        TimelineEventPresenter.pluginCatalogRefreshed(
+        TimelinePluginEventPresenter.pluginCatalogRefreshed(
           pluginSummary: pluginCountSummary(),
           surfaceSummary: pluginSurfaceSummary(),
           diagnostics: snapshot.diagnostics,
@@ -80,7 +80,7 @@ extension AppViewModel {
           let detail = preview.installBlocker ?? "Plugin cannot be installed yet."
           appendPluginStatusEntry(
             to: timelineThreadID,
-            TimelineEventPresenter.pluginInstallBlocked(preview: preview),
+            TimelinePluginEventPresenter.pluginInstallBlocked(preview: preview),
             detail: detail,
             preview: "Plugin install needs attention"
           )
@@ -105,7 +105,7 @@ extension AppViewModel {
         )
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginInstalled(installedPlugin, preview: preview),
+          TimelinePluginEventPresenter.pluginInstalled(installedPlugin, preview: preview),
           detail: installedPlugin.enabled
             ? "Plugin installed and enabled."
             : "Plugin installed. Enable it before running actions.",
@@ -160,7 +160,7 @@ extension AppViewModel {
         )
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled),
+          TimelinePluginEventPresenter.pluginUpdated(updatedPlugin, enabled: enabled),
           detail: "\(updatedPlugin.displayName) is now \(enabled ? "enabled" : "disabled").",
           preview: enabled ? "Plugin enabled" : "Plugin disabled"
         )
@@ -172,7 +172,7 @@ extension AppViewModel {
         }
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginUpdateFailed(
+          TimelinePluginEventPresenter.pluginUpdateFailed(
             pluginID: pluginID,
             enabled: enabled,
             error: error
@@ -219,7 +219,7 @@ extension AppViewModel {
         }
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginRemoved(removedPlugin),
+          TimelinePluginEventPresenter.pluginRemoved(removedPlugin),
           detail: "\(removedPlugin.displayName) was removed.",
           preview: "Plugin removed"
         )
@@ -231,7 +231,7 @@ extension AppViewModel {
         }
         appendPluginStatusEntry(
           to: timelineThreadID,
-          TimelineEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error),
+          TimelinePluginEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error),
           detail: error.localizedDescription,
           preview: "Plugin removal failed"
         )
@@ -250,7 +250,7 @@ extension AppViewModel {
     if confirmedPreview == nil {
       appendPluginStatusEntry(
         to: threadID,
-        TimelineEventPresenter.pluginInstallPreviewFailed(
+        TimelinePluginEventPresenter.pluginInstallPreviewFailed(
           error: error,
           repairHint: repairHint,
           sourcePath: sourcePath
@@ -263,7 +263,7 @@ extension AppViewModel {
 
     appendPluginStatusEntry(
       to: threadID,
-      TimelineEventPresenter.pluginInstallFailed(
+      TimelinePluginEventPresenter.pluginInstallFailed(
         error: error,
         repairHint: repairHint,
         sourcePath: confirmedPreview?.sourcePath

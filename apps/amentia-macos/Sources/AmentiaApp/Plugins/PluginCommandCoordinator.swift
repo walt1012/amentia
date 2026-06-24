@@ -24,7 +24,7 @@ enum PluginCommandCoordinator {
       return blockedOrUnavailable(
         commandID: commandID,
         commands: commands,
-        detail: TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail,
+        detail: TimelinePluginEventPresenter.pluginCommandNeedsExecutionContractDetail,
         input: input
       )
     }
@@ -35,7 +35,7 @@ enum PluginCommandCoordinator {
         snapshot: snapshot
       )
         ?? PluginActionPlanner.commandRunBlocker(commandID: commandID, snapshot: snapshot)
-        ?? TimelineEventPresenter.pluginCommandNeedsConnectorAuthDetail
+        ?? TimelinePluginEventPresenter.pluginCommandNeedsConnectorAuthDetail
       return blockedOrUnavailable(
         commandID: commandID,
         commands: commands,

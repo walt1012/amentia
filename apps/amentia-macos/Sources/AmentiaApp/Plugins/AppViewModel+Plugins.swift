@@ -35,9 +35,9 @@ extension AppViewModel {
     }
     appendPluginStatusEntry(
       to: timelineThreadID,
-      TimelineEventPresenter.pluginLifecycleCancelled(),
-      detail: TimelineEventPresenter.pluginLifecycleCancelledDetail,
-      preview: TimelineEventPresenter.cancelledPluginLifecyclePreview
+      TimelinePluginEventPresenter.pluginLifecycleCancelled(),
+      detail: TimelinePluginEventPresenter.pluginLifecycleCancelledDetail,
+      preview: TimelinePluginEventPresenter.cancelledPluginLifecyclePreview
     )
   }
 

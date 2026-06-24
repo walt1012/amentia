@@ -1064,12 +1064,12 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(TimelineEventPresenter.cancellingTurnDetail, "Cancelling request...")
     XCTAssertEqual(cancelled.body, "The pending request was cancelled before it finished.")
     XCTAssertEqual(
-      TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail,
+      TimelinePluginEventPresenter.pluginCommandNeedsExecutionContractDetail,
       "Plugin action needs a supported local runner before it can run."
     )
     XCTAssertFalse(cancelled.body.contains("local execution"))
     XCTAssertFalse(
-      TimelineEventPresenter.pluginCommandNeedsExecutionContractDetail.contains("contract")
+      TimelinePluginEventPresenter.pluginCommandNeedsExecutionContractDetail.contains("contract")
     )
   }
 
@@ -1133,8 +1133,8 @@ final class CoworkFirstPresentationTests: XCTestCase {
       validationError: nil,
       validationHint: nil
     )
-    let installed = TimelineEventPresenter.pluginInstalled(plugin, preview: preview)
-    let removed = TimelineEventPresenter.pluginRemoved(
+    let installed = TimelinePluginEventPresenter.pluginInstalled(plugin, preview: preview)
+    let removed = TimelinePluginEventPresenter.pluginRemoved(
       RuntimeBridge.RuntimePluginRemoval(
         pluginID: "notion",
         displayName: "Notion",
@@ -1254,7 +1254,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       credentialSecretPresent: true
     )
 
-    let entry = TimelineEventPresenter.pluginConnectorAuthorized(connector)
+    let entry = TimelinePluginEventPresenter.pluginConnectorAuthorized(connector)
 
     XCTAssertEqual(entry.title, "Connection Authorized")
     XCTAssertTrue(entry.body.contains("Notion is ready for Notion through Notion Connector."))
@@ -1271,7 +1271,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       credentialSecretPresent: false
     )
 
-    let entry = TimelineEventPresenter.pluginConnectorAuthorized(connector)
+    let entry = TimelinePluginEventPresenter.pluginConnectorAuthorized(connector)
 
     XCTAssertTrue(entry.body.contains("Authorization: needs sign in."))
     XCTAssertEqual(entry.attributes["authorizationSummary"], "needs sign in")
@@ -1286,7 +1286,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       credentialSecretPresent: false
     )
 
-    let entry = TimelineEventPresenter.pluginConnectorAuthorized(connector)
+    let entry = TimelinePluginEventPresenter.pluginConnectorAuthorized(connector)
 
     XCTAssertTrue(entry.body.contains("Authorization: needs sign in."))
     XCTAssertEqual(entry.attributes["authorizationSummary"], "needs sign in")
@@ -1349,7 +1349,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       credentialSecretPresent: false
     )
 
-    let entry = TimelineEventPresenter.pluginConnectorCredentialCleared(connector)
+    let entry = TimelinePluginEventPresenter.pluginConnectorCredentialCleared(connector)
 
     XCTAssertEqual(entry.title, "Connection Authorization Cleared")
     XCTAssertTrue(entry.body.contains("Notion authorization for Notion was cleared"))
