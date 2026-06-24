@@ -1,7 +1,8 @@
 use super::protocol_adapters::build_protocol_capability_registry;
 use super::test_support::{
   bundled_manifest_plugin_entry, bundled_plugin_entry, create_temp_plugin_bundle,
-  create_temp_workspace, replace_plugin_catalog, request,
+  create_temp_workspace, make_test_file_executable, replace_plugin_catalog, request,
+  temp_manifest_plugin_entry,
 };
 use super::*;
 use crate::plugins::plugin_command_approval::PLUGIN_COMMAND_CONNECTOR_APPROVAL_REASON;
@@ -76,23 +77,14 @@ fn plugin_command_registry_surfaces_invalid_command_manifests() {
   .expect("write invalid command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "broken-tools".to_string(),
-      name: "broken-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Broken Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Broken command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:broken-tools.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "broken-tools",
+      "Broken Tools",
+      "Broken command plugin",
+      &["command:broken-tools.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -167,23 +159,14 @@ fn plugin_command_registry_marks_unsupported_execution_contracts() {
   .expect("write command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:notion-tools.run".to_string()],
-      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion command plugin",
+      &["command:notion-tools.run"],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -244,23 +227,14 @@ fn plugin_command_registry_blocks_mcp_commands_with_missing_server() {
   .expect("write mcp command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:notion-tools.run".to_string()],
-      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion command plugin",
+      &["command:notion-tools.run"],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -340,36 +314,18 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   .expect("write mcp server");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&server_path)
-      .expect("mcp server metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&server_path, permissions).expect("make mcp server executable");
+    make_test_file_executable(&server_path, "mcp server");
   }
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion MCP command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:notion-tools.create-task".to_string(),
-        "mcp_server:notion".to_string(),
-      ],
-      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion MCP command plugin",
+      &["command:notion-tools.create-task", "mcp_server:notion"],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -392,8 +348,6 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
 #[cfg(unix)]
 #[test]
 fn plugin_command_registry_blocks_mcp_without_declared_mcp_permission() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-mcp-permission-status",
@@ -444,33 +398,17 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
 "#,
   )
   .expect("write mcp server");
-  let mut permissions = fs::metadata(&server_path)
-    .expect("mcp server metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions).expect("make mcp server executable");
+  make_test_file_executable(&server_path, "mcp server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-permission".to_string(),
-      name: "mcp-permission".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Permission".to_string(),
-      status: "ready".to_string(),
-      description: "MCP permission plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-permission.run".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec![],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-permission",
+      "MCP Permission",
+      "MCP permission plugin",
+      &["command:mcp-permission.run", "mcp_server:local"],
+      &[],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -545,26 +483,14 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   .expect("write mcp server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-setup".to_string(),
-      name: "mcp-setup".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Setup".to_string(),
-      status: "ready".to_string(),
-      description: "MCP setup plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-setup.run".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec!["mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-setup",
+      "MCP Setup",
+      "MCP setup plugin",
+      &["command:mcp-setup.run", "mcp_server:local"],
+      &["mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -616,33 +542,18 @@ printf '{"content":"ok"}\n'
   .expect("write runner");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&runner_path)
-      .expect("runner metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+    make_test_file_executable(&runner_path, "stdio runner");
   }
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "stdio-tools".to_string(),
-      name: "stdio-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Stdio Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Stdio command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:stdio-tools.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "stdio-tools",
+      "Stdio Tools",
+      "Stdio command plugin",
+      &["command:stdio-tools.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -695,23 +606,14 @@ printf '{"content":"ok"}\n'
   .expect("write runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "stdio-setup".to_string(),
-      name: "stdio-setup".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Stdio Setup".to_string(),
-      status: "ready".to_string(),
-      description: "Stdio setup plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:stdio-setup.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "stdio-setup",
+      "Stdio Setup",
+      "Stdio setup plugin",
+      &["command:stdio-setup.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -780,13 +682,7 @@ printf '{"content":"ok"}\n'
   .expect("write runner");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&runner_path)
-      .expect("runner metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+    make_test_file_executable(&runner_path, "connector runner");
   }
   fs::write(
     source_root.join("commands").join("notion-tools.sync.json"),
@@ -803,26 +699,14 @@ printf '{"content":"ok"}\n'
   .expect("write connector command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion connector command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:notion-tools.sync".to_string(),
-        "connector:notion".to_string(),
-      ],
-      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion connector command plugin",
+      &["command:notion-tools.sync", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let registry_response = handle_request(
@@ -941,13 +825,7 @@ printf '{"content":"ok"}\n'
   .expect("write runner");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&runner_path)
-      .expect("runner metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+    make_test_file_executable(&runner_path, "connector runner");
   }
   fs::write(
     source_root.join("commands").join("notion-tools.sync.json"),
@@ -964,26 +842,14 @@ printf '{"content":"ok"}\n'
   .expect("write connector command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion connector command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:notion-tools.sync".to_string(),
-        "connector:notion".to_string(),
-      ],
-      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion connector command plugin",
+      &["command:notion-tools.sync", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    )],
   );
   context
     .plugin_state
@@ -1083,26 +949,14 @@ fn connector_backed_plugin_commands_report_runner_setup_before_connector_auth() 
   .expect("write connector command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion connector command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:notion-tools.sync".to_string(),
-        "connector:notion".to_string(),
-      ],
-      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion connector command plugin",
+      &["command:notion-tools.sync", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let registry_response = handle_request(
@@ -1200,13 +1054,7 @@ printf '{"content":"ok"}\n'
   .expect("write runner");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&runner_path)
-      .expect("runner metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+    make_test_file_executable(&runner_path, "connector runner");
   }
   fs::write(
     source_root
@@ -1240,27 +1088,18 @@ printf '{"content":"ok"}\n'
   .expect("write scoped connector command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion connector command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:notion-tools.status".to_string(),
-        "command:notion-tools.sync".to_string(),
-        "connector:notion".to_string(),
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion connector command plugin",
+      &[
+        "command:notion-tools.status",
+        "command:notion-tools.sync",
+        "connector:notion",
       ],
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+      &["network.outbound"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -1314,23 +1153,14 @@ fn connector_backed_plugin_commands_report_missing_declared_connectors() {
   .expect("write missing connector command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-tools".to_string(),
-      name: "notion-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Notion connector command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:notion-tools.sync".to_string()],
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-tools",
+      "Notion Tools",
+      "Notion connector command plugin",
+      &["command:notion-tools.sync"],
+      &["network.outbound"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -1396,13 +1226,7 @@ printf '{"content":"ok"}\n'
   .expect("write runner");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&runner_path)
-      .expect("runner metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+    make_test_file_executable(&runner_path, "optional connector runner");
   }
   fs::write(
     source_root
@@ -1422,26 +1246,14 @@ printf '{"content":"ok"}\n'
   .expect("write optional connector command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "browser-tools".to_string(),
-      name: "browser-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Browser Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Connector command plugin without required auth".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:browser-tools.search".to_string(),
-        "connector:web".to_string(),
-      ],
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "browser-tools",
+      "Browser Tools",
+      "Connector command plugin without required auth",
+      &["command:browser-tools.search", "connector:web"],
+      &["network.outbound"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -1507,13 +1319,7 @@ printf '{"content":"ok"}\n'
   .expect("write runner");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&runner_path)
-      .expect("runner metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&runner_path, permissions).expect("make runner executable");
+    make_test_file_executable(&runner_path, "stdio network runner");
   }
   fs::write(
     source_root.join("commands").join("stdio-network.sync.json"),
@@ -1530,26 +1336,14 @@ printf '{"content":"ok"}\n'
   .expect("write connector command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "stdio-network".to_string(),
-      name: "stdio-network".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Stdio Network".to_string(),
-      status: "ready".to_string(),
-      description: "Connector-backed stdio command plugin missing network permission".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:stdio-network.sync".to_string(),
-        "connector:notion".to_string(),
-      ],
-      permissions: vec![],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "stdio-network",
+      "Stdio Network",
+      "Connector-backed stdio command plugin missing network permission",
+      &["command:stdio-network.sync", "connector:notion"],
+      &[],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(
@@ -1632,23 +1426,14 @@ fn plugin_hook_registry_surfaces_invalid_hook_manifests() {
     .expect("write invalid hook manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "broken-hooks".to_string(),
-      name: "broken-hooks".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Broken Hooks".to_string(),
-      status: "ready".to_string(),
-      description: "Broken hook plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["hook:shell.broken".to_string()],
-      permissions: vec!["shell.exec".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "broken-hooks",
+      "Broken Hooks",
+      "Broken hook plugin",
+      &["hook:shell.broken"],
+      &["shell.exec"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(&mut context, request(methods::PLUGIN_HOOK_REGISTRY, None));
@@ -1710,23 +1495,14 @@ fn plugin_skill_registry_lists_enabled_plugin_skills() {
   .expect("write skill file");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-connector".to_string(),
-      name: "notion-connector".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Connector".to_string(),
-      status: "ready".to_string(),
-      description: "Notion skill plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["skill:notion.workspace".to_string()],
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-connector",
+      "Notion Connector",
+      "Notion skill plugin",
+      &["skill:notion.workspace"],
+      &["network.outbound"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(&mut context, request(methods::PLUGIN_SKILL_REGISTRY, None));
@@ -2081,23 +1857,14 @@ fn plugin_connector_authorize_rejects_missing_secret_for_api_key_spelling_varian
   .expect("write api key connector manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "api-key-tools".to_string(),
-      name: "api-key-tools".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "API Key Tools".to_string(),
-      status: "ready".to_string(),
-      description: "Connector plugin with camel-case auth type.".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["connector:notion".to_string()],
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "api-key-tools",
+      "API Key Tools",
+      "Connector plugin with camel-case auth type.",
+      &["connector:notion"],
+      &["network.outbound"],
+      &plugin_manifest,
+    )],
   );
 
   let response = handle_request(

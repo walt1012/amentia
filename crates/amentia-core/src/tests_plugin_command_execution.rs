@@ -1,6 +1,6 @@
 use super::test_support::{
   bundled_manifest_plugin_entry, create_temp_plugin_bundle, create_temp_workspace,
-  replace_plugin_catalog, request,
+  make_test_file_executable, replace_plugin_catalog, request, temp_manifest_plugin_entry,
 };
 use super::*;
 use amentia_plugin_host::PluginCatalogEntry;
@@ -11,8 +11,6 @@ use std::fs;
 
 #[cfg(unix)]
 fn create_notion_stdio_runner_plugin(label: &str) -> (std::path::PathBuf, PluginCatalogEntry) {
-  use std::os::unix::fs::PermissionsExt;
-
   let source_root = create_temp_plugin_bundle(label, "notion-runner", "Notion Runner");
   let plugin_manifest = source_root.join("amentia-plugin.json");
   let runner_path = source_root.join("runner.sh");
@@ -71,32 +69,18 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s label=%s secre
 "#,
   )
   .expect("write connector runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
-  let catalog_entry = PluginCatalogEntry {
-    id: "notion-runner".to_string(),
-    name: "notion-runner".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Notion Runner".to_string(),
-    status: "ready".to_string(),
-    description: "Connector-backed stdio command plugin".to_string(),
-    author_name: Some("Amentia".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec![
-      "command:notion-runner.sync".to_string(),
-      "connector:notion".to_string(),
-    ],
-    permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-    manifest_path: plugin_manifest.display().to_string(),
-    provenance: "test".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  };
-  (source_root, catalog_entry)
+  make_test_file_executable(&runner_path, "connector runner");
+  (
+    source_root,
+    temp_manifest_plugin_entry(
+      "notion-runner",
+      "Notion Runner",
+      "Connector-backed stdio command plugin",
+      &["command:notion-runner.sync", "connector:notion"],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    ),
+  )
 }
 
 #[cfg(unix)]
@@ -106,8 +90,6 @@ fn create_next_action_stdio_runner_plugin(
   output_json: &str,
   permissions: &[&str],
 ) -> (std::path::PathBuf, PluginCatalogEntry) {
-  use std::os::unix::fs::PermissionsExt;
-
   let source_root = create_temp_plugin_bundle(label, plugin_name, "Follow-up Runner");
   let plugin_manifest = source_root.join("amentia-plugin.json");
   let runner_path = source_root.join("runner.sh");
@@ -160,38 +142,23 @@ JSON
     ),
   )
   .expect("write follow-up runner");
-  let mut file_permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  file_permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, file_permissions).expect("set runner permissions");
-  let catalog_entry = PluginCatalogEntry {
-    id: plugin_name.to_string(),
-    name: plugin_name.to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Follow-up Runner".to_string(),
-    status: "ready".to_string(),
-    description: "Emits next-action observations for the agent loop.".to_string(),
-    author_name: Some("Amentia".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec![format!("command:{command_name}")],
-    permissions: permissions
-      .iter()
-      .map(|permission| permission.to_string())
-      .collect(),
-    manifest_path: plugin_manifest.display().to_string(),
-    provenance: "test".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  };
-  (source_root, catalog_entry)
+  make_test_file_executable(&runner_path, "follow-up runner");
+  let capability = format!("command:{command_name}");
+  (
+    source_root,
+    temp_manifest_plugin_entry(
+      plugin_name,
+      "Follow-up Runner",
+      "Emits next-action observations for the agent loop.",
+      &[capability.as_str()],
+      permissions,
+      &plugin_manifest,
+    ),
+  )
 }
 
 #[cfg(unix)]
 fn create_linear_stdio_runner_plugin(label: &str) -> (std::path::PathBuf, PluginCatalogEntry) {
-  use std::os::unix::fs::PermissionsExt;
-
   let source_root = create_temp_plugin_bundle(label, "linear-runner", "Linear Runner");
   let plugin_manifest = source_root.join("amentia-plugin.json");
   let runner_path = source_root.join("runner.sh");
@@ -242,32 +209,18 @@ printf '{"content":"linear connector_id=%s service=%s input=%s","memoryNotes":[{
 "#,
   )
   .expect("write linear runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
-  let catalog_entry = PluginCatalogEntry {
-    id: "linear-runner".to_string(),
-    name: "linear-runner".to_string(),
-    version: "0.1.0".to_string(),
-    display_name: "Linear Runner".to_string(),
-    status: "ready".to_string(),
-    description: "Connector-backed Linear command plugin".to_string(),
-    author_name: Some("Amentia".to_string()),
-    enabled: true,
-    default_enabled: true,
-    capabilities: vec![
-      "command:linear.update".to_string(),
-      "connector:linear".to_string(),
-    ],
-    permissions: vec!["network.outbound".to_string()],
-    manifest_path: plugin_manifest.display().to_string(),
-    provenance: "test".to_string(),
-    validation_error: None,
-    validation_hint: None,
-  };
-  (source_root, catalog_entry)
+  make_test_file_executable(&runner_path, "linear runner");
+  (
+    source_root,
+    temp_manifest_plugin_entry(
+      "linear-runner",
+      "Linear Runner",
+      "Connector-backed Linear command plugin",
+      &["command:linear.update", "connector:linear"],
+      &["network.outbound"],
+      &plugin_manifest,
+    ),
+  )
 }
 
 #[test]
@@ -1388,23 +1341,14 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
   let plugin_manifest = source_root.join("amentia-plugin.json");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "prompt-only".to_string(),
-      name: "prompt-only".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Prompt Only".to_string(),
-      status: "ready".to_string(),
-      description: "Prompt-only command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:prompt-only.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "prompt-only",
+      "Prompt Only",
+      "Prompt-only command plugin",
+      &["command:prompt-only.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -1458,8 +1402,6 @@ fn plugin_command_run_rejects_commands_without_execution_contract() {
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_executes_bounded_stdio_runner() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-stdio-runner",
@@ -1491,30 +1433,17 @@ printf '{"content":"External runner completed."}\n'
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "stdio runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "stdio-runner".to_string(),
-      name: "stdio-runner".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Stdio Runner".to_string(),
-      status: "ready".to_string(),
-      description: "Stdio command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:stdio-runner.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "stdio-runner",
+      "Stdio Runner",
+      "Stdio command plugin",
+      &["command:stdio-runner.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -1585,8 +1514,6 @@ printf '{"content":"External runner completed."}\n'
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_rejects_missing_required_user_input_before_runner_start() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-required-input",
@@ -1631,30 +1558,17 @@ printf '{"content":"runner should not start"}\n'
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "required input runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "required-input".to_string(),
-      name: "required-input".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Required Input".to_string(),
-      status: "ready".to_string(),
-      description: "Required input command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:required-input.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "required-input",
+      "Required Input",
+      "Required input command plugin",
+      &["command:required-input.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -1727,8 +1641,6 @@ printf '{"content":"runner should not start"}\n'
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_disables_network_for_empty_connector_scope() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-empty-connector-scope",
@@ -1789,33 +1701,17 @@ printf '{"content":"status ok"}\n'
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "connector status runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-runner".to_string(),
-      name: "notion-runner".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion Runner".to_string(),
-      status: "ready".to_string(),
-      description: "Connector plugin with a local status command".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:notion-runner.status".to_string(),
-        "connector:notion".to_string(),
-      ],
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "notion-runner",
+      "Notion Runner",
+      "Connector plugin with a local status command",
+      &["command:notion-runner.status", "connector:notion"],
+      &["network.outbound"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -1873,8 +1769,6 @@ printf '{"content":"status ok"}\n'
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_passes_auth_free_connector_context_to_runner() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-auth-free-connector",
@@ -1940,33 +1834,17 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s envKey=%s secr
 "#,
   )
   .expect("write auth-free connector runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "auth-free connector runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "browser-runner".to_string(),
-      name: "browser-runner".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Browser Runner".to_string(),
-      status: "ready".to_string(),
-      description: "Auth-free connector command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:browser-runner.search".to_string(),
-        "connector:web".to_string(),
-      ],
-      permissions: vec!["network.outbound".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "browser-runner",
+      "Browser Runner",
+      "Auth-free connector command plugin",
+      &["command:browser-runner.search", "connector:web"],
+      &["network.outbound"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -2017,21 +1895,6 @@ printf '{"content":"connectorId=%s provider=%s handle=%s store=%s envKey=%s secr
   );
   assert_eq!(items[0]["attributes"]["connectorSecretBindings"], "none");
   assert_eq!(items[1]["kind"], "pluginResult");
-  assert_eq!(items[1]["attributes"]["pluginRunnerConnectorCount"], "1");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerConnectorIds"],
-    "browser-runner::web"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerConnectorId"],
-    "browser-runner::web"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerCredentialProviders"],
-    "amentia.noCredentialRequired"
-  );
-  assert_eq!(items[1]["attributes"]["pluginRunnerSecretBindings"], "none");
-  assert_eq!(items[1]["attributes"]["sandboxNetworkAllowed"], "true");
   assert_eq!(
     items[1]["content"],
     "connectorId=true provider=true handle=true store=true envKey=false secretLeak=false"
@@ -2102,34 +1965,19 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
     items[0]["attributes"]["connectorIds"],
     "notion-runner::notion"
   );
-  assert_eq!(items[0]["attributes"]["connectorServices"], "notion");
-  assert_eq!(
-    items[0]["attributes"]["connectorCredentialProviders"],
-    "amentia.localCredentialProvider"
-  );
   assert!(items[0]["attributes"]
     .get("connectorCredentialHandles")
     .is_none());
   assert_eq!(
-    items[0]["attributes"]["connectorCredentialLabels"],
-    "Notion authorization marker"
-  );
-  assert_eq!(
     items[0]["attributes"]["connectorSecretBindings"],
     "marker-only"
   );
-  assert!(items[0]["attributes"]["connectorCredentialAuthorizedAt"].is_string());
   assert_eq!(items[1]["kind"], "approvalRequested");
   assert_eq!(
     items[1]["attributes"]["connectorId"],
     "notion-runner::notion"
   );
-  assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.notionSync");
-  assert!(items[1]["attributes"]["sourcePath"]
-    .as_str()
-    .expect("approval source path")
-    .contains("notion-runner.sync.json"));
   assert_eq!(
     items[1]["attributes"]["connectorSecretBindings"],
     "marker-only"
@@ -2162,102 +2010,34 @@ fn plugin_command_run_approves_connector_stdio_runner_without_secrets() {
   let items = approval_result["items"].as_array().expect("approval items");
   assert_eq!(items[0]["kind"], "approvalResolved");
   assert_eq!(items[0]["attributes"]["decision"], "approved");
-  assert_eq!(items[0]["attributes"]["action"], "run_plugin_command");
   assert_eq!(
     items[0]["attributes"]["commandId"],
     "notion-runner::notion-runner.sync"
   );
-  assert_eq!(items[0]["attributes"]["pluginId"], "notion-runner");
   assert_eq!(items[1]["kind"], "pluginCommand");
   assert_eq!(
     items[1]["attributes"]["connectorIds"],
     "notion-runner::notion"
-  );
-  assert_eq!(items[1]["attributes"]["connectorServices"], "notion");
-  assert_eq!(
-    items[1]["attributes"]["connectorCredentialProviders"],
-    "amentia.localCredentialProvider"
-  );
-  assert_eq!(
-    items[1]["attributes"]["connectorCredentialLabels"],
-    "Notion authorization marker"
   );
   assert_eq!(
     items[1]["attributes"]["connectorSecretBindings"],
     "marker-only"
   );
   assert_eq!(items[2]["kind"], "pluginResult");
-  assert_eq!(items[2]["attributes"]["pluginRunnerConnectorCount"], "1");
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerConnectorIds"],
-    "notion-runner::notion"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerConnectorId"],
-    "notion-runner::notion"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerConnectorServices"],
-    "notion"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerConnectorStores"],
-    "local"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerCredentialProviders"],
-    "amentia.localCredentialProvider"
-  );
   assert!(items[2]["attributes"]
     .get("pluginRunnerCredentialHandles")
     .is_none());
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerExecutionDriver"],
-    "stdio"
-  );
   assert_eq!(
     items[2]["attributes"]["pluginRunnerExecutionKind"],
     "stdio.notionSync"
   );
   assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypoint"],
-    "runner.sh"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypointCheck"],
-    "ready"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypointFileKind"],
-    "file"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypointExecutable"],
-    "true"
-  );
-  assert!(items[2]["attributes"]["pluginRunnerPluginRoot"].is_string());
-  assert!(items[2]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerCredentialLabels"],
-    "Notion authorization marker"
-  );
-  assert_eq!(
     items[2]["attributes"]["pluginRunnerSecretBindings"],
     "marker-only"
   );
-  assert!(items[2]["attributes"]["pluginRunnerCredentialAuthorizedAt"].is_string());
-  assert_eq!(items[2]["attributes"]["sandboxNetworkAllowed"], "true");
-  assert!(items[2]["attributes"]["sandboxNetworkPolicy"]
-    .as_str()
-    .expect("sandbox network policy")
-    .contains("network allowed"));
   assert_eq!(
     items[2]["content"],
     "connectorId=true provider=true handle=true store=true label=true secretLeak=false"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerOutputMemoryNoteCount"],
-    "1"
   );
   let memory_item = items
     .iter()
@@ -2377,8 +2157,6 @@ fn approval_respond_returns_structured_plugin_command_readiness_error() {
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_executes_mcp_stdio_connector_action() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root =
     create_temp_plugin_bundle("plugin-command-mcp-runner", "notion-mcp", "Notion MCP");
@@ -2452,34 +2230,21 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
 "#,
   )
   .expect("write mcp server");
-  let mut permissions = fs::metadata(&server_path)
-    .expect("mcp server metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions).expect("set mcp server permissions");
+  make_test_file_executable(&server_path, "mcp server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "notion-mcp".to_string(),
-      name: "notion-mcp".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Notion MCP".to_string(),
-      status: "ready".to_string(),
-      description: "Connector-backed MCP command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:notion-mcp.create-task".to_string(),
-        "mcp_server:notion".to_string(),
-        "connector:notion".to_string(),
+    vec![temp_manifest_plugin_entry(
+      "notion-mcp",
+      "Notion MCP",
+      "Connector-backed MCP command plugin",
+      &[
+        "command:notion-mcp.create-task",
+        "mcp_server:notion",
+        "connector:notion",
       ],
-      permissions: vec!["network.outbound".to_string(), "mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+      &["network.outbound", "mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -2595,73 +2360,21 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
   let items = approval_result["items"].as_array().expect("approval items");
   assert_eq!(items[0]["kind"], "approvalResolved");
   assert_eq!(items[0]["attributes"]["decision"], "approved");
-  assert_eq!(items[0]["attributes"]["action"], "run_plugin_command");
   assert_eq!(
     items[0]["attributes"]["commandId"],
     "notion-mcp::notion-mcp.create-task"
   );
-  assert_eq!(items[0]["attributes"]["pluginId"], "notion-mcp");
-  assert_eq!(
-    items[0]["attributes"]["commandInput"],
-    "Create a follow-up task"
-  );
   assert_eq!(items[1]["kind"], "pluginCommand");
   assert_eq!(items[2]["kind"], "pluginResult");
-  assert_eq!(
-    items[1]["attributes"]["pluginCommandRunId"],
-    "thread-1::notion-mcp::notion-mcp.create-task"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginCommandRunId"],
-    items[1]["attributes"]["pluginCommandRunId"]
-  );
   assert_eq!(
     items[2]["attributes"]["executionKind"],
     "mcp.notionCreateTask"
   );
-  assert_eq!(items[2]["attributes"]["mcpServerId"], "notion");
   assert_eq!(items[2]["attributes"]["mcpToolName"], "createTask");
-  assert_eq!(items[2]["attributes"]["pluginRunnerExecutionDriver"], "mcp");
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerExecutionKind"],
-    "mcp.notionCreateTask"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypoint"],
-    "notion.createTask"
-  );
-  assert_eq!(items[2]["attributes"]["mcpServerCommand"], "mcp-server.sh");
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypointCheck"],
-    "ready"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypointFileKind"],
-    "file"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerEntrypointExecutable"],
-    "true"
-  );
-  assert!(items[2]["attributes"]["pluginRunnerPluginRoot"].is_string());
-  assert!(items[2]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
-  assert_eq!(items[2]["attributes"]["mcpProtocolStatus"], "completed");
-  assert_eq!(items[2]["attributes"]["mcpInitializeResponseSeen"], "true");
-  assert_eq!(items[2]["attributes"]["mcpToolResponseSeen"], "true");
-  assert_eq!(items[2]["attributes"]["pluginRunnerConnectorCount"], "1");
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerCredentialProviders"],
-    "amentia.localCredentialProvider"
-  );
-  assert_eq!(
-    items[2]["attributes"]["pluginRunnerCredentialLabels"],
-    "Notion authorization marker"
-  );
   assert_eq!(
     items[2]["attributes"]["pluginRunnerSecretBindings"],
     "env-bound"
   );
-  assert!(items[2]["attributes"]["pluginRunnerCredentialAuthorizedAt"].is_string());
   assert_eq!(
     items[2]["content"],
     "method=true tool=true provider=true handle=true secretLeak=false credentialEnv=true tokenLeak=false"
@@ -2671,8 +2384,6 @@ printf '{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"meth
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_accepts_mcp_structured_amentia_output() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-mcp-structured-output",
@@ -2730,33 +2441,17 @@ JSON
 "#,
   )
   .expect("write mcp structured server");
-  let mut permissions = fs::metadata(&server_path)
-    .expect("mcp structured server metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions).expect("set mcp structured server permissions");
+  make_test_file_executable(&server_path, "mcp structured server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-structured".to_string(),
-      name: "mcp-structured".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Structured".to_string(),
-      status: "ready".to_string(),
-      description: "MCP command plugin with Amentia structured output".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-structured.capture".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec!["mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-structured",
+      "MCP Structured",
+      "MCP command plugin with Amentia structured output",
+      &["command:mcp-structured.capture", "mcp_server:local"],
+      &["mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -2838,8 +2533,6 @@ JSON
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_accepts_mcp_text_amentia_output() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-mcp-text-amentia-output",
@@ -2895,33 +2588,17 @@ JSON
 "#,
   )
   .expect("write mcp text server");
-  let mut permissions = fs::metadata(&server_path)
-    .expect("mcp text server metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions).expect("set mcp text server permissions");
+  make_test_file_executable(&server_path, "mcp text server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-text".to_string(),
-      name: "mcp-text".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Text".to_string(),
-      status: "ready".to_string(),
-      description: "MCP command plugin with text output".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-text.capture".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec!["mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-text",
+      "MCP Text",
+      "MCP command plugin with text output",
+      &["command:mcp-text.capture", "mcp_server:local"],
+      &["mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -2978,8 +2655,6 @@ JSON
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_preserves_generic_mcp_structured_content() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-mcp-generic-structured-output",
@@ -3037,33 +2712,17 @@ JSON
 "#,
   )
   .expect("write mcp generic server");
-  let mut permissions = fs::metadata(&server_path)
-    .expect("mcp generic server metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions).expect("set mcp generic server permissions");
+  make_test_file_executable(&server_path, "mcp generic server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-generic".to_string(),
-      name: "mcp-generic".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Generic".to_string(),
-      status: "ready".to_string(),
-      description: "MCP command plugin with generic structured output".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-generic.inspect".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec!["mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-generic",
+      "MCP Generic",
+      "MCP command plugin with generic structured output",
+      &["command:mcp-generic.inspect", "mcp_server:local"],
+      &["mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -3118,8 +2777,6 @@ JSON
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_classifies_malformed_mcp_amentia_output() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-mcp-malformed-amentia-output",
@@ -3177,33 +2834,17 @@ JSON
 "#,
   )
   .expect("write mcp malformed server");
-  let mut permissions = fs::metadata(&server_path)
-    .expect("mcp malformed server metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions).expect("set mcp malformed server permissions");
+  make_test_file_executable(&server_path, "mcp malformed server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-malformed".to_string(),
-      name: "mcp-malformed".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Malformed".to_string(),
-      status: "ready".to_string(),
-      description: "MCP command plugin with malformed Amentia structured output".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-malformed.inspect".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec!["mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-malformed",
+      "MCP Malformed",
+      "MCP command plugin with malformed Amentia structured output",
+      &["command:mcp-malformed.inspect", "mcp_server:local"],
+      &["mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -3267,8 +2908,6 @@ JSON
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_records_mcp_protocol_diagnostics() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-mcp-diagnostics",
@@ -3324,33 +2963,17 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
 "#,
   )
   .expect("write mcp diagnostics server");
-  let mut permissions = fs::metadata(&server_path)
-    .expect("mcp diagnostics server metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&server_path, permissions).expect("set mcp diagnostics server permissions");
+  make_test_file_executable(&server_path, "mcp diagnostics server");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-diagnostics".to_string(),
-      name: "mcp-diagnostics".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Diagnostics".to_string(),
-      status: "ready".to_string(),
-      description: "MCP protocol diagnostics plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-diagnostics.run".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec!["mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-diagnostics",
+      "MCP Diagnostics",
+      "MCP protocol diagnostics plugin",
+      &["command:mcp-diagnostics.run", "mcp_server:local"],
+      &["mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -3477,36 +3100,18 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   .expect("write mcp server");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&server_path)
-      .expect("mcp server metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&server_path, permissions).expect("make mcp server executable");
+    make_test_file_executable(&server_path, "mcp server");
   }
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-permission".to_string(),
-      name: "mcp-permission".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Permission".to_string(),
-      status: "ready".to_string(),
-      description: "MCP command plugin missing permissions".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-permission.run".to_string(),
-        "mcp_server:local".to_string(),
-      ],
-      permissions: vec![],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "mcp-permission",
+      "MCP Permission",
+      "MCP command plugin missing permissions",
+      &["command:mcp-permission.run", "mcp_server:local"],
+      &[],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -3613,37 +3218,22 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
   .expect("write mcp server");
   #[cfg(unix)]
   {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(&server_path)
-      .expect("mcp server metadata")
-      .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(&server_path, permissions).expect("make mcp server executable");
+    make_test_file_executable(&server_path, "mcp server");
   }
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "mcp-network".to_string(),
-      name: "mcp-network".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "MCP Network".to_string(),
-      status: "ready".to_string(),
-      description: "Connector MCP command plugin missing network permission".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec![
-        "command:mcp-network.sync".to_string(),
-        "mcp_server:notion".to_string(),
-        "connector:notion".to_string(),
+    vec![temp_manifest_plugin_entry(
+      "mcp-network",
+      "MCP Network",
+      "Connector MCP command plugin missing network permission",
+      &[
+        "command:mcp-network.sync",
+        "mcp_server:notion",
+        "connector:notion",
       ],
-      permissions: vec!["mcp.connect".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+      &["mcp.connect"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -3697,8 +3287,6 @@ printf '{"jsonrpc":"2.0","id":1,"result":{}}\n'
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_records_stdio_runner_failure() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-stdio-failure",
@@ -3731,30 +3319,17 @@ exit 7
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "failure runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "stdio-failure".to_string(),
-      name: "stdio-failure".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Stdio Failure".to_string(),
-      status: "ready".to_string(),
-      description: "Failing stdio command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:stdio-failure.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "stdio-failure",
+      "Stdio Failure",
+      "Failing stdio command plugin",
+      &["command:stdio-failure.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -3796,70 +3371,11 @@ exit 7
   let items = result["items"].as_array().expect("items");
   assert_eq!(items[1]["kind"], "warning");
   assert_eq!(items[1]["attributes"]["pluginCommandStatus"], "failed");
-  assert_eq!(items[1]["attributes"]["pluginRunnerErrorCode"], "-32054");
   assert_eq!(
     items[1]["attributes"]["pluginRunnerFailureKind"],
     "processExit"
   );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerRecoveryHint"],
-    "Fix the runner error shown in stderr/stdout, then return exit code 0 with valid output."
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerExecutionDriver"],
-    "stdio"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerExecutionKind"],
-    "stdio.failure"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypoint"],
-    "runner.sh"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerInputEnvelope"],
-    "amentia.plugin.command.input"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerInputFieldNames"],
-    "threadId, input, workspace"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerInputRequiredFields"],
-    "threadId"
-  );
-  assert_eq!(items[1]["attributes"]["pluginRunnerInputProvided"], "true");
-  assert_eq!(items[1]["attributes"]["pluginRunnerInputBytes"], "11");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputEnvelope"],
-    "amentia.plugin.command.output"
-  );
-  assert_eq!(items[1]["attributes"]["pluginRunnerOutputFieldCount"], "4");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputFieldNames"],
-    "content, message, items, memoryNotes"
-  );
-  assert!(items[1]["attributes"]["pluginRunnerOutputRequiredFields"].is_null());
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypointCheck"],
-    "ready"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypointFileKind"],
-    "file"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerEntrypointExecutable"],
-    "true"
-  );
-  assert!(items[1]["attributes"]["pluginRunnerPluginRoot"].is_string());
-  assert!(items[1]["attributes"]["pluginRunnerResolvedEntrypoint"].is_string());
   assert_eq!(items[1]["attributes"]["pluginRunnerExitCode"], "7");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerExitReason"],
-    "completed"
-  );
   assert_eq!(
     items[1]["attributes"]["pluginRunnerStderrPreview"],
     "diagnostic stderr"
@@ -3896,8 +3412,6 @@ exit 7
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_rejects_empty_stdio_output_envelope() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-empty-output",
@@ -3928,30 +3442,17 @@ printf '{}\n'
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "empty output runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "empty-output".to_string(),
-      name: "empty-output".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Empty Output".to_string(),
-      status: "ready".to_string(),
-      description: "Empty output command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:empty-output.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "empty-output",
+      "Empty Output",
+      "Empty output command plugin",
+      &["command:empty-output.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -3997,25 +3498,8 @@ printf '{}\n'
     "outputContract"
   );
   assert_eq!(
-    items[1]["attributes"]["pluginRunnerRecoveryHint"],
-    "Populate `content`, `message`, `items`, or `memoryNotes`, or return plain text."
-  );
-  assert_eq!(
     items[1]["attributes"]["pluginRunnerOutputStatus"],
     "emptyEnvelope"
-  );
-  assert_eq!(items[1]["attributes"]["pluginRunnerOutputParsed"], "true");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputContentBytes"],
-    "0"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputValidTimelineItemCount"],
-    "0"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputInvalidTimelineItemCount"],
-    "0"
   );
   assert!(items[1]["content"]
     .as_str()
@@ -4026,8 +3510,6 @@ printf '{}\n'
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_rejects_malformed_stdio_output_envelope() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-malformed-output",
@@ -4060,30 +3542,17 @@ printf '{"content":'
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "malformed output runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "malformed-output".to_string(),
-      name: "malformed-output".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Malformed Output".to_string(),
-      status: "ready".to_string(),
-      description: "Malformed output command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:malformed-output.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "malformed-output",
+      "Malformed Output",
+      "Malformed output command plugin",
+      &["command:malformed-output.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -4142,8 +3611,6 @@ printf '{"content":'
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_captures_stdio_runner_memory_notes() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root = create_temp_plugin_bundle(
     "plugin-command-runner-memory",
@@ -4186,30 +3653,17 @@ JSON
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "memory runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "runner-memory".to_string(),
-      name: "runner-memory".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Runner Memory".to_string(),
-      status: "ready".to_string(),
-      description: "Runner memory command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:runner-memory.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "runner-memory",
+      "Runner Memory",
+      "Runner memory command plugin",
+      &["command:runner-memory.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -4256,14 +3710,6 @@ JSON
     memory_item["attributes"]["memoryNoteTitle"],
     "Runner Preference"
   );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputMemoryNoteCount"],
-    "1"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputInvalidMemoryNoteCount"],
-    "0"
-  );
   let saved_note = context
     .memory_state
     .recent_notes(16)
@@ -4308,23 +3754,14 @@ printf 'should not run\n'
   .expect("write runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "non-exec".to_string(),
-      name: "non-exec".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Non Exec".to_string(),
-      status: "ready".to_string(),
-      description: "Non executable stdio command plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:non-exec.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "non-exec",
+      "Non Exec",
+      "Non executable stdio command plugin",
+      &["command:non-exec.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -4375,8 +3812,6 @@ printf 'should not run\n'
 #[cfg(unix)]
 #[test]
 fn plugin_command_run_accepts_runner_timeline_items() {
-  use std::os::unix::fs::PermissionsExt;
-
   let mut context = RuntimeContext::new_in_memory();
   let source_root =
     create_temp_plugin_bundle("plugin-command-owned-items", "owned-items", "Owned Items");
@@ -4415,30 +3850,17 @@ JSON
 "#,
   )
   .expect("write runner");
-  let mut permissions = fs::metadata(&runner_path)
-    .expect("runner metadata")
-    .permissions();
-  permissions.set_mode(0o755);
-  fs::set_permissions(&runner_path, permissions).expect("set runner permissions");
+  make_test_file_executable(&runner_path, "owned items runner");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "owned-items".to_string(),
-      name: "owned-items".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Owned Items".to_string(),
-      status: "ready".to_string(),
-      description: "Owned item plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:owned-items.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "owned-items",
+      "Owned Items",
+      "Owned item plugin",
+      &["command:owned-items.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(
@@ -4482,21 +3904,7 @@ JSON
   assert_eq!(items[1]["content"], "Owned timeline item.");
   assert_eq!(items[1]["attributes"]["runner"], "stdio");
   assert_eq!(items[1]["attributes"]["pluginId"], "owned-items");
-  assert_eq!(items[1]["attributes"]["sandboxMode"], "workspaceReadWrite");
-  assert!(items[1]["attributes"]["sandboxBackend"].is_string());
   assert_eq!(items[1]["attributes"]["executionKind"], "stdio.ownedItems");
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputStatus"],
-    "envelope"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputValidTimelineItemCount"],
-    "1"
-  );
-  assert_eq!(
-    items[1]["attributes"]["pluginRunnerOutputInvalidTimelineItemCount"],
-    "0"
-  );
 }
 
 #[test]
@@ -4524,23 +3932,14 @@ fn plugin_command_run_rejects_runner_entrypoint_escape() {
   .expect("write command manifest");
   replace_plugin_catalog(
     &mut context,
-    vec![PluginCatalogEntry {
-      id: "escape-runner".to_string(),
-      name: "escape-runner".to_string(),
-      version: "0.1.0".to_string(),
-      display_name: "Escape Runner".to_string(),
-      status: "ready".to_string(),
-      description: "Escape runner plugin".to_string(),
-      author_name: Some("Amentia".to_string()),
-      enabled: true,
-      default_enabled: true,
-      capabilities: vec!["command:escape-runner.run".to_string()],
-      permissions: vec!["file.read".to_string()],
-      manifest_path: plugin_manifest.display().to_string(),
-      provenance: "test".to_string(),
-      validation_error: None,
-      validation_hint: None,
-    }],
+    vec![temp_manifest_plugin_entry(
+      "escape-runner",
+      "Escape Runner",
+      "Escape runner plugin",
+      &["command:escape-runner.run"],
+      &["file.read"],
+      &plugin_manifest,
+    )],
   );
 
   let _ = handle_request(

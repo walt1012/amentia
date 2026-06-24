@@ -3,7 +3,7 @@ use amentia_protocol::JsonRpcRequest;
 use serde_json::{json, Value};
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::runtime_context::RuntimeContext;
@@ -71,6 +71,10 @@ pub(crate) fn replace_plugin_catalog(
   context.plugin_state.replace_catalog(catalog);
 }
 
+fn string_list(items: &[&str]) -> Vec<String> {
+  items.iter().map(|item| item.to_string()).collect()
+}
+
 pub(crate) fn bundled_plugin_entry(
   id: &str,
   display_name: &str,
@@ -89,14 +93,8 @@ pub(crate) fn bundled_plugin_entry(
     author_name: Some("Amentia".to_string()),
     enabled,
     default_enabled,
-    capabilities: capabilities
-      .iter()
-      .map(|capability| capability.to_string())
-      .collect(),
-    permissions: permissions
-      .iter()
-      .map(|permission| permission.to_string())
-      .collect(),
+    capabilities: string_list(capabilities),
+    permissions: string_list(permissions),
     manifest_path: format!("plugins/bundled/{id}/amentia-plugin.json"),
     provenance: "bundled".to_string(),
     validation_error: None,
@@ -126,6 +124,48 @@ pub(crate) fn bundled_manifest_plugin_entry(
     .to_string();
   plugin
 }
+
+pub(crate) fn temp_manifest_plugin_entry(
+  id: &str,
+  display_name: &str,
+  description: &str,
+  capabilities: &[&str],
+  permissions: &[&str],
+  manifest_path: &Path,
+) -> PluginCatalogEntry {
+  PluginCatalogEntry {
+    id: id.to_string(),
+    name: id.to_string(),
+    version: "0.1.0".to_string(),
+    display_name: display_name.to_string(),
+    status: "ready".to_string(),
+    description: description.to_string(),
+    author_name: Some("Amentia".to_string()),
+    enabled: true,
+    default_enabled: true,
+    capabilities: string_list(capabilities),
+    permissions: string_list(permissions),
+    manifest_path: manifest_path.display().to_string(),
+    provenance: "test".to_string(),
+    validation_error: None,
+    validation_hint: None,
+  }
+}
+
+#[cfg(unix)]
+pub(crate) fn make_test_file_executable(path: &Path, label: &str) {
+  use std::os::unix::fs::PermissionsExt;
+
+  let mut permissions = fs::metadata(path)
+    .unwrap_or_else(|error| panic!("{label} metadata: {error}"))
+    .permissions();
+  permissions.set_mode(0o755);
+  fs::set_permissions(path, permissions)
+    .unwrap_or_else(|error| panic!("make {label} executable: {error}"));
+}
+
+#[cfg(not(unix))]
+pub(crate) fn make_test_file_executable(_path: &Path, _label: &str) {}
 
 pub(crate) fn enable_full_access_plugin(context: &mut RuntimeContext) {
   replace_plugin_catalog(
