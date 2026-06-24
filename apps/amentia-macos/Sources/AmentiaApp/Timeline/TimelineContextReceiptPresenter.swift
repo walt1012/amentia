@@ -76,7 +76,11 @@ enum TimelineContextReceiptPresenter {
     appendLine("Max results", entry.attributes["maxResults"], to: &lines)
     appendLine("Result count", entry.attributes["resultCount"], to: &lines)
     appendLine("Unique paths", entry.attributes["uniquePathCount"], to: &lines)
-    appendLine("Truncated", entry.attributes["isTruncated"].map(yesNo), to: &lines)
+    appendLine(
+      "Truncated",
+      entry.attributes["isTruncated"].map { TimelineReceiptText.yesNo($0) },
+      to: &lines
+    )
     appendLine("Next action", entry.attributes["nextAction"], to: &lines)
     appendLine("Next path", entry.attributes["nextRelativePath"], to: &lines)
     appendLine("Loop step", entry.attributes["agentStepIndex"], to: &lines)
