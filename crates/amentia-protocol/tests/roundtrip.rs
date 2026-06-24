@@ -267,10 +267,7 @@ fn plugin_capability_registry_round_trips() {
     summary: PluginCapabilityRegistrySummary {
       enabled_plugin_count: 2,
       total_capability_count: 3,
-      capability_counts_by_kind: HashMap::from([
-        ("skill".to_string(), 1),
-        ("tool".to_string(), 2),
-      ]),
+      capability_counts_by_kind: HashMap::from([("skill".to_string(), 1), ("tool".to_string(), 2)]),
     },
     capabilities: vec![PluginCapabilityRegistration {
       capability_id: "review-assistant::tool:diff.summaries".to_string(),
