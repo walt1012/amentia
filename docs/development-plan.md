@@ -105,6 +105,7 @@ Implemented foundations:
   protocol-shaped data does not become UI glue.
 - Plugin UI rows keep capability display, capability presentation, and
   connection actions in separate owners.
+- Plugin execution UI keeps action rows and check rows in separate owners.
 - Primary window foundations are in place: native sidebar density, calm timeline
   cards, focused composer, readiness, first-run setup, session sidebar
   ownership, model management, project search, plugin management, inspector
