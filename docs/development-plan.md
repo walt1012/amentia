@@ -103,6 +103,8 @@ Implemented foundations:
 - macOS plugin cleanup keeps summary data, dashboard state, surface/status
   display, validation copy, and guidance/check copy in separate owners so
   protocol-shaped data does not become UI glue.
+- Plugin UI rows keep capability display, capability presentation, and
+  connection actions in separate owners.
 - Primary window foundations are in place: native sidebar density, calm timeline
   cards, focused composer, readiness, first-run setup, session sidebar
   ownership, model management, project search, plugin management, inspector
