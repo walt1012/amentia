@@ -9,15 +9,15 @@ use super::turn_web_search_timeline::{
   web_search_failed_items, web_search_result_item, web_search_start_item,
   web_search_unavailable_items,
 };
-use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
+use crate::active_turn_model::ActiveTurn;
+use crate::active_turn_timeline::start_streaming_assistant_turn;
 use crate::intent_inference::WebSearchIntent;
 use crate::local_responses::{
   build_plan_item, format_web_search_result, summarize_declined_web_search_candidate,
   summarize_web_search_result,
 };
-use crate::plugin_permissions::{
-  build_permission_denied_items, permission_is_granted, WEB_SEARCH_TOOL_PERMISSION,
-};
+use crate::plugin_permission_denied::build_permission_denied_items;
+use crate::plugin_permission_sources::{permission_is_granted, WEB_SEARCH_TOOL_PERMISSION};
 use crate::request_state::PreparedTurnSnapshot;
 
 const WEB_SEARCH_ROUTE_DECISION_TOKENS: usize = 8;

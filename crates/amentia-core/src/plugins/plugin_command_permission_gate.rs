@@ -5,7 +5,7 @@ use amentia_protocol::{TimelineItem, WorkspaceSummary};
 
 use super::plugin_command_recovery_hints::readiness_repair_hint;
 use super::plugin_command_types::PluginConnectorExecutionRef;
-use super::plugin_permissions::build_permission_denied_items;
+use super::plugin_permission_denied::build_permission_denied_items;
 
 const MCP_STDIO_PLUGIN_ACTION: &str = "run an MCP stdio plugin action";
 const CONNECTOR_PLUGIN_ACTION: &str = "run a plugin action";

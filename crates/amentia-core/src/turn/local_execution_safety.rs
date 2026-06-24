@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::plugin_permissions::permission_is_granted;
+use crate::plugin_permission_sources::permission_is_granted;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum LocalExecutionSafetyMode {

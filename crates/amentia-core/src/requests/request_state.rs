@@ -6,12 +6,12 @@ use amentia_plugin_host::PluginCatalogEntry;
 use amentia_protocol::{TimelineItem, WorkspaceSummary};
 use amentia_storage::StoredWorkspaceChangeRecord;
 
-use crate::active_turns::ActiveTurn;
+use crate::active_turn_model::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::context_plugin_skill_pack::PluginSkillContextPack;
 use crate::intent_inference;
 use crate::plugin_commands::{PluginCommandOutput, PluginCommandSnapshot};
-use crate::plugin_hooks::PluginHookMemoryCapture;
+use crate::plugin_hook_types::PluginHookMemoryCapture;
 use crate::requests::approval_agent_context::ApprovalAgentContext;
 use crate::runtime_plugins::RuntimePluginState;
 use crate::turn::local_execution_safety::{LocalChangeExecutionPolicy, LocalExecutionSafetyMode};

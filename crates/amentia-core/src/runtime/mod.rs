@@ -1,7 +1,6 @@
 pub(crate) mod protocol_adapters;
 pub(crate) mod protocol_memory_adapters;
 pub(crate) mod protocol_model_adapters;
-pub(crate) mod protocol_plugin_adapters;
 pub(crate) mod protocol_plugin_registry_adapters;
 pub(crate) mod protocol_plugin_registry_mappers;
 pub(crate) mod protocol_plugin_summary_adapters;
@@ -22,7 +21,6 @@ pub(crate) mod runtime_persistence_records;
 pub(crate) mod runtime_persistence_threads;
 pub(crate) mod runtime_plugins;
 pub(crate) mod runtime_readiness;
-pub(crate) mod runtime_readiness_checks;
 pub(crate) mod runtime_readiness_execution;
 pub(crate) mod runtime_readiness_metrics;
 pub(crate) mod runtime_readiness_model;

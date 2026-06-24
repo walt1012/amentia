@@ -5,7 +5,7 @@ pub use super::approval_completion::complete_prepared_approval_respond;
 pub use super::approval_execution::execute_prepared_approval_respond;
 
 use crate::plugin_commands::prepare_approved_plugin_command_snapshot;
-use crate::plugin_permissions::granted_permission_sources;
+use crate::plugin_permission_sources::granted_permission_sources;
 use crate::request_params::parse_required_params;
 use crate::request_state::{PreparedApprovalRespond, PreparedApprovalSnapshot};
 use crate::requests::approval_agent_context::ApprovalAgentContext;

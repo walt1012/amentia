@@ -6,7 +6,8 @@ use amentia_protocol::WorkspaceSummary;
 use amentia_tools::{write_file, write_file_max_bytes};
 
 use crate::approval_types::PendingApproval;
-use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
+use crate::plugin_permission_denied::build_permission_denied_items;
+use crate::plugin_permission_sources::permission_is_granted;
 use crate::turn_tool_provenance::workspace_tool_attributes;
 
 use super::approval_execution_events::ApprovalExecutionEvents;

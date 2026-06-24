@@ -12,7 +12,7 @@ use super::turn_workspace_fallback::execute_no_workspace_turn;
 use super::turn_workspace_list::execute_list_observation_step;
 use super::turn_workspace_read::execute_read_observation_step;
 use super::turn_workspace_search::execute_search_observation_step;
-use crate::active_turns::ActiveTurn;
+use crate::active_turn_model::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::{
   ensure_plugin_command_handoff, execute_plugin_command_snapshot, PluginCommandOutput,

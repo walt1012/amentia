@@ -6,7 +6,7 @@ use amentia_tools::{run_shell_with_cancellation, shell_sandbox_summary};
 
 use crate::approval_types::PendingApproval;
 use crate::local_responses::{build_plan_item, format_shell_result, summarize_shell_result};
-use crate::plugin_permissions::build_permission_denied_items;
+use crate::plugin_permission_denied::build_permission_denied_items;
 use crate::request_state::PreparedTurnSnapshot;
 use crate::turn::local_execution_safety::LocalChangeExecutionPolicy;
 use crate::turn::turn_local_execution_block::build_local_execution_blocked_items;

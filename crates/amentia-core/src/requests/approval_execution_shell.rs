@@ -9,8 +9,9 @@ use amentia_tools::{run_shell_with_cancellation, ShellCommandResult};
 
 use crate::approval_types::PendingApproval;
 use crate::local_responses::{format_shell_result, summarize_shell_result};
-use crate::plugin_hooks::build_shell_completed_hook_items;
-use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
+use crate::plugin_hook_shell::build_shell_completed_hook_items;
+use crate::plugin_permission_denied::build_permission_denied_items;
+use crate::plugin_permission_sources::permission_is_granted;
 use crate::turn::turn_tool_limits::SHELL_OUTPUT_PREVIEW_MAX_BYTES;
 use crate::turn_tool_provenance::workspace_tool_attributes;
 

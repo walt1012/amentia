@@ -96,6 +96,8 @@ Implemented foundations:
   release metadata stay aligned without changing connector protocol fields.
 - Core and macOS cleanup is collapsing thin facade files and misleading legacy
   names while keeping real domain boundaries intact.
+- Core cleanup now favors direct module ownership over facade-of-facade imports
+  for turns, plugin permissions, hooks, lifecycle requests, and readiness.
 - Primary window foundations are in place: native sidebar density, calm timeline
   cards, focused composer, readiness, first-run setup, session sidebar
   ownership, model management, project search, plugin management, inspector

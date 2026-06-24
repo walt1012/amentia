@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::active_turns::{active_turn_id_for_thread, ActiveTurn};
+use crate::active_turn_model::ActiveTurn;
+use crate::active_turn_timeline::active_turn_id_for_thread;
 
 #[derive(Debug, Clone)]
 pub(super) struct RuntimeActiveTurnState {

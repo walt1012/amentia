@@ -4,7 +4,7 @@ use amentia_storage::StoredWorkspaceChangeRecord;
 
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::PluginCommandOutput;
-use crate::plugin_hooks::PluginHookMemoryCapture;
+use crate::plugin_hook_types::PluginHookMemoryCapture;
 use crate::request_state::ApprovalExecutionOutput;
 use crate::requests::approval_agent_context::ApprovalAgentContext;
 

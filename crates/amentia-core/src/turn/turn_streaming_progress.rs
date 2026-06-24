@@ -1,7 +1,7 @@
 use amentia_protocol::ThreadUpdatedNotificationParams;
 use anyhow::Result;
 
-use crate::active_turns::{streaming_progress_label, update_streaming_item};
+use crate::active_turn_timeline::{streaming_progress_label, update_streaming_item};
 use crate::approval_state::approvals_for_thread;
 use crate::runtime_context::RuntimeContext;
 use crate::text_utils::take_characters;

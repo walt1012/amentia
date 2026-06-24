@@ -13,7 +13,7 @@ use super::turn_workspace_timeline::{
 use crate::approval_types::PendingApproval;
 use crate::intent_inference;
 use crate::local_responses::build_plan_item;
-use crate::plugin_permissions::build_permission_denied_items;
+use crate::plugin_permission_denied::build_permission_denied_items;
 use crate::request_state::PreparedTurnSnapshot;
 use crate::turn::local_execution_safety::LocalChangeExecutionPolicy;
 use crate::turn::turn_local_execution_block::build_local_execution_blocked_items;

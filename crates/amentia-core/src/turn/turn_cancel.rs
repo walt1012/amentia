@@ -5,7 +5,7 @@ use amentia_protocol::{
   TurnCancelRunningParams,
 };
 
-use crate::active_turns::update_streaming_item;
+use crate::active_turn_timeline::update_streaming_item;
 use crate::request_params::parse_required_params;
 use crate::runtime_context::RuntimeContext;
 use crate::text_utils::take_characters;

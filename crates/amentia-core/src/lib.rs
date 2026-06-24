@@ -5,7 +5,8 @@ pub use runtime_context::RuntimeContext;
 
 mod turn;
 pub(crate) use turn::{
-  active_turns, approval_state, approval_types, turn_actions, turn_streaming, turn_tool_provenance,
+  active_turn_model, active_turn_timeline, approval_state, approval_types, turn_actions,
+  turn_streaming, turn_tool_provenance,
 };
 
 mod threads;
@@ -19,7 +20,8 @@ pub(crate) use context::{
 
 mod plugins;
 pub(crate) use plugins::{
-  plugin_catalog_state, plugin_commands, plugin_hooks, plugin_permissions, plugin_requests,
+  plugin_catalog_state, plugin_commands, plugin_hook_memory, plugin_hook_shell, plugin_hook_types,
+  plugin_permission_denied, plugin_permission_sources, plugin_requests,
 };
 
 mod requests;

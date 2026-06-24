@@ -7,7 +7,7 @@ use amentia_protocol::{JsonRpcRequest, JsonRpcResponse, TurnStartParams, TurnSta
 use crate::approval_state::approvals_for_thread;
 use crate::context_plugin_skill_pack::pack_plugin_skills_for_context;
 use crate::plugin_commands::capture_plugin_command_output_memory;
-use crate::plugin_permissions::granted_permission_sources;
+use crate::plugin_permission_sources::granted_permission_sources;
 use crate::request_params::parse_required_params;
 use crate::request_state::{CompletedTurnStart, PreparedTurnSnapshot, PreparedTurnStart};
 use crate::runtime_context::RuntimeContext;

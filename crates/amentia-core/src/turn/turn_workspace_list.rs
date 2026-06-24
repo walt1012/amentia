@@ -9,11 +9,13 @@ use super::turn_workspace_entry_points::preferred_entry_point;
 use super::turn_workspace_timeline::{
   workspace_tool_failed_items, workspace_tool_result_item, workspace_tool_start_item,
 };
-use crate::active_turns::{start_streaming_assistant_turn, ActiveTurn};
+use crate::active_turn_model::ActiveTurn;
+use crate::active_turn_timeline::start_streaming_assistant_turn;
 use crate::local_responses::{
   build_plan_item, format_directory_result, summarize_directory_result,
 };
-use crate::plugin_permissions::{build_permission_denied_items, permission_is_granted};
+use crate::plugin_permission_denied::build_permission_denied_items;
+use crate::plugin_permission_sources::permission_is_granted;
 use crate::request_state::PreparedTurnSnapshot;
 
 pub(super) fn execute_list_observation_step(

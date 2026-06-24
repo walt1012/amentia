@@ -6,7 +6,7 @@ use super::turn_agent_loop::{
   AgentLoopCoordinator, AgentLoopObservation, AgentLoopPlannedAction, AgentLoopStopReason,
 };
 use super::turn_step_dispatcher::{TurnStepControl, TurnStepDispatcher, TurnStepResult};
-use crate::active_turns::ActiveTurn;
+use crate::active_turn_model::ActiveTurn;
 use crate::approval_types::PendingApproval;
 use crate::plugin_commands::{
   prepare_plugin_command_follow_up_snapshot, PluginCommandFollowUpRequest, PluginCommandOutput,

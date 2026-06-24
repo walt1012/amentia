@@ -6,7 +6,7 @@ use amentia_protocol::ApprovalRequest;
 use super::runtime_execution_approvals::RuntimePendingApprovalState;
 use super::runtime_execution_running::{RuntimeRunningCancellation, RuntimeRunningExecutionState};
 use super::runtime_execution_turns::RuntimeActiveTurnState;
-use crate::active_turns::ActiveTurn;
+use crate::active_turn_model::ActiveTurn;
 use crate::approval_types::PendingApproval;
 
 #[derive(Debug, Clone)]
