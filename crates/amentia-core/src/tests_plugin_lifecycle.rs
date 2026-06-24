@@ -50,10 +50,7 @@ fn plugin_set_enabled_does_not_mutate_catalog_when_persistence_fails() {
   fs::create_dir_all(&database_path).expect("create directory at database path");
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path,
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(database_path));
   replace_plugin_catalog(
     &mut context,
     vec![bundled_plugin_entry(
@@ -274,10 +271,7 @@ fn plugin_install_reports_refresh_failure_as_structured_recovery() {
   fs::create_dir_all(&database_path).expect("create directory at database path");
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path,
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(database_path));
   let source_root = create_temp_plugin_bundle(
     "plugin-install-refresh-fail",
     "focus-review",
@@ -392,10 +386,7 @@ fn plugin_refresh_preserves_runtime_state_when_persistence_fails() {
   fs::create_dir_all(&database_path).expect("create directory at database path");
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path,
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(database_path));
   let plugin_root = create_temp_plugin_bundle(
     "plugin-refresh-state-warning",
     "refresh-state",
@@ -498,10 +489,7 @@ fn plugin_remove_deletes_local_plugin_and_clears_persisted_state() {
   let source_root =
     create_temp_plugin_bundle("plugin-remove-source", "focus-review", "Focus Review");
   let install_root = create_temp_workspace("plugin-remove-root");
-  let store = RuntimeStore::new(
-    storage_root.join("amentia.db"),
-    storage_root.join("threads.json"),
-  );
+  let store = RuntimeStore::new(storage_root.join("amentia.db"));
   store
     .save_plugin_enabled("focus-review", true)
     .expect("save persisted plugin state");
@@ -592,10 +580,7 @@ fn plugin_remove_deletes_connector_credentials_for_local_plugin() {
   .expect("write connector plugin manifest");
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      storage_root.join("amentia.db"),
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(storage_root.join("amentia.db")));
   context
     .plugin_state
     .configure_roots(vec![install_root.clone()], install_root.clone());
@@ -699,10 +684,7 @@ fn plugin_remove_refreshes_catalog_after_persistence_cleanup_fails() {
 
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path,
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(database_path));
   let manifest_path = context.plugin_state.catalog()[0].manifest_path.clone();
   let remove_response = handle_request(
     &mut context,

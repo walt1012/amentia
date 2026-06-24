@@ -1667,7 +1667,6 @@ def validate_packaged_first_cowork_request(app_path: Path) -> None:
     runtime_environment = {
       "AMENTIA_MODEL_PACK_MANIFEST": str(manifest_path),
       "AMENTIA_MODEL_PATH": str(model_path),
-      "AMENTIA_LFM_MODEL_PATH": str(model_path),
       "AMENTIA_LLAMACPP_PATH": str(backend_path),
       "AMENTIA_ENABLE_WEB_SEARCH_FIXTURE": "1",
       "AMENTIA_WEB_SEARCH_FIXTURE_PATH": str(web_search_fixture_path),

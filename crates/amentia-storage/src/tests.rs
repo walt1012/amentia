@@ -36,7 +36,7 @@ fn workspace_change(id: &str, thread_id: &str) -> StoredWorkspaceChangeRecord {
 #[test]
 fn sqlite_store_round_trips_threads_and_workspace() {
   let root = create_temp_directory("sqlite-roundtrip");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
 
   store
     .save_workspace(&WorkspaceSummary {
@@ -91,7 +91,7 @@ fn sqlite_store_round_trips_threads_and_workspace() {
 #[test]
 fn sqlite_store_round_trips_pending_approvals_and_resolution_audit() {
   let root = create_temp_directory("approval-roundtrip");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let approval = StoredApprovalRecord {
     id: "approval-4".to_string(),
     thread_id: "thread-2".to_string(),
@@ -130,7 +130,7 @@ fn sqlite_store_round_trips_pending_approvals_and_resolution_audit() {
 #[test]
 fn sqlite_store_deletes_all_approvals_for_thread() {
   let root = create_temp_directory("approval-delete-thread");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let approval = StoredApprovalRecord {
     id: "approval-4".to_string(),
     thread_id: "thread-2".to_string(),
@@ -168,7 +168,7 @@ fn sqlite_store_deletes_all_approvals_for_thread() {
 #[test]
 fn sqlite_store_round_trips_workspace_change_ledger() {
   let root = create_temp_directory("workspace-change-ledger");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let change = StoredWorkspaceChangeRecord {
     id: "approval-9".to_string(),
     thread_id: "thread-7".to_string(),
@@ -201,7 +201,7 @@ fn sqlite_store_round_trips_workspace_change_ledger() {
 #[test]
 fn sqlite_store_deletes_workspace_changes_for_thread() {
   let root = create_temp_directory("workspace-change-delete-thread");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let mut first_change = workspace_change("change-1", "thread-1");
   let second_change = workspace_change("change-2", "thread-2");
   first_change.relative_path = "first.txt".to_string();
@@ -228,56 +228,6 @@ fn sqlite_store_deletes_workspace_changes_for_thread() {
   assert!(first_thread_changes.is_empty());
   assert_eq!(second_thread_changes.len(), 1);
   assert_eq!(second_thread_changes[0].id, "change-2");
-}
-
-#[test]
-fn sqlite_store_imports_legacy_json_threads() {
-  let root = create_temp_directory("legacy-import");
-  let database_path = root.join("amentia.db");
-  let legacy_path = root.join("threads.json");
-  let legacy_workspace = WorkspaceSummary {
-    root_path: "/tmp/amentia-legacy".to_string(),
-    display_name: "amentia-legacy".to_string(),
-  };
-  fs::write(
-    &legacy_path,
-    serde_json::to_string(&vec![StoredThreadRecord {
-      summary: ThreadSummary {
-        id: "thread-legacy".to_string(),
-        title: "Legacy".to_string(),
-        status: "ready".to_string(),
-        workspace: Some(legacy_workspace.clone()),
-      },
-      turn_count: 1,
-      items: vec![],
-      workspace: Some(legacy_workspace.clone()),
-    }])
-    .expect("serialize legacy threads"),
-  )
-  .expect("write legacy threads");
-
-  let store = RuntimeStore::new(database_path, legacy_path);
-  let threads = store.load_threads().expect("load migrated threads");
-
-  fs::remove_dir_all(&root).expect("cleanup temp directory");
-
-  assert_eq!(threads.len(), 1);
-  assert_eq!(threads[0].summary.id, "thread-legacy");
-  assert_eq!(
-    threads[0]
-      .workspace
-      .as_ref()
-      .map(|workspace| workspace.root_path.as_str()),
-    Some("/tmp/amentia-legacy")
-  );
-  assert_eq!(
-    threads[0]
-      .summary
-      .workspace
-      .as_ref()
-      .map(|workspace| workspace.display_name.as_str()),
-    Some("amentia-legacy")
-  );
 }
 
 #[test]
@@ -310,7 +260,7 @@ fn sqlite_store_migrates_existing_version_one_database() {
     .expect("seed version one schema");
   drop(connection);
 
-  let store = RuntimeStore::new(database_path.clone(), root.join("threads.json"));
+  let store = RuntimeStore::new(database_path.clone());
   let threads = store.load_threads().expect("load migrated threads");
   let pending_approvals = store
     .load_pending_approvals()
@@ -366,7 +316,7 @@ fn sqlite_store_migrates_existing_version_one_database() {
 #[test]
 fn sqlite_store_round_trips_memory_notes() {
   let root = create_temp_directory("memory-roundtrip");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let note = MemoryNote {
     id: "memory-7".to_string(),
     title: "Opened workspace amentia".to_string(),
@@ -392,7 +342,7 @@ fn sqlite_store_round_trips_memory_notes() {
 #[test]
 fn sqlite_store_round_trips_plugin_states() {
   let root = create_temp_directory("plugin-state");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
 
   store
     .save_plugin_enabled("workspace-notes", true)
@@ -411,7 +361,7 @@ fn sqlite_store_round_trips_plugin_states() {
 #[test]
 fn sqlite_store_deletes_plugin_state() {
   let root = create_temp_directory("plugin-state-delete");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
 
   store
     .save_plugin_enabled("workspace-notes", true)
@@ -429,7 +379,7 @@ fn sqlite_store_deletes_plugin_state() {
 #[test]
 fn sqlite_store_round_trips_plugin_connector_credentials() {
   let root = create_temp_directory("plugin-connector-credentials");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let credential = StoredPluginConnectorCredential {
     connector_id: "notion-connector::notion".to_string(),
     plugin_id: "notion-connector".to_string(),
@@ -454,7 +404,7 @@ fn sqlite_store_round_trips_plugin_connector_credentials() {
 #[test]
 fn sqlite_store_deletes_plugin_connector_credentials() {
   let root = create_temp_directory("plugin-connector-credential-delete");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let credential = StoredPluginConnectorCredential {
     connector_id: "notion-connector::notion".to_string(),
     plugin_id: "notion-connector".to_string(),
@@ -482,7 +432,7 @@ fn sqlite_store_deletes_plugin_connector_credentials() {
 #[test]
 fn sqlite_store_deletes_plugin_connector_credentials_by_plugin() {
   let root = create_temp_directory("plugin-connector-credential-plugin-delete");
-  let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+  let store = RuntimeStore::new(root.join("amentia.db"));
   let notion = StoredPluginConnectorCredential {
     connector_id: "notion-connector::notion".to_string(),
     plugin_id: "notion-connector".to_string(),

@@ -35,10 +35,6 @@ pub(crate) fn resolve_model_path(
     return Some(PathBuf::from(path));
   }
 
-  if let Ok(path) = env::var("AMENTIA_LFM_MODEL_PATH") {
-    return Some(PathBuf::from(path));
-  }
-
   if let (Some(manifest_directory), Some(manifest)) = (manifest_directory, manifest) {
     let manifest_candidate = manifest_directory.join(&manifest.file_name);
     if manifest_candidate.is_file() {

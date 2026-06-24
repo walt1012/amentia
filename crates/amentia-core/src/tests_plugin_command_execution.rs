@@ -525,10 +525,7 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
   );
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path,
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(database_path));
 
   let response = handle_request(
     &mut context,

@@ -237,11 +237,10 @@ The default model pack path resolves in this order:
 The resolved model file path then checks:
 
 1. `AMENTIA_MODEL_PATH`
-2. `AMENTIA_LFM_MODEL_PATH` as a legacy alias
-3. a sibling of the resolved manifest using the manifest `file_name`
-4. `AMENTIA_DATA_DIR/models/LFM2.5-350M-Q4_K_M.gguf`
-5. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
-6. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
+2. a sibling of the resolved manifest using the manifest `file_name`
+3. `AMENTIA_DATA_DIR/models/LFM2.5-350M-Q4_K_M.gguf`
+4. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
+5. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
 
 The repository tracks manifests, licensing notes, and small metadata only. Model
 weights are downloaded in app, verified, and stored in the suggested app data

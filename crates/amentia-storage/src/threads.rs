@@ -2,7 +2,6 @@ use amentia_protocol::{ThreadSummary, TimelineItem, WorkspaceSummary};
 use anyhow::{Context, Result};
 use rusqlite::params;
 
-use crate::legacy::import_legacy_threads_if_needed;
 use crate::time::current_timestamp;
 use crate::types::StoredThreadRecord;
 use crate::RuntimeStore;
@@ -10,7 +9,6 @@ use crate::RuntimeStore;
 impl RuntimeStore {
   pub fn load_threads(&self) -> Result<Vec<StoredThreadRecord>> {
     let connection = self.open_connection()?;
-    import_legacy_threads_if_needed(&connection, &self.legacy_runtime_state_path)?;
 
     let mut statement = connection.prepare(
       "SELECT id, title, status, turn_count, items_json, workspace_root_path, workspace_display_name

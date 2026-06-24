@@ -6,7 +6,6 @@ pub struct StoragePaths {
   pub database_path: String,
   pub artifacts_path: String,
   pub plugins_path: String,
-  pub runtime_state_path: String,
 }
 
 impl StoragePaths {
@@ -15,7 +14,6 @@ impl StoragePaths {
       database_path: "~/Library/Application Support/Amentia/storage/amentia.db".to_string(),
       artifacts_path: "~/Library/Application Support/Amentia/artifacts".to_string(),
       plugins_path: "~/Library/Application Support/Amentia/plugins".to_string(),
-      runtime_state_path: "~/Library/Application Support/Amentia/storage/threads.json".to_string(),
     }
   }
 }

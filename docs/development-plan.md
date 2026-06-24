@@ -108,6 +108,8 @@ Implemented foundations:
   remains strict without repeating temporary repository setup in every assertion.
 - Source hygiene now treats generated previews, CI logs, Python caches, and local
   diagnostics as disposable artifacts, not source or plan material.
+- Amentia now treats app state as fresh SQLite-owned state: legacy JSON thread
+  import and legacy model-path aliases are removed from the active path.
 - macOS plugin cleanup keeps summary data, dashboard state, surface/status
   display, validation copy, and guidance/check copy in separate owners so
   protocol-shaped data does not become UI glue.

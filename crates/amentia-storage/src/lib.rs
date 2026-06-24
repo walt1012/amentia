@@ -6,7 +6,6 @@ use rusqlite::Connection;
 
 mod approvals;
 mod changes;
-mod legacy;
 mod memory;
 mod paths;
 mod plugins;
@@ -18,7 +17,7 @@ mod time;
 mod types;
 mod workspace;
 
-use crate::paths::{default_database_path, default_runtime_state_path};
+use crate::paths::default_database_path;
 use crate::schema::ensure_schema;
 pub use crate::types::{
   StoragePaths, StoredApprovalRecord, StoredPluginConnectorCredential, StoredThreadRecord,
@@ -28,22 +27,17 @@ pub use crate::types::{
 #[derive(Debug, Clone)]
 pub struct RuntimeStore {
   database_path: PathBuf,
-  legacy_runtime_state_path: PathBuf,
 }
 
 impl RuntimeStore {
   pub fn new_default() -> Result<Self> {
     Ok(Self {
       database_path: default_database_path()?,
-      legacy_runtime_state_path: default_runtime_state_path()?,
     })
   }
 
-  pub fn new(database_path: PathBuf, legacy_runtime_state_path: PathBuf) -> Self {
-    Self {
-      database_path,
-      legacy_runtime_state_path,
-    }
+  pub fn new(database_path: PathBuf) -> Self {
+    Self { database_path }
   }
 
   fn open_connection(&self) -> Result<Connection> {

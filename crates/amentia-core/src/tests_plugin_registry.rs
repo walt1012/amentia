@@ -1686,10 +1686,7 @@ fn plugin_connector_clear_forgets_runtime_secret_when_metadata_delete_fails() {
   let database_path = storage_root.join("amentia.db");
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path.clone(),
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(database_path.clone()));
   replace_plugin_catalog(
     &mut context,
     vec![bundled_manifest_plugin_entry(
@@ -1896,10 +1893,7 @@ fn plugin_connector_authorize_returns_repair_metadata_when_storage_fails() {
   fs::create_dir_all(&database_path).expect("create directory at database path");
   context
     .persistence_state
-    .set_store_for_testing(RuntimeStore::new(
-      database_path,
-      storage_root.join("threads.json"),
-    ));
+    .set_store_for_testing(RuntimeStore::new(database_path));
   replace_plugin_catalog(
     &mut context,
     vec![bundled_manifest_plugin_entry(

@@ -62,7 +62,6 @@ enum RuntimeBridgeLocalEnvironment {
     if let activeModel = await activeLocalModelSelection() {
       environment["AMENTIA_MODEL_PACK_MANIFEST"] = activeModel.manifestPath
       environment["AMENTIA_MODEL_PATH"] = activeModel.modelPath
-      environment["AMENTIA_LFM_MODEL_PATH"] = activeModel.modelPath
     }
     return environment
   }

@@ -37,7 +37,6 @@ The runtime can also resolve:
 
 - `AMENTIA_MODEL_PACK_MANIFEST`
 - `AMENTIA_MODEL_PATH`
-- `AMENTIA_LFM_MODEL_PATH` as a legacy alias
 - repo-local manifests for development
 
 The repository keeps the manifest so the product can describe the default downloadable model without forcing the large GGUF file into source control.

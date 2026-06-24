@@ -90,7 +90,7 @@ mod tests {
   #[test]
   fn bootstrap_maps_storage_records_into_runtime_state() {
     let root = create_temp_directory("bootstrap");
-    let store = RuntimeStore::new(root.join("amentia.db"), root.join("threads.json"));
+    let store = RuntimeStore::new(root.join("amentia.db"));
     let workspace = WorkspaceSummary {
       root_path: "/tmp/amentia".to_string(),
       display_name: "amentia".to_string(),
