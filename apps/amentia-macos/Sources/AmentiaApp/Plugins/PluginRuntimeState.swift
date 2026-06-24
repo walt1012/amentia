@@ -12,6 +12,19 @@ struct PluginStateRefresh {
   let refreshRecoveryAttributes: [String: String]
 }
 
+struct PluginDashboardSnapshot {
+  let plugins: [PluginSummary]
+  let registrySummary: PluginCapabilityRegistrySummary?
+  let capabilities: [PluginCapabilitySummary]
+  let connectors: [PluginConnectorSummary]
+  let commands: [PluginCommandSummary]
+  let hooks: [PluginHookSummary]
+  let skills: [PluginSkillSummary]
+  let diagnostics: [String]
+  let refreshRecoveryAttributes: [String: String]
+  let hasLifecycleOperation: Bool
+}
+
 struct PluginRuntimeState {
   var plugins: [PluginSummary]
   var registrySummary: PluginCapabilityRegistrySummary?

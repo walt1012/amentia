@@ -1,18 +1,3 @@
-import Foundation
-
-struct PluginDashboardSnapshot {
-  let plugins: [PluginSummary]
-  let registrySummary: PluginCapabilityRegistrySummary?
-  let capabilities: [PluginCapabilitySummary]
-  let connectors: [PluginConnectorSummary]
-  let commands: [PluginCommandSummary]
-  let hooks: [PluginHookSummary]
-  let skills: [PluginSkillSummary]
-  let diagnostics: [String]
-  let refreshRecoveryAttributes: [String: String]
-  let hasLifecycleOperation: Bool
-}
-
 enum PluginDashboardPresenter {
   private static let previewLimit = 6
 
@@ -24,7 +9,7 @@ enum PluginDashboardPresenter {
     let readyCount = readyPluginList(snapshot).count
     let invalidCount = snapshot.plugins.count - readyCount
     if invalidCount == 0 {
-      return "\(readyCount) plugin\(readyCount == 1 ? "" : "s") ready"
+      return "\(plural(readyCount, "plugin")) ready"
     }
 
     return "\(readyCount) ready, \(invalidCount) need attention"
@@ -37,7 +22,7 @@ enum PluginDashboardPresenter {
       return "No local plugins installed yet."
     }
 
-    return "\(localPlugins.count) local plugin\(localPlugins.count == 1 ? "" : "s")"
+    return "\(localPlugins.count) local \(pluralName(localPlugins.count, "plugin"))"
   }
 
   static func pluginDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -80,10 +65,13 @@ enum PluginDashboardPresenter {
     }
 
     if uniquePermissions.isEmpty {
-      return "\(readyPlugins.count) ready plugin\(readyPlugins.count == 1 ? "" : "s"), no extra permissions"
+      let pluginLabel = pluralName(readyPlugins.count, "plugin")
+      return "\(readyPlugins.count) ready \(pluginLabel), no extra permissions"
     }
 
-    return "\(uniquePermissions.count) permission\(uniquePermissions.count == 1 ? "" : "s") across \(readyPlugins.count) ready plugin\(readyPlugins.count == 1 ? "" : "s")"
+    let permissionSummary = plural(uniquePermissions.count, "permission")
+    let pluginLabel = pluralName(readyPlugins.count, "plugin")
+    return "\(permissionSummary) across \(readyPlugins.count) ready \(pluginLabel)"
   }
 
   static func permissionDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -122,7 +110,7 @@ enum PluginDashboardPresenter {
       return "No Setup Issues"
     }
 
-    return "\(invalidPlugins.count) plugin setup issue\(invalidPlugins.count == 1 ? "" : "s")"
+    return "\(invalidPlugins.count) \(pluralName(invalidPlugins.count, "plugin setup issue"))"
   }
 
   static func invalidPluginDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -152,9 +140,13 @@ enum PluginDashboardPresenter {
       return "No plugin capabilities yet"
     }
 
-    let capabilityLabel = registrySummary.totalCapabilityCount == 1 ? "capability" : "capabilities"
-    let pluginLabel = registrySummary.enabledPluginCount == 1 ? "plugin" : "plugins"
-    return "\(registrySummary.totalCapabilityCount) \(capabilityLabel) from \(registrySummary.enabledPluginCount) enabled \(pluginLabel)"
+    let capabilitySummary = plural(
+      registrySummary.totalCapabilityCount,
+      "capability",
+      plural: "capabilities"
+    )
+    let pluginLabel = pluralName(registrySummary.enabledPluginCount, "plugin")
+    return "\(capabilitySummary) from \(registrySummary.enabledPluginCount) enabled \(pluginLabel)"
   }
 
   static func registryDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -186,19 +178,14 @@ enum PluginDashboardPresenter {
     let authorizedCount = snapshot.connectors.filter { connector in
       connectorAuthorizationStatus(connector) == "authorized locally"
     }.count
-    var parts = [
-      "\(snapshot.connectors.count) connection\(snapshot.connectors.count == 1 ? "" : "s")"
-    ]
-    if readyCount > 0 {
-      parts.append("\(readyCount) ready")
-    }
-    if needsAuthCount > 0 {
-      parts.append("\(needsAuthCount) need sign in")
-    }
-    if authorizedCount > 0 {
-      parts.append("\(authorizedCount) authorized")
-    }
-    return parts.joined(separator: " | ")
+    return statusSummary(
+      total: plural(snapshot.connectors.count, "connection"),
+      nonZeroParts: [
+        (readyCount, "ready"),
+        (needsAuthCount, "need sign in"),
+        (authorizedCount, "authorized")
+      ]
+    )
   }
 
   static func connectorDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -223,19 +210,14 @@ enum PluginDashboardPresenter {
     let readyCount = snapshot.commands.filter { $0.runStatus == "ready" }.count
     let blockedCount = snapshot.commands.count - readyCount
     let approvalCount = snapshot.commands.filter { $0.approvalRequired }.count
-    var parts = [
-      "\(snapshot.commands.count) action\(snapshot.commands.count == 1 ? "" : "s")"
-    ]
-    if readyCount > 0 {
-      parts.append("\(readyCount) ready")
-    }
-    if blockedCount > 0 {
-      parts.append("\(blockedCount) blocked")
-    }
-    if approvalCount > 0 {
-      parts.append("\(approvalCount) approval gated")
-    }
-    return parts.joined(separator: " | ")
+    return statusSummary(
+      total: plural(snapshot.commands.count, "action"),
+      nonZeroParts: [
+        (readyCount, "ready"),
+        (blockedCount, "blocked"),
+        (approvalCount, "approval gated")
+      ]
+    )
   }
 
   static func commandDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -272,7 +254,7 @@ enum PluginDashboardPresenter {
       return "No checks yet"
     }
 
-    return "\(snapshot.hooks.count) check\(snapshot.hooks.count == 1 ? "" : "s")"
+    return plural(snapshot.hooks.count, "check")
   }
 
   static func hookDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -295,9 +277,9 @@ enum PluginDashboardPresenter {
     let readyCount = snapshot.skills.filter { $0.status == "ready" }.count
     let blockedCount = snapshot.skills.count - readyCount
     if blockedCount == 0 {
-      return "\(readyCount) skill\(readyCount == 1 ? "" : "s") ready"
+      return "\(plural(readyCount, "skill")) ready"
     }
-    return "\(snapshot.skills.count) skill\(snapshot.skills.count == 1 ? "" : "s") | \(blockedCount) need review"
+    return "\(plural(snapshot.skills.count, "skill")) | \(blockedCount) need review"
   }
 
   static func skillDetailSummary(_ snapshot: PluginDashboardSnapshot) -> String {
@@ -314,6 +296,32 @@ enum PluginDashboardPresenter {
 
   private static func preview<Value>(_ values: [Value]) -> [Value] {
     Array(values.prefix(previewLimit))
+  }
+
+  private static func plural(
+    _ count: Int,
+    _ singular: String,
+    plural pluralName: String? = nil
+  ) -> String {
+    "\(count) \(self.pluralName(count, singular, plural: pluralName))"
+  }
+
+  private static func pluralName(
+    _ count: Int,
+    _ singular: String,
+    plural pluralName: String? = nil
+  ) -> String {
+    count == 1 ? singular : (pluralName ?? "\(singular)s")
+  }
+
+  private static func statusSummary(
+    total: String,
+    nonZeroParts: [(count: Int, label: String)]
+  ) -> String {
+    ([total] + nonZeroParts.compactMap { part in
+      part.count > 0 ? "\(part.count) \(part.label)" : nil
+    })
+    .joined(separator: " | ")
   }
 
   private static func readyPluginList(_ snapshot: PluginDashboardSnapshot) -> [PluginSummary] {
