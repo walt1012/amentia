@@ -13,6 +13,11 @@ use amentia_storage::RuntimeStore;
 use serde_json::json;
 use std::fs;
 
+const SUPPORTED_CAPABILITY_KINDS_HINT: &str = concat!(
+  "Use one of the supported capability kinds: command, agent, hook, tool, ",
+  "mcp_server, skill, connector, connector_workflow, settings."
+);
+
 #[test]
 fn plugin_command_registry_lists_enabled_command_plugins() {
   let mut context = RuntimeContext::new_in_memory();
@@ -1991,10 +1996,7 @@ fn capability_registry_only_includes_ready_enabled_plugins() {
       manifest_path: "plugins/bundled/broken/amentia-plugin.json".to_string(),
       provenance: "bundled".to_string(),
       validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
-      validation_hint: Some(
-        "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings."
-          .to_string(),
-      ),
+      validation_hint: Some(SUPPORTED_CAPABILITY_KINDS_HINT.to_string()),
     },
   ];
 

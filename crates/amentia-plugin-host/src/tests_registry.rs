@@ -2,6 +2,11 @@ use super::tests_support::create_temp_plugin_root;
 use super::*;
 use std::fs;
 
+const SUPPORTED_CAPABILITY_KINDS_HINT: &str = concat!(
+  "Use one of the supported capability kinds: command, agent, hook, tool, ",
+  "mcp_server, skill, connector, connector_workflow, settings."
+);
+
 #[test]
 fn build_capability_registry_skips_disabled_and_invalid_plugins() {
   let plugins = vec![
@@ -58,10 +63,7 @@ fn build_capability_registry_skips_disabled_and_invalid_plugins() {
       manifest_path: "plugins/bundled/broken/amentia-plugin.json".to_string(),
       provenance: "bundled".to_string(),
       validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
-      validation_hint: Some(
-        "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings."
-          .to_string(),
-      ),
+      validation_hint: Some(SUPPORTED_CAPABILITY_KINDS_HINT.to_string()),
     },
   ];
 

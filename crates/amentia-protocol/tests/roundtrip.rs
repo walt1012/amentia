@@ -12,6 +12,11 @@ use amentia_protocol::{
 };
 use std::collections::HashMap;
 
+const SUPPORTED_CAPABILITY_KINDS_HINT: &str = concat!(
+  "Use one of the supported capability kinds: command, agent, hook, tool, ",
+  "mcp_server, skill, connector, connector_workflow, settings."
+);
+
 #[test]
 fn initialize_params_uses_camel_case_fields() {
   let params = InitializeParams {
@@ -245,10 +250,7 @@ fn plugin_summary_round_trips_validation_hint() {
     manifest_path: "plugins/local/broken-plugin/amentia-plugin.json".to_string(),
     provenance: "local".to_string(),
     validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
-    validation_hint: Some(
-      "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings."
-        .to_string(),
-    ),
+    validation_hint: Some(SUPPORTED_CAPABILITY_KINDS_HINT.to_string()),
   };
 
   let value = serde_json::to_value(&plugin).expect("serialize plugin summary");
@@ -258,9 +260,7 @@ fn plugin_summary_round_trips_validation_hint() {
   let decoded: PluginSummary = serde_json::from_value(value).expect("deserialize plugin summary");
   assert_eq!(
     decoded.validation_hint.as_deref(),
-    Some(
-      "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings."
-    )
+    Some(SUPPORTED_CAPABILITY_KINDS_HINT)
   );
 }
 
