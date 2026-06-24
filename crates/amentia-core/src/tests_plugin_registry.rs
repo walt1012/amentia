@@ -28,10 +28,7 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
       "Workspace Notes",
       true,
       true,
-      &[
-        "command:workspace.capture-note",
-        "skill:workspace.notes",
-      ],
+      &["command:workspace.capture-note", "skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );

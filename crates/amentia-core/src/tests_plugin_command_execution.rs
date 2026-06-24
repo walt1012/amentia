@@ -234,10 +234,7 @@ fn plugin_command_run_executes_builtin_command_for_the_selected_thread() {
       "Workspace Notes",
       true,
       true,
-      &[
-        "command:workspace.capture-note",
-        "skill:workspace.notes",
-      ],
+      &["command:workspace.capture-note", "skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );
@@ -320,10 +317,7 @@ fn plugin_command_run_honors_pending_running_cancel_before_builtin_execution() {
       "Workspace Notes",
       true,
       true,
-      &[
-        "command:workspace.capture-note",
-        "skill:workspace.notes",
-      ],
+      &["command:workspace.capture-note", "skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );
@@ -419,10 +413,7 @@ fn plugin_command_run_reports_repair_metadata_when_thread_is_missing() {
       "Workspace Notes",
       true,
       true,
-      &[
-        "command:workspace.capture-note",
-        "skill:workspace.notes",
-      ],
+      &["command:workspace.capture-note", "skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );
@@ -496,10 +487,7 @@ fn plugin_command_run_reports_repair_metadata_when_completion_persistence_fails(
       "Workspace Notes",
       true,
       true,
-      &[
-        "command:workspace.capture-note",
-        "skill:workspace.notes",
-      ],
+      &["command:workspace.capture-note", "skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );
@@ -568,10 +556,7 @@ fn turn_start_routes_natural_workspace_note_through_plugin_execution() {
       "Workspace Notes",
       true,
       true,
-      &[
-        "command:workspace.capture-note",
-        "skill:workspace.notes",
-      ],
+      &["command:workspace.capture-note", "skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );
