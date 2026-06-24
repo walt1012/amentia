@@ -11,9 +11,7 @@ use super::runtime_readiness_plugins::plugin_check;
 use super::runtime_readiness_sandbox::native_sandbox_check;
 use super::runtime_readiness_summary::{readiness_summary, ReadinessSummaryInput};
 use super::runtime_readiness_web_search::web_search_check;
-use super::runtime_readiness_workspace::{
-  first_request_check, thread_check, workspace_check,
-};
+use super::runtime_readiness_workspace::{first_request_check, thread_check, workspace_check};
 use crate::plugin_permission_sources::{granted_permission_sources, WEB_SEARCH_TOOL_PERMISSION};
 use crate::runtime_context::RuntimeContext;
 
