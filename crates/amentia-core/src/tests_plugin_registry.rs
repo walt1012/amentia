@@ -2001,8 +2001,14 @@ fn capability_registry_only_includes_ready_enabled_plugins() {
 
   assert_eq!(result.summary.enabled_plugin_count, 1);
   assert_eq!(result.summary.total_capability_count, 2);
-  assert_eq!(result.summary.capability_counts_by_kind.get("skill"), Some(&1));
-  assert_eq!(result.summary.capability_counts_by_kind.get("settings"), Some(&1));
+  assert_eq!(
+    result.summary.capability_counts_by_kind.get("skill"),
+    Some(&1)
+  );
+  assert_eq!(
+    result.summary.capability_counts_by_kind.get("settings"),
+    Some(&1)
+  );
   assert_eq!(result.capabilities.len(), 2);
   assert_eq!(result.capabilities[0].kind, "settings");
   assert_eq!(result.capabilities[0].plugin_id, "workspace-notes");
