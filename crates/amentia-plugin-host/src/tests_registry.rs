@@ -16,7 +16,7 @@ fn build_capability_registry_skips_disabled_and_invalid_plugins() {
       enabled: true,
       default_enabled: true,
       capabilities: vec![
-        "prompt_pack:workspace.notes".to_string(),
+        "skill:workspace.notes".to_string(),
         "settings:workspace.preferences".to_string(),
         "command:../outside".to_string(),
       ],
@@ -59,7 +59,7 @@ fn build_capability_registry_skips_disabled_and_invalid_plugins() {
       provenance: "bundled".to_string(),
       validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
       validation_hint: Some(
-        "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings."
+        "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings."
           .to_string(),
       ),
     },
@@ -68,7 +68,7 @@ fn build_capability_registry_skips_disabled_and_invalid_plugins() {
   let registry = build_capability_registry(&plugins);
 
   assert_eq!(registry.len(), 2);
-  assert_eq!(registry[0].kind, "prompt_pack");
+  assert_eq!(registry[0].kind, "skill");
   assert_eq!(registry[1].kind, "settings");
   assert!(registry
     .iter()
@@ -380,7 +380,6 @@ fn build_command_registry_loads_enabled_plugin_commands() {
   "author": { "name": "Amentia" },
   "capabilities": [
     "command:workspace.capture-note",
-    "prompt_pack:workspace.notes",
     "skill:workspace.notes"
   ],
   "skills": [

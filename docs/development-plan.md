@@ -78,6 +78,7 @@ The current product baseline includes:
 - Reset Amentia for app-owned data.
 - Local plugin registry, installation lifecycle, Actions, Connections, Skills,
   MCP, Tools, Checks, credentials, retries, and generic connector receipts.
+- Legacy prompt-pack aliases are out of the active plugin contract.
 - Notion as the reference connection, not as a hardcoded platform direction.
 - Product-first UI language that avoids raw protocol names, hashes, paths, and
   manifest details in normal use.

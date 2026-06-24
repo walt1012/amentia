@@ -246,7 +246,7 @@ fn plugin_summary_round_trips_validation_hint() {
     provenance: "local".to_string(),
     validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
     validation_hint: Some(
-      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings.".to_string(),
+      "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings.".to_string(),
     ),
   };
 
@@ -258,7 +258,7 @@ fn plugin_summary_round_trips_validation_hint() {
   assert_eq!(
     decoded.validation_hint.as_deref(),
     Some(
-      "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings."
+      "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings."
     )
   );
 }
@@ -270,7 +270,7 @@ fn plugin_capability_registry_round_trips() {
       enabled_plugin_count: 2,
       total_capability_count: 3,
       capability_counts_by_kind: HashMap::from([
-        ("prompt_pack".to_string(), 1),
+        ("skill".to_string(), 1),
         ("tool".to_string(), 2),
       ]),
     },

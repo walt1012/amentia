@@ -20,7 +20,7 @@ fn discover_plugins_in_roots_merges_local_and_bundled_catalogs() {
   "displayName": "Workspace Notes",
   "description": "Bundled plugin",
   "author": { "name": "Amentia" },
-  "capabilities": ["prompt_pack:workspace.notes", "skill:workspace.notes"],
+  "capabilities": ["skill:workspace.notes"],
   "skills": [
     {
       "id": "workspace.notes",

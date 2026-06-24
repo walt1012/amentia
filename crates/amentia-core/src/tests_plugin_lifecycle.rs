@@ -18,7 +18,7 @@ fn plugin_set_enabled_updates_runtime_catalog() {
       "Workspace Notes",
       false,
       false,
-      &["prompt_pack:workspace.notes"],
+      &["skill:workspace.notes"],
       &["file.read"],
     )],
   );
@@ -58,7 +58,7 @@ fn plugin_set_enabled_does_not_mutate_catalog_when_persistence_fails() {
       "Workspace Notes",
       false,
       false,
-      &["prompt_pack:workspace.notes"],
+      &["skill:workspace.notes"],
       &["file.read"],
     )],
   );
@@ -142,7 +142,7 @@ fn plugin_inspect_reports_duplicate_install_blocker() {
       "Workspace Notes",
       true,
       true,
-      &["prompt_pack:workspace.notes"],
+      &["skill:workspace.notes"],
       &["file.read"],
     )],
   );
@@ -447,7 +447,7 @@ fn plugin_install_rejects_duplicate_plugin_ids() {
       "Workspace Notes",
       true,
       true,
-      &["prompt_pack:workspace.notes"],
+      &["skill:workspace.notes"],
       &["file.read"],
     )],
   );

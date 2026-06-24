@@ -25,7 +25,7 @@ fn plugin_command_registry_lists_enabled_command_plugins() {
       true,
       &[
         "command:workspace.capture-note",
-        "prompt_pack:workspace.notes",
+        "skill:workspace.notes",
       ],
       &["file.read", "file.write"],
     )],
@@ -1965,7 +1965,7 @@ fn capability_registry_only_includes_ready_enabled_plugins() {
       "Workspace Notes",
       true,
       true,
-      &["prompt_pack:workspace.notes", "settings:workspace.preferences"],
+      &["skill:workspace.notes", "settings:workspace.preferences"],
       &["file.read", "file.write"],
     ),
     bundled_plugin_entry(
@@ -1992,7 +1992,7 @@ fn capability_registry_only_includes_ready_enabled_plugins() {
       provenance: "bundled".to_string(),
       validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
       validation_hint: Some(
-        "Use one of the supported capability kinds: command, agent, prompt_pack, hook, tool, mcp_server, skill, connector, settings.".to_string(),
+        "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings.".to_string(),
       ),
     },
   ];
@@ -2002,7 +2002,7 @@ fn capability_registry_only_includes_ready_enabled_plugins() {
   assert_eq!(result.summary.enabled_plugin_count, 1);
   assert_eq!(result.summary.total_capability_count, 2);
   assert_eq!(
-    result.summary.capability_counts_by_kind.get("prompt_pack"),
+    result.summary.capability_counts_by_kind.get("skill"),
     Some(&1)
   );
   assert_eq!(
@@ -2010,7 +2010,7 @@ fn capability_registry_only_includes_ready_enabled_plugins() {
     Some(&1)
   );
   assert_eq!(result.capabilities.len(), 2);
-  assert_eq!(result.capabilities[0].kind, "prompt_pack");
+  assert_eq!(result.capabilities[0].kind, "skill");
   assert_eq!(result.capabilities[0].plugin_id, "workspace-notes");
   assert_eq!(result.capabilities[1].kind, "settings");
 }

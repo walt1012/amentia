@@ -180,7 +180,7 @@ pub(crate) fn enable_full_access_plugin(context: &mut RuntimeContext) {
       author_name: Some("Amentia".to_string()),
       enabled: true,
       default_enabled: true,
-      capabilities: vec!["prompt_pack:test.full_access".to_string()],
+      capabilities: vec!["skill:test.full_access".to_string()],
       permissions: vec![
         "file.read".to_string(),
         "file.write".to_string(),

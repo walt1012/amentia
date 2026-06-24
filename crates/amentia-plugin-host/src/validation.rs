@@ -4,10 +4,9 @@ use anyhow::Result;
 
 use crate::manifest::PluginManifest;
 
-const KNOWN_CAPABILITY_KINDS: [&str; 10] = [
+const KNOWN_CAPABILITY_KINDS: [&str; 9] = [
   "command",
   "agent",
-  "prompt_pack",
   "hook",
   "tool",
   "mcp_server",
@@ -114,27 +113,6 @@ pub(crate) fn validation_hint_for_error(validation_error: &str) -> String {
   {
     return "Add a matching connectorWorkflows entry or remove the unused connector_workflow capability."
       .to_string();
-  }
-  if validation_error.contains("plugin prompt pack capability")
-    && validation_error.contains("skill entry")
-  {
-    let skill_capability = validation_error
-      .split('`')
-      .nth(1)
-      .and_then(|capability| capability.strip_prefix("prompt_pack:"))
-      .map(|identifier| format!("skill:{identifier}"))
-      .unwrap_or_else(|| "skill:<id>".to_string());
-    return format!(
-      "Add a matching skills entry and {skill_capability} capability, or remove the legacy prompt_pack alias."
-    );
-  }
-  if validation_error.contains("plugin prompt pack capability")
-    && validation_error.contains("matching capability")
-  {
-    let skill_capability = validation_error.split('`').nth(3).unwrap_or("skill:<id>");
-    return format!(
-      "Add the matching capability `{skill_capability}` shown in the error, or remove the legacy prompt_pack alias."
-    );
   }
   if validation_error.contains("plugin connector workflow")
     && validation_error.contains("must declare at least one")
@@ -316,34 +294,6 @@ pub(crate) fn validate_manifest(manifest: &PluginManifest) -> Result<()> {
       );
     }
   }
-  for capability in &manifest.capabilities {
-    let Some(("prompt_pack", prompt_pack_id)) = capability.split_once(':') else {
-      continue;
-    };
-    if !manifest
-      .skills
-      .iter()
-      .any(|skill| skill.id == prompt_pack_id)
-    {
-      anyhow::bail!(
-        "plugin prompt pack capability `{}` must map to a skill entry",
-        capability
-      );
-    }
-    let skill_capability = format!("skill:{prompt_pack_id}");
-    if !manifest
-      .capabilities
-      .iter()
-      .any(|capability| capability == &skill_capability)
-    {
-      anyhow::bail!(
-        "plugin prompt pack capability `{}` must include matching capability `{}`",
-        capability,
-        skill_capability
-      );
-    }
-  }
-
   if let Some(auth_policy) = manifest.auth_policy.as_ref() {
     if !KNOWN_AUTH_TYPES.contains(&auth_policy.auth_type.as_str()) {
       anyhow::bail!(

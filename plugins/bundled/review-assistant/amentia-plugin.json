@@ -8,7 +8,6 @@
   },
   "capabilities": [
     "command:review.inspect-diff",
-    "prompt_pack:review.prompts",
     "skill:review.prompts",
     "tool:diff.summaries"
   ],

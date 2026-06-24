@@ -6,7 +6,6 @@ use super::*;
 fn validate_manifest_accepts_typed_capabilities_and_permissions() {
   let mut manifest = manifest(
     vec![
-      "prompt_pack:workspace.notes",
       "skill:workspace.notes",
       "settings:workspace.preferences",
     ],
@@ -162,53 +161,6 @@ fn validate_manifest_accepts_bundle_relative_skill_paths() {
   let result = validate_manifest(&manifest);
 
   assert!(result.is_ok());
-}
-
-#[test]
-fn validate_manifest_rejects_prompt_pack_without_skill_entry() {
-  let manifest = manifest(vec!["prompt_pack:workspace.notes"], vec!["file.read"]);
-
-  let error = validate_manifest(&manifest).expect_err("prompt pack needs a skill entry");
-
-  assert!(error.to_string().contains(
-    "plugin prompt pack capability `prompt_pack:workspace.notes` must map to a skill entry"
-  ));
-}
-
-#[test]
-fn validate_manifest_rejects_prompt_pack_without_skill_capability() {
-  let mut manifest = manifest(vec!["prompt_pack:workspace.notes"], vec!["file.read"]);
-  manifest.skills = vec![PluginSkillManifest {
-    id: "workspace.notes".to_string(),
-    description: "Workspace note guidance.".to_string(),
-    path: "skills/workspace-notes.md".to_string(),
-  }];
-
-  let error = validate_manifest(&manifest).expect_err("prompt pack needs a skill capability");
-
-  assert!(error.to_string().contains(
-    "plugin prompt pack capability `prompt_pack:workspace.notes` must include matching capability `skill:workspace.notes`"
-  ));
-}
-
-#[test]
-fn validation_hint_describes_prompt_pack_skill_mapping() {
-  let hint = validation_hint_for_error(
-    "plugin prompt pack capability `prompt_pack:workspace.notes` must map to a skill entry",
-  );
-
-  assert!(hint.contains("matching skills entry"));
-  assert!(hint.contains("skill:workspace.notes"));
-}
-
-#[test]
-fn validation_hint_describes_prompt_pack_skill_capability_mapping() {
-  let hint = validation_hint_for_error(
-    "plugin prompt pack capability `prompt_pack:workspace.notes` must include matching capability `skill:workspace.notes`",
-  );
-
-  assert!(hint.contains("matching capability"));
-  assert!(hint.contains("skill:workspace.notes"));
 }
 
 #[test]

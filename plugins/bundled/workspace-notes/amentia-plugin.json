@@ -8,7 +8,6 @@
   },
   "capabilities": [
     "command:workspace.capture-note",
-    "prompt_pack:workspace.notes",
     "skill:workspace.notes",
     "settings:workspace.preferences"
   ],

@@ -424,14 +424,6 @@ def main() -> int:
         }
       ],
     }
-    assert_raises(
-      lambda: assert_bundled_plugin_skill_files(
-        plugin_root,
-        skill_manifest,
-        {"prompt_pack:notion.workspace"},
-      ),
-      "skill capability should be explicit",
-    )
     assert_bundled_plugin_skill_files(
       plugin_root,
       skill_manifest,
@@ -449,14 +441,9 @@ def main() -> int:
             }
           ],
         },
-        {"prompt_pack:notion.workspace", "skill:other.workspace"},
+        {"skill:notion.workspace", "skill:other.workspace"},
       ),
-      "prompt_pack compatibility should point at an explicit skill",
-    )
-    assert_bundled_plugin_skill_files(
-      plugin_root,
-      skill_manifest,
-      {"prompt_pack:notion.workspace", "skill:notion.workspace"},
+      "skill capability should map to a declared skill",
     )
 
   with tempfile.TemporaryDirectory(prefix="amentia-package-copy-") as root:

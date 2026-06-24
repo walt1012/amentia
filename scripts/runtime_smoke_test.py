@@ -474,7 +474,6 @@ def main() -> int:
       },
       "capabilities": [
         "command:workspace.capture-note",
-        "prompt_pack:workspace.notes",
         "skill:workspace.notes",
         "settings:workspace.preferences",
       ],
@@ -611,7 +610,6 @@ def main() -> int:
       },
       "capabilities": [
         "command:review.inspect-diff",
-        "prompt_pack:review.prompts",
         "skill:review.prompts",
         "tool:diff.summaries",
       ],

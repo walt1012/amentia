@@ -13,7 +13,6 @@
     "connector:notion",
     "connector_workflow:notion.create-page",
     "mcp_server:notion",
-    "prompt_pack:notion.workspace",
     "skill:notion.workspace"
   ],
   "permissions": [

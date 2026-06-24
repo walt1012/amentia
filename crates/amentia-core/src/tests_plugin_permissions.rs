@@ -74,7 +74,7 @@ fn shell_requests_require_plugin_permission_before_approval() {
       "Workspace Notes",
       true,
       true,
-      &["prompt_pack:workspace.notes"],
+      &["skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );
@@ -133,7 +133,7 @@ fn approval_resolution_rechecks_plugin_permissions() {
       "Workspace Notes",
       true,
       true,
-      &["prompt_pack:workspace.notes"],
+      &["skill:workspace.notes"],
       &["file.read", "file.write"],
     )],
   );

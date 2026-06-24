@@ -151,7 +151,6 @@ enum PluginCapabilityDisplay {
     "hook",
     "connector_workflow",
     "agent",
-    "prompt_pack",
     "settings",
   ]
 
