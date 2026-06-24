@@ -104,6 +104,8 @@ Implemented foundations:
   keep core setup, execution, permission, credential, sandbox, and receipt paths
   covered while deleting repeated fixture construction and fragile detail
   assertions.
+- Workflow policy tests now use table-driven contract cases so CI structure
+  remains strict without repeating temporary repository setup in every assertion.
 - Source hygiene now treats generated previews, CI logs, Python caches, and local
   diagnostics as disposable artifacts, not source or plan material.
 - macOS plugin cleanup keeps summary data, dashboard state, surface/status

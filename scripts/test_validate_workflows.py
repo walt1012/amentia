@@ -532,320 +532,254 @@ def issue_messages(root: Path) -> list[str]:
   return [issue.message for issue in validate_workflows(root)]
 
 
-def main() -> int:
+def workflow_policy_messages(
+  ci: str = VALID_CI,
+  release: str = VALID_RELEASE,
+) -> list[str]:
   with TemporaryDirectory() as directory:
     root = Path(directory)
-    write_workflows(root)
-    messages = issue_messages(root)
-    if messages:
-      raise AssertionError(f"expected no workflow policy issues, got {messages!r}")
+    write_workflows(root, ci=ci, release=release)
+    return issue_messages(root)
 
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace("persist-credentials: false", "fetch-depth: 1", 1),
-    )
-    assert_issue(issue_messages(root), "persist-credentials: false")
 
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace("  contents: read", "  contents: write"),
-    )
-    assert_issue(issue_messages(root), "contents: read")
+def assert_workflows_valid() -> None:
+  messages = workflow_policy_messages()
+  if messages:
+    raise AssertionError(f"expected no workflow policy issues, got {messages!r}")
 
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace("  cancel-in-progress: true", "  cancel-in-progress: false"),
-    )
-    assert_issue(issue_messages(root), "cancel-in-progress: true")
 
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+def assert_policy_issue(
+  expected: str,
+  *,
+  ci: str = VALID_CI,
+  release: str = VALID_RELEASE,
+) -> None:
+  assert_issue(workflow_policy_messages(ci=ci, release=release), expected)
+
+
+def ci_policy_cases() -> list[tuple[str, str]]:
+  return [
+    (
+      "persist-credentials: false",
+      VALID_CI.replace("persist-credentials: false", "fetch-depth: 1", 1),
+    ),
+    ("contents: read", VALID_CI.replace("  contents: read", "  contents: write")),
+    (
+      "cancel-in-progress: true",
+      VALID_CI.replace("  cancel-in-progress: true", "  cancel-in-progress: false"),
+    ),
+    (
+      "test_release_identity.py",
+      VALID_CI.replace(
         "      - name: Test release identity helper\n"
         "        run: python3 scripts/test_release_identity.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_release_identity.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_sign_macos_app_for_distribution.py",
+      VALID_CI.replace(
         "      - name: Test distribution signing helper\n"
         "        run: python3 scripts/test_sign_macos_app_for_distribution.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_sign_macos_app_for_distribution.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_package_contract.py",
+      VALID_CI.replace(
         "      - name: Test package contract helper\n"
         "        run: python3 scripts/test_package_contract.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_package_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_ci_changes.py",
+      VALID_CI.replace(
         "      - name: Test CI change classifier\n"
         "        run: python3 scripts/test_ci_changes.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_ci_changes.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_release_text.py",
+      VALID_CI.replace(
         "      - name: Test release text helper\n"
         "        run: python3 scripts/test_release_text.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_release_text.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_first_app_open_contract.py",
+      VALID_CI.replace(
         "      - name: Test first app-open contract\n"
         "        run: python3 scripts/test_first_app_open_contract.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_first_app_open_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_release_publish_contract.py",
+      VALID_CI.replace(
         "      - name: Test published release contract\n"
         "        run: python3 scripts/test_release_publish_contract.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_release_publish_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_release_rehearsal_contract.py",
+      VALID_CI.replace(
         "      - name: Test release rehearsal contract\n"
         "        run: python3 scripts/test_release_rehearsal_contract.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_release_rehearsal_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_release_artifacts.py",
+      VALID_CI.replace(
         "      - name: Test release artifact helper\n"
         "        run: python3 scripts/test_release_artifacts.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_release_artifacts.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_create_macos_dmg.py",
+      VALID_CI.replace(
         "      - name: Test DMG staging helper\n"
         "        run: python3 scripts/test_create_macos_dmg.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_create_macos_dmg.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_installer_artifact_contract.py",
+      VALID_CI.replace(
         "      - name: Test installer artifact contract\n"
         "        run: python3 scripts/test_installer_artifact_contract.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_installer_artifact_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_connector_workflow_contracts.py",
+      VALID_CI.replace(
         "      - name: Test connector workflow contracts\n"
         "        run: python3 scripts/test_connector_workflow_contracts.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_connector_workflow_contracts.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "test_notion_connector_contract.py",
+      VALID_CI.replace(
         "      - name: Test Notion connector contract\n"
         "        run: python3 scripts/test_notion_connector_contract.py\n",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "test_notion_connector_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(root, ci=VALID_CI.replace("          retention-days: 7\n", ""))
-    assert_issue(issue_messages(root), "retention-days")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(root, ci=VALID_CI.replace("          retention-days: 1\n", "", 1))
-    assert_issue(issue_messages(root), "internal artifact")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    ("retention-days", VALID_CI.replace("          retention-days: 7\n", "")),
+    ("internal artifact", VALID_CI.replace("          retention-days: 1\n", "", 1)),
+    (
+      "internal-AmentiaApp",
+      VALID_CI.replace(
         "SWIFT_APP_ARTIFACT: internal-AmentiaApp-x86_64",
         "SWIFT_APP_ARTIFACT: AmentiaApp-x86_64",
       ),
-    )
-    assert_issue(issue_messages(root), "internal-AmentiaApp")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(root, ci=VALID_CI.replace("${{ github.repository }}-", ""))
-    assert_issue(issue_messages(root), "github.repository")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    ("github.repository", VALID_CI.replace("${{ github.repository }}-", "")),
+    (
+      "internal zip",
+      VALID_CI.replace(
         "            artifacts/macos/${{ env.MACOS_DMG_NAME }}",
         "            artifacts/macos/Amentia-macos-x86_64.zip\n"
         "            artifacts/macos/${{ env.MACOS_DMG_NAME }}",
       ),
-    )
-    assert_issue(issue_messages(root), "internal zip")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
+    ),
+    (
+      "internal release notes",
+      VALID_CI.replace(
         "            artifacts/macos/internal-release-manifest.json",
         "            artifacts/macos/internal-release-notes.md\n"
         "            artifacts/macos/internal-release-manifest.json",
       ),
-    )
-    assert_issue(issue_messages(root), "internal release notes")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - changes",
-        "      - changes\n      - swift-tests",
+    ),
+    (
+      "must not wait for swift-tests",
+      VALID_CI.replace("      - changes", "      - changes\n      - swift-tests"),
+    ),
+    (
+      "Swift executable directly",
+      VALID_CI.replace("      - changes", "      - changes\n      - swift-app"),
+    ),
+    (
+      "runtime executable directly",
+      VALID_CI.replace("      - changes", "      - changes\n      - macos-runtime"),
+    ),
+    (
+      "cached llama.cpp directly",
+      VALID_CI.replace("      - changes", "      - changes\n      - macos-llama-backend"),
+    ),
+    (
+      "depend only on changes",
+      VALID_CI.replace("      - changes", "      - changes\n      - repository-policy"),
+    ),
+    (
+      "macos-package release manifest",
+      VALID_CI.replace('--source-commit "$GITHUB_SHA"', ""),
+    ),
+    ("--no-zip", VALID_CI.replace("--no-zip", "")),
+    (
+      "package_contract.py",
+      VALID_CI.replace(
+        "python3 scripts/package_contract.py",
+        "python3 scripts/missing_package_contract.py",
       ),
-    )
-    assert_issue(issue_messages(root), "must not wait for swift-tests")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - changes",
-        "      - changes\n      - swift-app",
+    ),
+    (
+      "AmentiaPackage.json",
+      VALID_CI.replace(
+        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json",
+        "",
       ),
-    )
-    assert_issue(issue_messages(root), "Swift executable directly")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - changes",
-        "      - changes\n      - macos-runtime",
+    ),
+    (
+      "packaged-smoke-receipt.json",
+      VALID_CI.replace("--smoke-receipt artifacts/macos/packaged-smoke-receipt.json", ""),
+    ),
+    ("workflow-run-id", VALID_CI.replace('--workflow-run-id "$GITHUB_RUN_ID"', "")),
+    (
+      "internal-release-manifest.json",
+      VALID_CI.replace(
+        "            --manifest-output artifacts/macos/internal-release-manifest.json\n",
+        "",
       ),
-    )
-    assert_issue(issue_messages(root), "runtime executable directly")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - changes",
-        "      - changes\n      - macos-llama-backend",
+    ),
+    (
+      "installer_artifact_contract.py",
+      VALID_CI.replace(
+        "python3 scripts/installer_artifact_contract.py",
+        "python3 scripts/missing_installer_artifact_contract.py",
       ),
-    )
-    assert_issue(issue_messages(root), "cached llama.cpp directly")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "      - changes",
-        "      - changes\n      - repository-policy",
+    ),
+    (
+      "release_rehearsal_contract.py",
+      VALID_CI.replace(
+        "python3 scripts/release_rehearsal_contract.py",
+        "python3 scripts/missing_release_rehearsal_contract.py",
       ),
-    )
-    assert_issue(issue_messages(root), "depend only on changes")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace("--workflow CI", "--workflow Release"),
-    )
-    assert_issue(issue_messages(root), "release CI gate")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace("  contents: write", "  contents: read"),
-    )
-    assert_issue(issue_messages(root), "contents: write")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    ("--allow-extra-assets", VALID_CI.replace("--allow-extra-assets", "--missing-extra-assets")),
+  ]
+def release_policy_cases() -> list[tuple[str, str]]:
+  audit_step = (
+    "      - name: Audit remote model catalog metadata\n"
+    "        run: python3 scripts/validate_model_pack.py --remote\n"
+  )
+  final_validation_source = (
+    '            --release-json release-published.json \\\n'
+    '            --source-commit "$AMENTIA_RELEASE_SHA" \\\n'
+  )
+  return [
+    ("release CI gate", VALID_RELEASE.replace("--workflow CI", "--workflow Release")),
+    ("contents: write", VALID_RELEASE.replace("  contents: write", "  contents: read")),
+    (
+      "dry_run must include default: true",
+      VALID_RELEASE.replace(
         "      dry_run:\n"
         "        default: true\n"
         "        type: boolean\n",
@@ -853,14 +787,10 @@ def main() -> int:
         "        default: false\n"
         "        type: boolean\n",
       ),
-    )
-    assert_issue(issue_messages(root), "dry_run must include default: true")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "prerelease must include default: true",
+      VALID_RELEASE.replace(
         "      prerelease:\n"
         "        default: true\n"
         "        type: boolean\n",
@@ -868,178 +798,81 @@ def main() -> int:
         "        default: false\n"
         "        type: boolean\n",
       ),
-    )
-    assert_issue(issue_messages(root), "prerelease must include default: true")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "manual_acceptance_receipt_url must include HTTPS URL",
+      VALID_RELEASE.replace(
         "HTTPS URL for the validated manual acceptance receipt",
         "Acceptance artifact, issue, or notes URL",
       ),
-    )
-    assert_issue(issue_messages(root), "manual_acceptance_receipt_url must include HTTPS URL")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "RELEASE_DRY_RUN",
+      VALID_RELEASE.replace(
         "RELEASE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}",
         "RELEASE_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}",
       ),
-    )
-    assert_issue(issue_messages(root), "RELEASE_DRY_RUN")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "      - name: Audit remote model catalog metadata\n"
-        "        run: python3 scripts/validate_model_pack.py --remote\n",
-        "",
+    ),
+    ("validate_model_pack.py --remote", VALID_RELEASE.replace(audit_step, "")),
+    (
+      "readiness must be written before remote model audit",
+      VALID_RELEASE.replace(audit_step, "", 1).replace(
+        "      - name: Write release readiness report\n",
+        audit_step + "      - name: Write release readiness report\n",
+        1,
       ),
-    )
-    assert_issue(issue_messages(root), "validate_model_pack.py --remote")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    audit_step = (
-      "      - name: Audit remote model catalog metadata\n"
-      "        run: python3 scripts/validate_model_pack.py --remote\n"
-    )
-    release_with_early_audit = VALID_RELEASE.replace(audit_step, "", 1).replace(
-      "      - name: Write release readiness report\n",
-      audit_step + "      - name: Write release readiness report\n",
-      1,
-    )
-    write_workflows(
-      root,
-      release=release_with_early_audit,
-    )
-    assert_issue(issue_messages(root), "readiness must be written before remote model audit")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "python3 scripts/release_artifacts.py",
-        "shasum -a 256",
-      ),
-    )
-    assert_issue(issue_messages(root), "release checksum")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace('          --tag "$RELEASE_TAG"\n', ""),
-    )
-    assert_issue(issue_messages(root), "release state helper")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace('          release_title="Amentia $RELEASE_TAG"', ""),
-    )
-    assert_issue(issue_messages(root), "Release title")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace('          --title "$release_title"\n', ""),
-    )
-    assert_issue(issue_messages(root), "release state helper must receive --title")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        '--requested-prerelease "$RELEASE_PRERELEASE"',
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "release readiness helper must receive shared release input")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "release checksum",
+      VALID_RELEASE.replace("python3 scripts/release_artifacts.py", "shasum -a 256"),
+    ),
+    ("release state helper", VALID_RELEASE.replace('          --tag "$RELEASE_TAG"\n', "")),
+    (
+      "Release title",
+      VALID_RELEASE.replace('          release_title="Amentia $RELEASE_TAG"', ""),
+    ),
+    (
+      "release state helper must receive --title",
+      VALID_RELEASE.replace('          --title "$release_title"\n', ""),
+    ),
+    (
+      "release readiness helper must receive shared release input",
+      VALID_RELEASE.replace('--requested-prerelease "$RELEASE_PRERELEASE"', ""),
+    ),
+    (
+      "release state helper must receive shared release input",
+      VALID_RELEASE.replace(
         '          --allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"\n',
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "release state helper must receive shared release input")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        '          cat release-state.env >> "$GITHUB_ENV"\n',
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "stage boundary")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        '          cat release-plan.md >> "$GITHUB_STEP_SUMMARY"\n',
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "stage boundary")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "--mode preupload-existing-assets",
-        "--missing-preupload-mode",
-      ),
-    )
-    assert_issue(issue_messages(root), "stage boundary")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "stage boundary",
+      VALID_RELEASE.replace('          cat release-state.env >> "$GITHUB_ENV"\n', ""),
+    ),
+    (
+      "stage boundary",
+      VALID_RELEASE.replace('          cat release-plan.md >> "$GITHUB_STEP_SUMMARY"\n', ""),
+    ),
+    (
+      "stage boundary",
+      VALID_RELEASE.replace("--mode preupload-existing-assets", "--missing-preupload-mode"),
+    ),
+    (
+      "final release state patch",
+      VALID_RELEASE.replace(
         "      - name: Upload GitHub Release draft assets\n"
         "        if: env.RELEASE_DRY_RUN != 'true'\n",
         "      - name: Upload GitHub Release draft assets\n",
       ),
-    )
-    assert_issue(issue_messages(root), "final release state patch")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "release-dry-run-${{ env.RELEASE_TAG }}",
-        "release-dry-run-missing",
-      ),
-    )
-    assert_issue(issue_messages(root), "stage boundary")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "stage boundary",
+      VALID_RELEASE.replace("release-dry-run-${{ env.RELEASE_TAG }}", "release-dry-run-missing"),
+    ),
+    (
+      "dry-run rehearsal",
+      VALID_RELEASE.replace(
         "      - name: Upload release dry-run assets",
         "      - name: Upload release dry-run assets moved",
         1,
@@ -1052,33 +885,18 @@ def main() -> int:
         "      - name: Rehearse release dry-run assets",
         1,
       ),
-    )
-    assert_issue(issue_messages(root), "dry-run rehearsal")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "published release contract helper",
+      VALID_RELEASE.replace(
         "scripts/release_publish_contract.py",
         "scripts/missing_release_publish_contract.py",
       ),
-    )
-    assert_issue(issue_messages(root), "published release contract helper")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace("-X PATCH", "-X POST"),
-    )
-    assert_issue(issue_messages(root), "final release state patch")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    ("final release state patch", VALID_RELEASE.replace("-X PATCH", "-X POST")),
+    (
+      "release download rehearsal",
+      VALID_RELEASE.replace(
         "          rm -rf release-download\n",
         "          gh api \\\n"
         "            -X PATCH \\\n"
@@ -1087,92 +905,57 @@ def main() -> int:
         "          rm -rf release-download\n",
         1,
       ),
-    )
-    assert_issue(issue_messages(root), "release download rehearsal")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "release_tag_commit",
+      VALID_RELEASE.replace(
         '          release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"\n',
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "release_tag_commit")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "git rev-parse",
+      VALID_RELEASE.replace(
         '          release_tag_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"\n',
         '          release_tag_commit="$(\n'
         '            git ls-remote --exit-code --tags origin \\\n'
         '              "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | tail -n 1 | awk \'{print $1}\'\n'
         '          )"\n',
       ),
-    )
-    assert_issue(issue_messages(root), "git rev-parse")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "generic error annotations",
+      VALID_RELEASE.replace(
         '          test -n "${AMENTIA_RELEASE_ID:-}"\n',
         "          trap 'echo \"::error title=Release final validation failed::Validate final GitHub Release failed.\"' ERR\n"
         '          test -n "${AMENTIA_RELEASE_ID:-}"\n',
       ),
-    )
-    assert_issue(issue_messages(root), "generic error annotations")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "gh release view",
+      VALID_RELEASE.replace(
         '          release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"\n',
         '          release_id="$(\n'
         '            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |\n'
         '              python3 -c \'import json, os, sys; tag = os.environ["RELEASE_TAG"]; releases = json.load(sys.stdin); match = next((release for release in releases if release.get("tag_name") == tag), None); print(match["id"] if match else "")\'\n'
         '          )"\n',
       ),
-    )
-    assert_issue(issue_messages(root), "gh release view")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "AMENTIA_RELEASE_TAG_COMMIT",
+      VALID_RELEASE.replace(
         "          python3 scripts/release_publish_contract.py \\\n",
         '          release_tag_commit="$(git rev-parse "$RELEASE_TAG^{commit}")"\n'
         "          python3 scripts/release_publish_contract.py \\\n",
       ),
-    )
-    assert_issue(issue_messages(root), "AMENTIA_RELEASE_TAG_COMMIT")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        '--source-commit "$AMENTIA_RELEASE_SHA"',
-        "--missing-source-commit",
-      ),
-    )
-    assert_issue(issue_messages(root), "source-commit")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    final_validation_source = (
-      '            --release-json release-published.json \\\n'
-      '            --source-commit "$AMENTIA_RELEASE_SHA" \\\n'
-    )
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "source-commit",
+      VALID_RELEASE.replace('--source-commit "$AMENTIA_RELEASE_SHA"', "--missing-source-commit"),
+    ),
+    (
+      "undefined SOURCE_COMMIT",
+      VALID_RELEASE.replace(
         final_validation_source,
         final_validation_source.replace(
           '--source-commit "$AMENTIA_RELEASE_SHA"',
@@ -1180,335 +963,143 @@ def main() -> int:
         ),
         1,
       ),
-    )
-    assert_issue(issue_messages(root), "undefined SOURCE_COMMIT")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "tag-commit",
+      VALID_RELEASE.replace(
         '--tag-commit "$AMENTIA_RELEASE_TAG_COMMIT"',
         "--missing-tag-commit",
       ),
-    )
-    assert_issue(issue_messages(root), "tag-commit")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "expected-draft",
+      VALID_RELEASE.replace(
         '--expected-draft "$AMENTIA_RELEASE_STATE_DRAFT"',
         "--missing-expected-draft",
       ),
-    )
-    assert_issue(issue_messages(root), "expected-draft")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "signing-mode",
+      VALID_RELEASE.replace(
         '--signing-mode "$AMENTIA_RELEASE_SIGNING_MODE"',
         "--missing-signing-mode",
       ),
-    )
-    assert_issue(issue_messages(root), "signing-mode")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "allow-untrusted-ad-hoc",
+      VALID_RELEASE.replace(
         '--allow-untrusted-ad-hoc "$RELEASE_ALLOW_UNTRUSTED_AD_HOC"',
         "--missing-untrusted-ad-hoc",
       ),
-    )
-    assert_issue(issue_messages(root), "allow-untrusted-ad-hoc")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "manual-acceptance-receipt-url",
+      VALID_RELEASE.replace(
         '--manual-acceptance-receipt-url "$RELEASE_MANUAL_ACCEPTANCE_RECEIPT_URL"',
         "--missing-manual-acceptance-receipt-url",
       ),
-    )
-    assert_issue(issue_messages(root), "manual-acceptance-receipt-url")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "release download rehearsal helper",
+      VALID_RELEASE.replace(
         "scripts/release_rehearsal_contract.py",
         "scripts/missing_release_rehearsal_contract.py",
       ),
-    )
-    assert_issue(issue_messages(root), "release download rehearsal helper")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        'gh release download "$RELEASE_TAG"',
-        'gh release view "$RELEASE_TAG"',
-      ),
-    )
-    assert_issue(issue_messages(root), "release download rehearsal")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        '          cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"\n',
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "release download rehearsal")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace("          retention-days: 30\n", ""),
-    )
-    assert_issue(issue_messages(root), "retention-days")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "release download rehearsal",
+      VALID_RELEASE.replace('gh release download "$RELEASE_TAG"', 'gh release view "$RELEASE_TAG"'),
+    ),
+    (
+      "release download rehearsal",
+      VALID_RELEASE.replace('          cat release-rehearsal.md >> "$GITHUB_STEP_SUMMARY"\n', ""),
+    ),
+    ("retention-days", VALID_RELEASE.replace("          retention-days: 30\n", "")),
+    (
+      "^v[0-9]+",
+      VALID_RELEASE.replace(
         '          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+$ ]]; then\n'
         '            exit 1\n'
         '          fi\n',
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "^v[0-9]+")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace('--source-commit "$GITHUB_SHA"', ""),
-    )
-    assert_issue(issue_messages(root), "macos-package release manifest")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace("--no-zip", ""),
-    )
-    assert_issue(issue_messages(root), "--no-zip")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "python3 scripts/package_contract.py",
-        "python3 scripts/missing_package_contract.py",
-      ),
-    )
-    assert_issue(issue_messages(root), "package_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json",
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "AmentiaPackage.json")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "--smoke-receipt artifacts/macos/packaged-smoke-receipt.json",
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "packaged-smoke-receipt.json")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace('--workflow-run-id "$GITHUB_RUN_ID"', ""),
-    )
-    assert_issue(issue_messages(root), "workflow-run-id")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "            --manifest-output artifacts/macos/internal-release-manifest.json\n",
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "internal-release-manifest.json")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "python3 scripts/installer_artifact_contract.py",
-        "python3 scripts/missing_installer_artifact_contract.py",
-      ),
-    )
-    assert_issue(issue_messages(root), "installer_artifact_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace(
-        "python3 scripts/release_rehearsal_contract.py",
-        "python3 scripts/missing_release_rehearsal_contract.py",
-      ),
-    )
-    assert_issue(issue_messages(root), "release_rehearsal_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      ci=VALID_CI.replace("--allow-extra-assets", "--missing-extra-assets"),
-    )
-    assert_issue(issue_messages(root), "--allow-extra-assets")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "must not allow extra assets",
+      VALID_RELEASE.replace(
         "            --asset-dir release-download \\\n",
         "            --asset-dir release-download \\\n            --allow-extra-assets \\\n",
       ),
-    )
-    assert_issue(issue_messages(root), "must not allow extra assets")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace('--source-commit "$AMENTIA_RELEASE_SHA"', ""),
-    )
-    assert_issue(issue_messages(root), "source-commit")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    ("source-commit", VALID_RELEASE.replace('--source-commit "$AMENTIA_RELEASE_SHA"', "")),
+    (
+      "package_contract.py",
+      VALID_RELEASE.replace(
         "python3 scripts/package_contract.py",
         "python3 scripts/missing_package_contract.py",
       ),
-    )
-    assert_issue(issue_messages(root), "package_contract.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "sign_macos_app_for_distribution.py",
+      VALID_RELEASE.replace(
         "python3 scripts/sign_macos_app_for_distribution.py",
         "python3 scripts/missing_sign_macos_app_for_distribution.py",
       ),
-    )
-    assert_issue(issue_messages(root), "sign_macos_app_for_distribution.py")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace('--identity "$MACOS_DEVELOPER_ID_APPLICATION"', ""),
-    )
-    assert_issue(issue_messages(root), "MACOS_DEVELOPER_ID_APPLICATION")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace("xcrun notarytool submit", "xcrun missing_notarytool submit"),
-    )
-    assert_issue(issue_messages(root), "notarytool")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace('xcrun stapler staple "$dmg_path"', "echo missing stapler"),
-    )
-    assert_issue(issue_messages(root), "stapler")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "MACOS_DEVELOPER_ID_APPLICATION",
+      VALID_RELEASE.replace('--identity "$MACOS_DEVELOPER_ID_APPLICATION"', ""),
+    ),
+    (
+      "notarytool",
+      VALID_RELEASE.replace("xcrun notarytool submit", "xcrun missing_notarytool submit"),
+    ),
+    (
+      "stapler",
+      VALID_RELEASE.replace('xcrun stapler staple "$dmg_path"', "echo missing stapler"),
+    ),
+    (
+      "AmentiaPackage.json",
+      VALID_RELEASE.replace(
         "--package-manifest artifacts/macos/Amentia.app/Contents/Resources/AmentiaPackage.json",
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "AmentiaPackage.json")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
-        "--smoke-receipt artifacts/macos/packaged-smoke-receipt.json",
-        "",
-      ),
-    )
-    assert_issue(issue_messages(root), "packaged-smoke-receipt.json")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "packaged-smoke-receipt.json",
+      VALID_RELEASE.replace("--smoke-receipt artifacts/macos/packaged-smoke-receipt.json", ""),
+    ),
+    (
+      "workflow-run-url",
+      VALID_RELEASE.replace(
         '--workflow-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"',
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "workflow-run-url")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "Amentia-$RELEASE_TAG-release-manifest.json",
+      VALID_RELEASE.replace(
         '            --manifest-output "artifacts/macos/Amentia-$RELEASE_TAG-release-manifest.json"\n',
         "",
       ),
-    )
-    assert_issue(issue_messages(root), "Amentia-$RELEASE_TAG-release-manifest.json")
-
-  with TemporaryDirectory() as directory:
-    root = Path(directory)
-    write_workflows(
-      root,
-      release=VALID_RELEASE.replace(
+    ),
+    (
+      "installer_artifact_contract.py",
+      VALID_RELEASE.replace(
         "python3 scripts/installer_artifact_contract.py",
         "python3 scripts/missing_installer_artifact_contract.py",
       ),
-    )
-    assert_issue(issue_messages(root), "installer_artifact_contract.py")
+    ),
+  ]
+
+
+def main() -> int:
+  assert_workflows_valid()
+
+  for expected, ci in ci_policy_cases():
+    assert_policy_issue(expected, ci=ci)
+  for expected, release in release_policy_cases():
+    assert_policy_issue(expected, release=release)
 
   print("Workflow policy validation tests passed")
   return 0
