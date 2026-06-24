@@ -106,6 +106,8 @@ Implemented foundations:
 - Plugin UI rows keep capability display, capability presentation, and
   connection actions in separate owners.
 - Plugin execution UI keeps action rows and check rows in separate owners.
+- Plugin manager navigation stays separate from management and execution
+  section content.
 - Primary window foundations are in place: native sidebar density, calm timeline
   cards, focused composer, readiness, first-run setup, session sidebar
   ownership, model management, project search, plugin management, inspector
