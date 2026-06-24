@@ -2010,7 +2010,7 @@ fn capability_registry_only_includes_ready_enabled_plugins() {
     Some(&1)
   );
   assert_eq!(result.capabilities.len(), 2);
-  assert_eq!(result.capabilities[0].kind, "skill");
+  assert_eq!(result.capabilities[0].kind, "settings");
   assert_eq!(result.capabilities[0].plugin_id, "workspace-notes");
-  assert_eq!(result.capabilities[1].kind, "settings");
+  assert_eq!(result.capabilities[1].kind, "skill");
 }

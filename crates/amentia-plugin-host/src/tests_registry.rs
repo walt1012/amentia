@@ -68,8 +68,8 @@ fn build_capability_registry_skips_disabled_and_invalid_plugins() {
   let registry = build_capability_registry(&plugins);
 
   assert_eq!(registry.len(), 2);
-  assert_eq!(registry[0].kind, "skill");
-  assert_eq!(registry[1].kind, "settings");
+  assert_eq!(registry[0].kind, "settings");
+  assert_eq!(registry[1].kind, "skill");
   assert!(registry
     .iter()
     .all(|entry| entry.plugin_id == "workspace-notes"));
