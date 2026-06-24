@@ -246,7 +246,8 @@ fn plugin_summary_round_trips_validation_hint() {
     provenance: "local".to_string(),
     validation_error: Some("plugin capability kind `memory` is not supported".to_string()),
     validation_hint: Some(
-      "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings.".to_string(),
+      "Use one of the supported capability kinds: command, agent, hook, tool, mcp_server, skill, connector, connector_workflow, settings."
+        .to_string(),
     ),
   };
 
