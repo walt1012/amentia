@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Generate Amentia brand assets and exact SVG preview wrappers."""
+"""Generate Amentia brand assets and lightweight SVG preview wrappers."""
 
 from __future__ import annotations
 
-import base64
 from pathlib import Path
 
 try:
@@ -47,10 +46,6 @@ def scaled_box(box: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
 
 def write_text(path: Path, text: str) -> None:
   path.write_text(text, encoding="utf-8", newline="\n")
-
-
-def png_data_uri(path: Path) -> str:
-  return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
 
 
 def reference_mark_bounds(image: Image.Image) -> tuple[int, int, int, int]:
@@ -121,7 +116,7 @@ def write_icon_svg() -> None:
   write_text(
     ICON_SVG,
     f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {ICON_OUTPUT_SIZE} {ICON_OUTPUT_SIZE}" role="img" aria-label="Amentia blue app icon">
-  <image data-preview-source="{ICON_PNG.name}" href="{png_data_uri(ICON_PNG)}" width="{ICON_OUTPUT_SIZE}" height="{ICON_OUTPUT_SIZE}" preserveAspectRatio="xMidYMid meet"/>
+  <image data-preview-source="{ICON_PNG.name}" href="{ICON_PNG.name}" width="{ICON_OUTPUT_SIZE}" height="{ICON_OUTPUT_SIZE}" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 """,
   )
@@ -159,7 +154,7 @@ def write_lockup_svg() -> None:
   write_text(
     LOCKUP_SVG,
     f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 310" role="img" aria-label="Amentia wordmark lockup">
-  <image data-preview-source="{LOCKUP_REFERENCE_PNG.name}" href="{png_data_uri(LOCKUP_REFERENCE_PNG)}" width="1000" height="310" preserveAspectRatio="xMidYMid meet"/>
+  <image data-preview-source="{LOCKUP_REFERENCE_PNG.name}" href="{LOCKUP_REFERENCE_PNG.name}" width="1000" height="310" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 """,
   )

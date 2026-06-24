@@ -21,11 +21,12 @@ Current candidate:
 Source of truth:
 
 - Regenerate the packaged icon assets with
-  `python scripts/generate_brand_assets.py` so the packaged PNG icon and SVG
-  preview wrapper stay aligned.
+  `python scripts/generate_brand_assets.py` so the packaged PNG icon and
+  lightweight SVG preview wrappers stay aligned.
 - Use `amentia-wordmark-lockup-reference.png` as the approved visual reference
-  for the wordmark lockup. The lockup SVG must embed that PNG directly rather
-  than approximating the wordmark with system fonts.
+  for the wordmark lockup. The lockup SVG must reference that PNG directly
+  rather than duplicating it as base64 or approximating the wordmark with system
+  fonts.
 - The app icon mark is extracted from the approved lockup reference rather than
   redrawn with a second polygon recipe. The generated icon must not paste the
   reference image's white crop background as a visible plate.

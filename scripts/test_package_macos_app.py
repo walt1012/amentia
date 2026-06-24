@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import base64
 import stat
 import tempfile
 import zipfile
@@ -68,7 +67,7 @@ def assert_raises(action, message: str) -> None:
   raise AssertionError(message)
 
 
-def assert_svg_png_preview(svg_name: str, png_name: str) -> None:
+def assert_svg_png_reference(svg_name: str, png_name: str) -> None:
   svg_path = BRAND_DIR / svg_name
   png_path = BRAND_DIR / png_name
   if not png_path.is_file():
@@ -78,12 +77,10 @@ def assert_svg_png_preview(svg_name: str, png_name: str) -> None:
     raise AssertionError(f"{svg_name} must declare {png_name} as its preview source")
   if "<text" in svg or "<polygon" in svg or "<path" in svg:
     raise AssertionError(f"{svg_name} must not approximate the approved PNG")
-  marker = 'href="data:image/png;base64,'
-  if marker not in svg:
-    raise AssertionError(f"{svg_name} must embed its approved PNG preview")
-  encoded = svg.split(marker, 1)[1].split('"', 1)[0]
-  if base64.b64decode(encoded) != png_path.read_bytes():
-    raise AssertionError(f"{svg_name} embedded preview must match {png_name}")
+  if "data:image" in svg or "base64" in svg:
+    raise AssertionError(f"{svg_name} must stay a lightweight PNG reference")
+  if f'href="{png_name}"' not in svg:
+    raise AssertionError(f"{svg_name} must reference {png_name} without embedding it")
 
 
 def assert_app_icon_has_no_reference_crop_plate() -> None:
@@ -163,11 +160,11 @@ def write_icns_header(path: Path, declared_size: int, body: bytes = b"") -> None
 
 
 def main() -> int:
-  assert_svg_png_preview(
+  assert_svg_png_reference(
     "amentia-blue-symbol-icon-source.svg",
     "amentia-blue-symbol-icon-candidate.png",
   )
-  assert_svg_png_preview(
+  assert_svg_png_reference(
     "amentia-wordmark-lockup-source.svg",
     "amentia-wordmark-lockup-reference.png",
   )

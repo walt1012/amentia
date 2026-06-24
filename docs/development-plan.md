@@ -202,9 +202,9 @@ Completed baseline:
   appropriate, receipt-backed, and CI-verified through shared scripts instead of
   repeated workflow shell blocks.
 - Finish product identity around the approved Amentia lockup reference, derive
-  the Dock icon mark from that source, keep SVG previews byte-aligned with PNG
-  assets, require transparent outer icon corners, and ship through the native
-  macOS icon package contract.
+  the Dock icon mark from that source, keep SVG previews lightweight, require
+  transparent outer icon corners, and ship through the native macOS icon package
+  contract.
 - Keep extension management understandable: plugin installation is the bundle
   workflow, while capabilities are grouped as Actions, Connections, Skills,
   MCP, Tools, and Checks.
@@ -248,8 +248,8 @@ Remaining quality bar:
 - CI stays fast, split, strict, and green for the release package path.
 - The app has a polished blue Dock icon and no obvious stale, unused, or
   confusing UI surfaces left in the primary path.
-- The approved Dock icon uses a 2048 px PNG master with a byte-matched SVG
-  preview wrapper and native macOS icon packaging checks.
+- The approved Dock icon uses a 2048 px PNG master, lightweight SVG reference
+  wrappers, and native macOS icon packaging checks.
 
 ## M14: Connector and Skill Platform
 
