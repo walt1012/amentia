@@ -104,6 +104,8 @@ Implemented foundations:
   keep core setup, execution, permission, credential, sandbox, and receipt paths
   covered while deleting repeated fixture construction and fragile detail
   assertions.
+- Source hygiene now treats generated previews, CI logs, Python caches, and local
+  diagnostics as disposable artifacts, not source or plan material.
 - macOS plugin cleanup keeps summary data, dashboard state, surface/status
   display, validation copy, and guidance/check copy in separate owners so
   protocol-shaped data does not become UI glue.
@@ -314,6 +316,8 @@ Immediate work:
   wrappers, remove stale code, and avoid cosmetic file churn.
 - Keep tests lean: cover user-visible and safety-critical contracts, consolidate
   plugin fixtures, and remove redundant implementation-detail assertions.
+- Keep generated artifacts out of source review; use checked-in assets only when
+  they are product inputs such as the approved brand references.
 - Add a local follow-up queue for user-approved next actions.
 - Add cross-session recall through bounded memory and session search before any
   local document RAG.

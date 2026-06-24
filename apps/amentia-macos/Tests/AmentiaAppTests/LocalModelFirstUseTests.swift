@@ -5,7 +5,7 @@ import XCTest
 
 final class LocalModelFirstUseTests: XCTestCase {
   func testDownloadedModelValidatesAndPreparesActivationManifest() throws {
-    let rootURL = try temporaryDirectory()
+    let rootURL = try makeTemporaryDirectory(prefix: "amentia-model-first-use")
     defer {
       try? FileManager.default.removeItem(at: rootURL)
     }
@@ -55,7 +55,7 @@ final class LocalModelFirstUseTests: XCTestCase {
   }
 
   func testPausedFirstUseDownloadResumesFromKnownProgress() throws {
-    let rootURL = try temporaryDirectory()
+    let rootURL = try makeTemporaryDirectory(prefix: "amentia-model-first-use")
     defer {
       try? FileManager.default.removeItem(at: rootURL)
     }
@@ -112,7 +112,7 @@ final class LocalModelFirstUseTests: XCTestCase {
   }
 
   func testDownloadCompletionWaitingForWorkAvoidsTurnLanguage() throws {
-    let rootURL = try temporaryDirectory()
+    let rootURL = try makeTemporaryDirectory(prefix: "amentia-model-first-use")
     defer {
       try? FileManager.default.removeItem(at: rootURL)
     }
@@ -146,7 +146,7 @@ final class LocalModelFirstUseTests: XCTestCase {
   }
 
   func testDownloadedOnlyCompletionKeepsLocalPathOutOfUserCopy() throws {
-    let rootURL = try temporaryDirectory()
+    let rootURL = try makeTemporaryDirectory(prefix: "amentia-model-first-use")
     defer {
       try? FileManager.default.removeItem(at: rootURL)
     }
@@ -195,7 +195,7 @@ final class LocalModelFirstUseTests: XCTestCase {
   }
 
   func testLaunchValidationRejectsReplacedModel() throws {
-    let rootURL = try temporaryDirectory()
+    let rootURL = try makeTemporaryDirectory(prefix: "amentia-model-first-use")
     defer {
       try? FileManager.default.removeItem(at: rootURL)
     }
@@ -211,22 +211,7 @@ final class LocalModelFirstUseTests: XCTestCase {
       sizeBytes: expectedSizeBytes,
       sha256: expectedSHA256
     )
-    let item = LocalModelCatalogItem(
-      id: model.id,
-      displayName: model.displayName,
-      description: model.description,
-      fileName: model.fileName,
-      downloadURL: model.downloadURL,
-      homepage: model.homepage,
-      sizeBytes: model.sizeBytes,
-      sha256: model.sha256,
-      contextSize: model.contextSize,
-      modelContextSize: model.modelContextSize,
-      maxOutputTokens: model.maxOutputTokens,
-      license: model.license,
-      tags: model.tags,
-      installSegments: []
-    )
+    let item = localModelCatalogItem(for: model)
 
     try LocalModelIntegrity.validateDownloadedModel(model)
     let originalAttributes = try FileManager.default.attributesOfItem(atPath: modelURL.path)
@@ -248,7 +233,7 @@ final class LocalModelFirstUseTests: XCTestCase {
   }
 
   func testLegacyVerificationStampKeepsExistingDownloadsVisible() throws {
-    let rootURL = try temporaryDirectory()
+    let rootURL = try makeTemporaryDirectory(prefix: "amentia-model-first-use")
     defer {
       try? FileManager.default.removeItem(at: rootURL)
     }
@@ -280,30 +265,8 @@ final class LocalModelFirstUseTests: XCTestCase {
     ].joined(separator: "|")
     UserDefaults.standard.set(legacyStamp, forKey: "amentia.verifiedLocalModel.\(model.id)")
 
-    let item = LocalModelCatalogItem(
-      id: model.id,
-      displayName: model.displayName,
-      description: model.description,
-      fileName: model.fileName,
-      downloadURL: model.downloadURL,
-      homepage: model.homepage,
-      sizeBytes: model.sizeBytes,
-      sha256: model.sha256,
-      contextSize: model.contextSize,
-      modelContextSize: model.modelContextSize,
-      maxOutputTokens: model.maxOutputTokens,
-      license: model.license,
-      tags: model.tags,
-      installSegments: []
-    )
+    let item = localModelCatalogItem(for: model)
     XCTAssertTrue(LocalModelIntegrity.state(at: modelURL.path, item: item).isVerified)
-  }
-
-  private func temporaryDirectory() throws -> URL {
-    let rootURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("amentia-model-first-use-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
-    return rootURL
   }
 
   private func localModelSummary(
@@ -329,6 +292,25 @@ final class LocalModelFirstUseTests: XCTestCase {
       downloaded: false,
       active: false,
       localSizeBytes: nil
+    )
+  }
+
+  private func localModelCatalogItem(for model: LocalModelSummary) -> LocalModelCatalogItem {
+    LocalModelCatalogItem(
+      id: model.id,
+      displayName: model.displayName,
+      description: model.description,
+      fileName: model.fileName,
+      downloadURL: model.downloadURL,
+      homepage: model.homepage,
+      sizeBytes: model.sizeBytes,
+      sha256: model.sha256,
+      contextSize: model.contextSize,
+      modelContextSize: model.modelContextSize,
+      maxOutputTokens: model.maxOutputTokens,
+      license: model.license,
+      tags: model.tags,
+      installSegments: []
     )
   }
 

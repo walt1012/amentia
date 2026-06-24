@@ -4,7 +4,7 @@ import XCTest
 
 final class AppSupportDirectoriesTests: XCTestCase {
   func testPrepareAppOwnedDirectoriesCreatesFirstUseLayout() throws {
-    let rootURL = try temporaryDirectory()
+    let rootURL = try makeTemporaryDirectory(prefix: "amentia-app-support")
     try FileManager.default.removeItem(at: rootURL)
     defer {
       try? FileManager.default.removeItem(at: rootURL)
@@ -20,7 +20,7 @@ final class AppSupportDirectoriesTests: XCTestCase {
   }
 
   func testPrepareAppOwnedDirectoriesRejectsSymbolicLinkRoot() throws {
-    let realRootURL = try temporaryDirectory()
+    let realRootURL = try makeTemporaryDirectory(prefix: "amentia-app-support")
     let symlinkURL = FileManager.default.temporaryDirectory
       .appendingPathComponent("amentia-app-support-symlink-\(UUID().uuidString)", isDirectory: true)
     defer {
@@ -38,7 +38,7 @@ final class AppSupportDirectoriesTests: XCTestCase {
   }
 
   func testDeleteLocalDataRemovesOnlyAppOwnedRootAndLeavesNoAppFolders() throws {
-    let parentURL = try temporaryDirectory()
+    let parentURL = try makeTemporaryDirectory(prefix: "amentia-app-support")
     let rootURL = parentURL.appendingPathComponent("Amentia", isDirectory: true)
     let outsideURL = parentURL.appendingPathComponent("workspace", isDirectory: true)
     defer {
@@ -79,10 +79,4 @@ final class AppSupportDirectoriesTests: XCTestCase {
     ]
   }
 
-  private func temporaryDirectory() throws -> URL {
-    let rootURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("amentia-app-support-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
-    return rootURL
-  }
 }
