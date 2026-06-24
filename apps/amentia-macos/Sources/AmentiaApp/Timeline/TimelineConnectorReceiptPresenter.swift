@@ -1,5 +1,3 @@
-import Foundation
-
 enum TimelineConnectorReceiptPresenter {
   static func hasReceipt(attributes: [String: String]) -> Bool {
     receiptKeys.contains { key in attributes[key] != nil }
@@ -61,7 +59,7 @@ enum TimelineConnectorReceiptPresenter {
   ]
 
   private static func connectorSummary(attributes: [String: String]) -> String? {
-    guard firstAttribute(attributes, keys: [
+    guard TimelineReceiptText.firstAttribute(attributes, keys: [
       "connectorId",
       "connectorIds",
       "pluginRunnerConnectorId",
@@ -70,7 +68,7 @@ enum TimelineConnectorReceiptPresenter {
       return nil
     }
 
-    let authorization = firstAttribute(attributes, keys: [
+    let authorization = TimelineReceiptText.firstAttribute(attributes, keys: [
       "authorizationSummary",
       "connectorAuthorizationSummary",
     ]) ?? authorizationSummary(attributes: attributes)
@@ -90,16 +88,18 @@ enum TimelineConnectorReceiptPresenter {
     let name = attributes["connectorWorkflowName"] ?? "Connector workflow"
     let status = attributes["connectorWorkflowStatus"] ?? "unknown"
     let stage = attributes["connectorWorkflowStage"] ?? "unknown stage"
-    lines.append("\(name): \(readableStatus(status)) in \(readableStage(stage)).")
+    let readableStatus = TimelineReceiptText.readableStatus(status)
+    let readableStage = TimelineReceiptText.readableStage(stage)
+    lines.append("\(name): \(readableStatus) in \(readableStage).")
 
     if let target = attributes["connectorWorkflowTarget"] {
       lines.append("Target: \(target)")
     }
     if let receiptKind = attributes["connectorWorkflowProof"] {
-      lines.append("Confirmation: \(readableReceiptKind(receiptKind))")
+      lines.append("Confirmation: \(TimelineReceiptText.readableReceiptKind(receiptKind))")
     }
     if let recovery = attributes["connectorWorkflowRecovery"] {
-      lines.append("Recovery: \(readableRecovery(recovery))")
+      lines.append("Recovery: \(TimelineReceiptText.readableRecovery(recovery))")
     }
   }
 
@@ -119,10 +119,12 @@ enum TimelineConnectorReceiptPresenter {
     let stage = attributes["remoteWriteStage"] ?? "unknown stage"
     let sent = attributes["remoteWrite"] ?? "unknown"
     let targetService = serviceName(attributes: attributes)
-    let targetTool = readableToolLabel(attributes["targetTool"])
+    let targetTool = TimelineReceiptText.readableToolLabel(attributes["targetTool"])
     lines.append(
-      "External action: \(readableStatus(status)). Sent: \(yesNo(sent)). "
-        + "Stage: \(readableStage(stage)). Service: \(targetService) via \(targetTool)."
+      "External action: \(TimelineReceiptText.readableStatus(status)). "
+        + "Sent: \(TimelineReceiptText.yesNo(sent)). "
+        + "Stage: \(TimelineReceiptText.readableStage(stage)). "
+        + "Service: \(targetService) via \(targetTool)."
     )
 
     appendRemoteWriteContinuation(attributes: attributes, to: &lines)
@@ -131,19 +133,19 @@ enum TimelineConnectorReceiptPresenter {
   }
 
   private static func authorizationSummary(attributes: [String: String]) -> String {
-    let authStatus = firstAttribute(attributes, keys: [
+    let authStatus = TimelineReceiptText.firstAttribute(attributes, keys: [
       "authStatus",
       "connectorAuthStatus",
     ]) ?? "ready"
-    let credentialPresent = boolAttribute(attributes, keys: [
+    let credentialPresent = TimelineReceiptText.boolAttribute(attributes, keys: [
       "credentialPresent",
       "connectorCredentialPresent",
     ])
-    let credentialSecretPresent = boolAttribute(attributes, keys: [
+    let credentialSecretPresent = TimelineReceiptText.boolAttribute(attributes, keys: [
       "credentialSecretPresent",
       "connectorCredentialSecretPresent",
     ])
-    let localCredentialBinding = firstAttribute(attributes, keys: [
+    let localCredentialBinding = TimelineReceiptText.firstAttribute(attributes, keys: [
       "credentialStore",
       "connectorCredentialStores",
       "pluginRunnerConnectorStores",
@@ -164,7 +166,7 @@ enum TimelineConnectorReceiptPresenter {
       return "available locally"
     }
 
-    if let authRequired = boolAttribute(attributes, keys: [
+    if let authRequired = TimelineReceiptText.boolAttribute(attributes, keys: [
       "authRequired",
       "connectorAuthRequired",
     ]) {
@@ -179,35 +181,20 @@ enum TimelineConnectorReceiptPresenter {
     return "not saved"
   }
 
-  private static func boolAttribute(
-    _ attributes: [String: String],
-    keys: [String]
-  ) -> Bool? {
-    guard let value = firstAttribute(attributes, keys: keys)?.lowercased() else {
-      return nil
-    }
-    switch value {
-    case "true", "yes", "1":
-      return true
-    case "false", "no", "0":
-      return false
-    default:
-      return nil
-    }
-  }
-
   private static func appendRemoteWriteContinuation(
     attributes: [String: String],
     to lines: inout [String]
   ) {
     if let approvalRequired = attributes["remoteWriteRequiresApproval"] {
-      lines.append("Approval before external write: \(yesNo(approvalRequired))")
+      let approval = TimelineReceiptText.yesNo(approvalRequired)
+      lines.append("Approval before external write: \(approval)")
     }
     if let sourceArtifact = attributes["sourceArtifact"] {
       lines.append("Source file: \(sourceArtifact)")
     }
     if let nextCommandID = attributes["nextCommandId"] {
-      let label = attributes["nextCommandLabel"] ?? readableCommandLabel(nextCommandID)
+      let label = attributes["nextCommandLabel"]
+        ?? TimelineReceiptText.readableCommandLabel(nextCommandID)
       lines.append("Next step: \(label)")
     }
     if let nextCommandInput = attributes["nextCommandInput"] {
@@ -228,8 +215,10 @@ enum TimelineConnectorReceiptPresenter {
     if attributes["remoteProofStatus"] != nil || attributes["remoteProofKind"] != nil {
       let receiptStatus = attributes["remoteProofStatus"] ?? "unknown"
       let receiptKind = attributes["remoteProofKind"] ?? "unknown confirmation"
+      let readableStatus = TimelineReceiptText.readableStatus(receiptStatus)
+      let readableKind = TimelineReceiptText.readableReceiptKind(receiptKind)
       lines.append(
-        "External confirmation: \(readableStatus(receiptStatus)) (\(readableReceiptKind(receiptKind)))"
+        "External confirmation: \(readableStatus) (\(readableKind))"
       )
     }
     if let receiptTitle = attributes["remoteProofTitle"] {
@@ -279,13 +268,13 @@ enum TimelineConnectorReceiptPresenter {
     to lines: inout [String]
   ) {
     if let failureReason = attributes["publishFailureReason"] {
-      lines.append("Publish issue: \(readableFailureReason(failureReason))")
+      lines.append("Publish issue: \(TimelineReceiptText.readableFailureReason(failureReason))")
     }
     if let retryCommandID = attributes["retryCommandId"] {
-      lines.append("Retry step: \(readableCommandLabel(retryCommandID))")
+      lines.append("Retry step: \(TimelineReceiptText.readableCommandLabel(retryCommandID))")
     }
     if let retryInputEditable = attributes["retryInputEditable"] {
-      lines.append("Retry input editable: \(yesNo(retryInputEditable))")
+      lines.append("Retry input editable: \(TimelineReceiptText.yesNo(retryInputEditable))")
     }
     if let retryInputHint = attributes["retryInputHint"] {
       lines.append("Retry hint: \(retryInputHint)")
@@ -302,7 +291,7 @@ enum TimelineConnectorReceiptPresenter {
           attributes["remoteProofKind"] == "notionApiResponse",
           let pageID = attributes["notionPageId"],
           !pageID.isEmpty,
-          let url = safeWebURL(attributes["notionPageUrl"])
+          let url = TimelineReceiptText.safeWebURL(attributes["notionPageUrl"])
     else {
       return nil
     }
@@ -318,7 +307,7 @@ enum TimelineConnectorReceiptPresenter {
     attributes: [String: String]
   ) -> TimelineExternalActionSummary? {
     guard attributes["remoteProofStatus"] == "success",
-          let url = safeWebURL(attributes["remoteProofUrl"])
+          let url = TimelineReceiptText.safeWebURL(attributes["remoteProofUrl"])
     else {
       return nil
     }
@@ -371,7 +360,7 @@ enum TimelineConnectorReceiptPresenter {
       parts.append("Confirmation: \(receiptID)")
     }
     if let receiptKind = attributes["remoteProofKind"], !receiptKind.isEmpty {
-      parts.append(readableReceiptKind(receiptKind))
+      parts.append(TimelineReceiptText.readableReceiptKind(receiptKind))
     }
     if let receiptURL = attributes["remoteProofUrl"], !receiptURL.isEmpty {
       parts.append("Link: \(receiptURL)")
@@ -388,189 +377,11 @@ enum TimelineConnectorReceiptPresenter {
   }
 
   private static func serviceName(attributes: [String: String]) -> String {
-    let raw = firstAttribute(attributes, keys: [
+    let raw = TimelineReceiptText.firstAttribute(attributes, keys: [
       "targetService",
       "connectorWorkflowService",
       "connectorService",
     ]) ?? "Remote"
-    return raw
-      .split { character in character == "-" || character == "_" || character == " " }
-      .map { word in
-        let lowercased = word.lowercased()
-        return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
-      }
-      .joined(separator: " ")
-  }
-
-  private static func readableCommandLabel(_ value: String) -> String {
-    let tail = value.components(separatedBy: "::").last ?? value
-    let words = tail
-      .split { character in
-        character == "." || character == "_" || character == "-" || character == ":"
-      }
-      .map { word in
-        let lowercased = word.lowercased()
-        return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
-      }
-
-    return words.isEmpty ? "Continue" : words.joined(separator: " ")
-  }
-
-  private static func readableStatus(_ value: String) -> String {
-    switch value {
-    case "success", "completed":
-      return "completed"
-    case "notRequested", "notSent":
-      return "not sent yet"
-    case "prepared":
-      return "prepared"
-    case "inspected":
-      return "ready for review"
-    case "retryNeeded":
-      return "needs retry"
-    default:
-      return readableTokenLabel(value)
-    }
-  }
-
-  private static func readableStage(_ value: String) -> String {
-    switch value {
-    case "draftPrepared":
-      return "draft prepared"
-    case "inspectBeforeWrite":
-      return "review before write"
-    case "blockedBeforeWrite":
-      return "blocked before external write"
-    case "failedBeforeProof":
-      return "finished without trusted confirmation"
-    case "completed":
-      return "completed"
-    default:
-      return readableTokenLabel(value)
-    }
-  }
-
-  private static func readableReceiptKind(_ value: String) -> String {
-    if let serviceLabel = PluginConnectorServiceGuide.receiptKindLabel(value) {
-      return serviceLabel
-    }
-
-    switch value {
-    case "localDraft":
-      return "local draft"
-    case "inspection":
-      return "review completed"
-    case "notRequested":
-      return "not requested"
-    case "missing":
-      return "missing"
-    case "messageApiResponse":
-      return "message confirmation"
-    default:
-      return readableTokenLabel(value)
-    }
-  }
-
-  private static func readableFailureReason(_ value: String) -> String {
-    switch value {
-    case "invalidParentPageId":
-      return "the parent page ID needs review"
-    case "missingParentPageId":
-      return "a parent page is required"
-    case "missingRemoteProof":
-      return "Amentia could not verify the external result"
-    default:
-      return readableTokenLabel(value)
-    }
-  }
-
-  private static func readableRecovery(_ value: String) -> String {
-    switch value {
-    case "retry":
-      return "retry available"
-    default:
-      return readableTokenLabel(value)
-    }
-  }
-
-  private static func readableToolLabel(_ value: String?) -> String {
-    guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-          !value.isEmpty
-    else {
-      return "local connector"
-    }
-
-    return readableTokenLabel(value)
-  }
-
-  private static func readableTokenLabel(_ value: String) -> String {
-    let normalized = value
-      .replacingOccurrences(of: "::", with: " ")
-      .replacingOccurrences(of: ".", with: " ")
-      .replacingOccurrences(of: "_", with: " ")
-      .replacingOccurrences(of: "-", with: " ")
-    let spaced = normalized.reduce(into: "") { result, character in
-      if isUppercaseLetter(character),
-         let last = result.last,
-         isLowercaseLetter(last) || isNumber(last) {
-        result.append(" ")
-      }
-      result.append(character)
-    }
-    let words = spaced
-      .split(separator: " ")
-      .map { word in
-        let lowercased = word.lowercased()
-        return lowercased.prefix(1).uppercased() + String(lowercased.dropFirst())
-      }
-
-    return words.isEmpty ? value : words.joined(separator: " ")
-  }
-
-  private static func isUppercaseLetter(_ character: Character) -> Bool {
-    character.unicodeScalars.allSatisfy { CharacterSet.uppercaseLetters.contains($0) }
-  }
-
-  private static func isLowercaseLetter(_ character: Character) -> Bool {
-    character.unicodeScalars.allSatisfy { CharacterSet.lowercaseLetters.contains($0) }
-  }
-
-  private static func isNumber(_ character: Character) -> Bool {
-    character.unicodeScalars.allSatisfy { CharacterSet.decimalDigits.contains($0) }
-  }
-
-  private static func yesNo(_ value: String) -> String {
-    switch value {
-    case "true":
-      return "yes"
-    case "false":
-      return "no"
-    default:
-      return value
-    }
-  }
-
-  private static func firstAttribute(
-    _ attributes: [String: String],
-    keys: [String]
-  ) -> String? {
-    keys
-      .compactMap { key in attributes[key]?.trimmingCharacters(in: .whitespacesAndNewlines) }
-      .first { !$0.isEmpty }
-  }
-
-  private static func safeWebURL(_ value: String?) -> URL? {
-    guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-          !value.isEmpty,
-          let url = URL(string: value),
-          let scheme = url.scheme?.lowercased(),
-          scheme == "https",
-          let host = url.host,
-          !host.isEmpty
-    else {
-      return nil
-    }
-
-    return url
+    return TimelineReceiptText.readableTokenLabel(raw)
   }
 }

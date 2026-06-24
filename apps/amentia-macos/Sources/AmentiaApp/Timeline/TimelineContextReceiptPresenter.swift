@@ -104,8 +104,8 @@ enum TimelineContextReceiptPresenter {
     let snapshotAvailable = entry.attributes["sourceSnapshotAvailable"] ?? "unknown"
     var lines = [
       "Search mode: \(readableSourceMode(sourceMode))",
-      "Opened source pages: \(yesNo(pageFetch))",
-      "Saved source receipt: \(yesNo(snapshotAvailable))",
+      "Opened source pages: \(TimelineReceiptText.yesNo(pageFetch))",
+      "Saved source receipt: \(TimelineReceiptText.yesNo(snapshotAvailable))",
     ]
     if let reason = entry.attributes["routingReason"] {
       lines.append("Why Amentia searched: \(readableRoutingReason(reason))")
@@ -142,7 +142,7 @@ enum TimelineContextReceiptPresenter {
     let policy = readableApprovalPolicy(
       entry.attributes["actionApprovalPolicy"] ?? inferredApprovalPolicy(tool)
     )
-    let account = yesNo(entry.attributes["amentiaAccountRequired"] ?? "false")
+    let account = TimelineReceiptText.yesNo(entry.attributes["amentiaAccountRequired"] ?? "false")
     var lines = [
       "Mode: \(mode)",
       "Boundary: \(boundary)",
@@ -384,7 +384,7 @@ enum TimelineContextReceiptPresenter {
       return
     }
 
-    let shortened = yesNo(truncated ?? "unknown")
+    let shortened = TimelineReceiptText.yesNo(truncated ?? "unknown")
     if let sourceChars, let budgetChars {
       lines.append(
         "\(label) context: \(shortened == "yes" ? "shortened" : "kept") "
@@ -423,17 +423,6 @@ enum TimelineContextReceiptPresenter {
       return
     }
     lines.append("\(label): \(value)")
-  }
-
-  private static func yesNo(_ value: String) -> String {
-    switch value {
-    case "true":
-      return "yes"
-    case "false":
-      return "no"
-    default:
-      return value
-    }
   }
 
   private static func readableSourceMode(_ value: String) -> String {

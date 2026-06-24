@@ -92,8 +92,8 @@ Implemented foundations:
 - Product language: normal setup, model, project, session, readiness, timeline,
   inspector, plugin, connection, permission, and local-data paths avoid raw
   protocol names, paths, IDs, hashes, and manifest details by default.
-- Timeline presentation internals use receipt terminology so UI copy, tests, and
-  release metadata stay aligned without changing connector protocol fields.
+- Timeline presentation internals use receipt terminology and shared readable
+  text helpers so UI copy stays consistent without changing protocol fields.
 - Core and macOS cleanup is collapsing thin facade files and misleading legacy
   names while keeping real domain boundaries intact.
 - Core cleanup now favors direct module ownership over facade-of-facade imports

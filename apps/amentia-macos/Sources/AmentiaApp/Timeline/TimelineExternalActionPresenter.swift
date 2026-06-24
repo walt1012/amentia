@@ -90,21 +90,9 @@ enum TimelineExternalActionPresenter {
     return value
       .components(separatedBy: separators)
       .compactMap { component in
-        safeWebURL(component.trimmingCharacters(in: .whitespacesAndNewlines))
+        TimelineReceiptText.safeWebURL(component.trimmingCharacters(in: .whitespacesAndNewlines))
       }
       .first
-  }
-
-  private static func safeWebURL(_ value: String?) -> URL? {
-    guard let value,
-          let url = URL(string: value),
-          url.scheme == "https",
-          url.host?.isEmpty == false
-    else {
-      return nil
-    }
-
-    return url
   }
 
   private static func safeWorkspaceFileURL(rootPath: String, relativePath: String) -> URL? {
