@@ -5,10 +5,7 @@ use super::*;
 #[test]
 fn validate_manifest_accepts_typed_capabilities_and_permissions() {
   let mut manifest = manifest(
-    vec![
-      "skill:workspace.notes",
-      "settings:workspace.preferences",
-    ],
+    vec!["skill:workspace.notes", "settings:workspace.preferences"],
     vec!["file.read", "file.write"],
   );
   manifest.skills = vec![PluginSkillManifest {
