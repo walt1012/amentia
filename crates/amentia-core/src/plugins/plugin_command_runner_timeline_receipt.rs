@@ -2,15 +2,15 @@ use std::collections::HashMap;
 
 use amentia_plugin_host::PluginCommandEntry as HostPluginCommandEntry;
 
-use super::plugin_command_runner_remote_write_proof::{
+use super::plugin_command_runner_remote_write_receipt::{
   insert_plugin_runner_remote_write_contract, plugin_runner_remote_write_contract_is_valid,
 };
-use super::plugin_command_runner_workflow_proof::{
+use super::plugin_command_runner_workflow_receipt::{
   insert_plugin_runner_connector_workflow_contract,
   plugin_runner_connector_workflow_contract_is_valid,
 };
 
-pub(super) use super::plugin_command_runner_workflow_proof::{
+pub(super) use super::plugin_command_runner_workflow_receipt::{
   plugin_runner_expected_workflow_id, plugin_runner_items_include_workflow,
 };
 

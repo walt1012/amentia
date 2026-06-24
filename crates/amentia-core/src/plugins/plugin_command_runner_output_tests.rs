@@ -331,7 +331,7 @@ fn output_contract_rejects_unproven_remote_write_claims() {
 }
 
 #[test]
-fn output_contract_accepts_completed_remote_write_with_target_evidence() {
+fn output_contract_accepts_completed_remote_write_with_target_receipt() {
   let command = test_command();
   let mut base_attributes = HashMap::new();
   base_attributes.insert(
@@ -562,7 +562,7 @@ fn output_contract_rejects_unbound_connector_workflow_id() {
 fn output_contract_requires_workflow_item_for_workflow_command() {
   let command = test_workflow_command("notion.create-page");
   let output = r#"{
-      "content": "The connector command finished without workflow proof."
+      "content": "The connector command finished without a workflow receipt."
     }"#;
 
   let failure = match plugin_runner_output(&command, "stdio.test", output, HashMap::new()) {
@@ -656,14 +656,14 @@ fn output_contract_accepts_manifest_workflow_shape() {
 }
 
 #[test]
-fn output_contract_marks_failed_remote_write_proof_as_unconfirmed() {
+fn output_contract_marks_failed_remote_write_confirmation_as_unconfirmed() {
   let command = test_command();
   let output = r#"{
       "items": [
         {
           "kind": "pluginResult",
           "title": "Remote Write Needs Retry",
-          "content": "The remote write did not return proof.",
+          "content": "The remote write did not return confirmation.",
           "attributes": {
             "remoteWrite": "false",
             "remoteWriteStage": "failedBeforeProof",

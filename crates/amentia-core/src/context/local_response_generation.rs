@@ -4,7 +4,7 @@ use amentia_model_runtime::{
   GenerateRequest, GenerationCancellation, LocalModelRuntime, ModelRole,
 };
 
-use crate::context_compaction::{
+use crate::context_observation::{
   compact_generation_prompt, merge_generation_prompt_attributes, merge_observation_attributes,
   PromptObservation,
 };

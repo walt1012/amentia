@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use super::plugin_command_runner_contracts::{
   PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE, PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT,
-  PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE,
+  PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_CONFIRMATION_STAGE,
   PLUGIN_RUNNER_REMOTE_WRITE_INSPECTION_STAGE, PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED,
   PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT, PLUGIN_RUNNER_REMOTE_WRITE_STATUS_PENDING,
   PLUGIN_RUNNER_REMOTE_WRITE_STATUS_UNCONFIRMED,
 };
-use super::plugin_command_runner_proof::{
+use super::plugin_command_runner_timeline_receipt::{
   plugin_runner_attribute_value, plugin_runner_target_service_is_bound,
 };
 
@@ -62,7 +62,7 @@ fn plugin_runner_remote_write_status(attributes: &HashMap<String, String>) -> &'
   {
     return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED;
   }
-  if remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE) {
+  if remote_write_stage == Some(PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_CONFIRMATION_STAGE) {
     return PLUGIN_RUNNER_REMOTE_WRITE_STATUS_UNCONFIRMED;
   }
   if remote_write == "false" {
@@ -101,7 +101,7 @@ mod tests {
   }
 
   #[test]
-  fn remote_write_contract_owns_failed_proof_status() {
+  fn remote_write_contract_owns_failed_confirmation_status() {
     let mut attributes = HashMap::new();
     attributes.insert("remoteWrite".to_string(), "false".to_string());
     attributes.insert(

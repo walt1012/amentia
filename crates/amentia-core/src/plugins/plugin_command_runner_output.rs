@@ -10,7 +10,7 @@ use super::plugin_command_runner_memory::plugin_runner_memory_notes;
 use super::plugin_command_runner_output_parser::{
   parse_plugin_runner_output, PluginRunnerParsedOutput,
 };
-use super::plugin_command_runner_proof::{
+use super::plugin_command_runner_timeline_receipt::{
   plugin_runner_expected_workflow_id, plugin_runner_items_include_workflow,
 };
 use super::plugin_command_runner_timeline_output::{

@@ -11,7 +11,7 @@ use super::plugin_command_runner_contracts::{
   PluginRunnerTimelineItemEnvelope, PLUGIN_RUNNER_ALLOWED_TIMELINE_KINDS,
   PLUGIN_RUNNER_TIMELINE_ITEM_CONTENT_LIMIT, PLUGIN_RUNNER_TIMELINE_ITEM_TITLE_LIMIT,
 };
-use super::plugin_command_runner_proof::{
+use super::plugin_command_runner_timeline_receipt::{
   insert_plugin_runner_timeline_contracts, plugin_runner_timeline_contracts_are_valid,
 };
 

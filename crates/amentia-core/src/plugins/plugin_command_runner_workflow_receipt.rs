@@ -8,7 +8,7 @@ use amentia_protocol::TimelineItem;
 use super::plugin_command_runner_contracts::{
   PLUGIN_RUNNER_CONNECTOR_WORKFLOW_CONTRACT, PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES,
 };
-use super::plugin_command_runner_proof::{
+use super::plugin_command_runner_timeline_receipt::{
   plugin_runner_attribute_value, plugin_runner_connector_service_is_bound,
 };
 

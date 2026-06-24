@@ -6,10 +6,10 @@ use amentia_model_runtime::{
 };
 use amentia_protocol::{TimelineItem, WorkspaceSummary};
 
-use crate::context_compaction::{compact_generation_prompt, merge_generation_prompt_attributes};
 use crate::context_memory_pack::{
   format_memory_context_prompt, merge_memory_context_attributes, pack_memory_notes_for_context,
 };
+use crate::context_observation::{compact_generation_prompt, merge_generation_prompt_attributes};
 use crate::context_plugin_skill_pack::{
   format_plugin_skill_context_prompt, merge_plugin_skill_context_attributes, PluginSkillContextPack,
 };

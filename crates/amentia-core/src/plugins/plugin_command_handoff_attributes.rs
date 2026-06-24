@@ -71,12 +71,12 @@ mod tests {
   use super::copy_observation_handoff_attributes;
 
   #[test]
-  fn copies_reviewable_connector_evidence_only() {
+  fn copies_reviewable_connector_receipt_only() {
     let mut attributes = HashMap::new();
     let observation_attributes = HashMap::from([
       (
         "remoteProofUrl".to_string(),
-        "https://example.com/proof".to_string(),
+        "https://example.com/confirmation".to_string(),
       ),
       (
         "connectorWorkflowStatus".to_string(),
@@ -93,7 +93,7 @@ mod tests {
 
     assert_eq!(
       attributes.get("remoteProofUrl").map(String::as_str),
-      Some("https://example.com/proof")
+      Some("https://example.com/confirmation")
     );
     assert_eq!(
       attributes

@@ -95,8 +95,8 @@ enum TimelineConnectorReceiptPresenter {
     if let target = attributes["connectorWorkflowTarget"] {
       lines.append("Target: \(target)")
     }
-    if let proof = attributes["connectorWorkflowProof"] {
-      lines.append("Confirmation: \(readableProofKind(proof))")
+    if let receiptKind = attributes["connectorWorkflowProof"] {
+      lines.append("Confirmation: \(readableReceiptKind(receiptKind))")
     }
     if let recovery = attributes["connectorWorkflowRecovery"] {
       lines.append("Recovery: \(readableRecovery(recovery))")
@@ -226,20 +226,20 @@ enum TimelineConnectorReceiptPresenter {
     to lines: inout [String]
   ) {
     if attributes["remoteProofStatus"] != nil || attributes["remoteProofKind"] != nil {
-      let proofStatus = attributes["remoteProofStatus"] ?? "unknown"
-      let proofKind = attributes["remoteProofKind"] ?? "unknown confirmation"
+      let receiptStatus = attributes["remoteProofStatus"] ?? "unknown"
+      let receiptKind = attributes["remoteProofKind"] ?? "unknown confirmation"
       lines.append(
-        "External confirmation: \(readableStatus(proofStatus)) (\(readableProofKind(proofKind)))"
+        "External confirmation: \(readableStatus(receiptStatus)) (\(readableReceiptKind(receiptKind)))"
       )
     }
-    if let proofTitle = attributes["remoteProofTitle"] {
-      lines.append("Confirmation title: \(proofTitle)")
+    if let receiptTitle = attributes["remoteProofTitle"] {
+      lines.append("Confirmation title: \(receiptTitle)")
     }
-    if let proofID = attributes["remoteProofId"] {
-      lines.append("Confirmation: \(proofID)")
+    if let receiptID = attributes["remoteProofId"] {
+      lines.append("Confirmation: \(receiptID)")
     }
-    if let proofURL = attributes["remoteProofUrl"] {
-      lines.append("Confirmation link: \(proofURL)")
+    if let receiptURL = attributes["remoteProofUrl"] {
+      lines.append("Confirmation link: \(receiptURL)")
     }
 
     appendNotionReceiptSummary(attributes: attributes, to: &lines)
@@ -367,14 +367,14 @@ enum TimelineConnectorReceiptPresenter {
     }
 
     var parts: [String] = []
-    if let proofID = attributes["remoteProofId"], !proofID.isEmpty {
-      parts.append("Confirmation: \(proofID)")
+    if let receiptID = attributes["remoteProofId"], !receiptID.isEmpty {
+      parts.append("Confirmation: \(receiptID)")
     }
-    if let proofKind = attributes["remoteProofKind"], !proofKind.isEmpty {
-      parts.append(readableProofKind(proofKind))
+    if let receiptKind = attributes["remoteProofKind"], !receiptKind.isEmpty {
+      parts.append(readableReceiptKind(receiptKind))
     }
-    if let proofURL = attributes["remoteProofUrl"], !proofURL.isEmpty {
-      parts.append("Link: \(proofURL)")
+    if let receiptURL = attributes["remoteProofUrl"], !receiptURL.isEmpty {
+      parts.append("Link: \(receiptURL)")
     }
 
     guard !parts.isEmpty else {
@@ -450,8 +450,8 @@ enum TimelineConnectorReceiptPresenter {
     }
   }
 
-  private static func readableProofKind(_ value: String) -> String {
-    if let serviceLabel = PluginConnectorServiceGuide.proofKindLabel(value) {
+  private static func readableReceiptKind(_ value: String) -> String {
+    if let serviceLabel = PluginConnectorServiceGuide.receiptKindLabel(value) {
       return serviceLabel
     }
 

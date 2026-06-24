@@ -17,7 +17,8 @@ pub(super) const PLUGIN_RUNNER_CONNECTOR_WORKFLOW_STATUSES: &[&str] =
   &["completed", "inspected", "prepared", "retryNeeded"];
 pub(super) const PLUGIN_RUNNER_REMOTE_WRITE_CONTRACT: &str = "amentia.connectorRemoteWrite.v1";
 pub(super) const PLUGIN_RUNNER_REMOTE_WRITE_COMPLETED_STAGE: &str = "completed";
-pub(super) const PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_PROOF_STAGE: &str = "failedBeforeProof";
+pub(super) const PLUGIN_RUNNER_REMOTE_WRITE_FAILED_BEFORE_CONFIRMATION_STAGE: &str =
+  "failedBeforeProof";
 pub(super) const PLUGIN_RUNNER_REMOTE_WRITE_INSPECTION_STAGE: &str = "inspectBeforeWrite";
 pub(super) const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_COMPLETED: &str = "completed";
 pub(super) const PLUGIN_RUNNER_REMOTE_WRITE_STATUS_NOT_SENT: &str = "notSent";

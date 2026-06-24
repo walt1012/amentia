@@ -318,7 +318,7 @@ mod tests {
   }
 
   #[test]
-  fn plugin_handoff_preserves_generic_remote_proof_metadata() {
+  fn plugin_handoff_preserves_generic_remote_confirmation_metadata() {
     let mut output = PluginCommandOutput {
       thread_id: "thread-1".to_string(),
       command: test_command(),
@@ -327,7 +327,7 @@ mod tests {
       items: vec![TimelineItem {
         kind: "pluginResult".to_string(),
         title: "Remote Write Complete".to_string(),
-        content: "The connector returned a trusted proof link.".to_string(),
+        content: "The connector returned a trusted confirmation link.".to_string(),
         attributes: Some(HashMap::from([
           ("targetService".to_string(), "team-chat".to_string()),
           (

@@ -6,8 +6,8 @@ use amentia_tools::SearchMatch;
 
 use super::local_response_formatting::format_search_result;
 use super::local_response_generation::{generate_local_summary, mark_cowork_handoff};
-use crate::context_compaction::compact_prompt_observation;
 use crate::context_memory_pack::{format_memory_context_prompt, pack_memory_notes_for_context};
+use crate::context_observation::compact_prompt_observation;
 
 pub(crate) fn summarize_search_result(
   model_runtime: &LocalModelRuntime,

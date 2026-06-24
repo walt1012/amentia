@@ -64,7 +64,7 @@ enum PluginConnectorServiceGuide {
     ].joined(separator: " ")
   }
 
-  static func proofKindLabel(_ value: String) -> String? {
+  static func receiptKindLabel(_ value: String) -> String? {
     switch value {
     case "notionApiResponse":
       return "Notion confirmation"

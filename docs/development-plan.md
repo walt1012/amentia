@@ -55,8 +55,8 @@ The daily loop is:
   supervision, and lock boundaries.
 - `crates/amentia-core`: orchestration, turn lifecycle, context selection, memory
   use, plugin execution, and local execution safety.
-- `crates/amentia-tools`: bounded workspace tools, shell, Web Search, compaction,
-  and path safety.
+- `crates/amentia-tools`: bounded workspace tools, shell, Web Search, output
+  shaping, and path safety.
 - `crates/amentia-sandbox`: native sandbox policy and diagnostics.
 - `crates/amentia-model-runtime`: local model discovery, validation, health,
   bounded inference, and failure wording.
@@ -94,6 +94,8 @@ Implemented foundations:
   protocol names, paths, IDs, hashes, and manifest details by default.
 - Timeline presentation internals use receipt terminology so UI copy, tests, and
   release metadata stay aligned without changing connector protocol fields.
+- Core and macOS cleanup is collapsing thin facade files and misleading legacy
+  names while keeping real domain boundaries intact.
 - Primary window foundations are in place: native sidebar density, calm timeline
   cards, focused composer, readiness, first-run setup, session sidebar
   ownership, model management, project search, plugin management, inspector
@@ -290,8 +292,8 @@ Goal: make Amentia better over time without turning it into a remote server agen
 Immediate work:
 
 - Continue structural cleanup after the rename and M14 acceptance work: keep
-  release metadata and user-visible UI on receipt language, remove stale code and
-  shared-script duplication, and avoid cosmetic file churn.
+  release metadata and user-visible UI on receipt language, collapse thin
+  wrappers, remove stale code, and avoid cosmetic file churn.
 - Add a local follow-up queue for user-approved next actions.
 - Add cross-session recall through bounded memory and session search before any
   local document RAG.
