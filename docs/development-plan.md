@@ -4,355 +4,155 @@
 
 Amentia is a small, strong, local-first macOS cowork agent for real daily work.
 
-- Product: native `Amentia` app, macOS 12+, `x86_64` only.
-- Purpose: cowork first; coding is one workflow, not the product boundary.
-- Intelligence: local model by default, no required hosted model API, one active
-  local model at a time.
-- Setup: first use downloads and verifies a local model in-app, defaulting to
-  `LFM2.5-350M`.
-- Retrieval: Web Search is the active retrieval layer. Generic local document
-  RAG stays deferred until the daily cowork loop is excellent.
-- Extensions: plugins are installable bundles; skills, actions, connections,
-  MCP servers, checks, and tools are bounded local capabilities, not prompt
-  templates or marketplace theater.
-- Delivery: users install a downloadable macOS package from GitHub Releases.
+- Native `Amentia` app, macOS 12+, `x86_64` only.
+- Cowork first; coding is one workflow, not the product boundary.
+- Local model by default, no required hosted model API, one active model at a time.
+- First use downloads and verifies a curated small model in app.
+- Web Search is the active retrieval layer; generic local document RAG is deferred.
+- Plugins are installable local bundles with bounded capabilities: Actions,
+  Connections, Skills, MCP, Tools, and Checks.
+- Users install a downloadable macOS DMG from GitHub Releases.
 
 ## Product Contract
 
-Amentia learns from Codex and Claude Code at durable boundaries: workspace context,
-bounded tools, Web Search, approvals, sandbox visibility, session continuity,
-reviewable receipts, and MCP-style local connections.
+Amentia learns from Codex and Claude Code where the patterns are durable:
+workspace context, bounded tools, Web Search, approvals, sandbox visibility,
+session continuity, reviewable receipts, and MCP-style local connections.
 
-Amentia also learns from Hermes Agent, but only where it supports the local macOS
-cowork goal:
-
-- Keep the core narrow and move optional capability to plugins, tools,
-  connectors, MCP, checks, and skills.
-- Make execution observable, interruptible, resumable, and receipt-backed.
-- Keep memory and skills bounded, curated, and progressively loaded.
-- Prefer edge expansion over core bloat.
-- Do not copy server-first messaging sprawl, multi-agent orchestration, or
-  provider complexity before the single local cowork loop is excellent.
-
-Amentia stays intentionally different where it matters: local-first inference, no
-account requirement, small-model constraints, cowork-first tasks, and a
+Amentia stays intentionally different where it matters: no required account,
+local-first inference, small-model constraints, cowork-first tasks, and a
 lightweight app that downloads model weights after install.
 
 The daily loop is:
 
-1. Understand the workspace and request.
+1. Understand the project and request.
 2. Retrieve only useful context.
-3. Choose a bounded tool, action, connector, or skill.
+3. Choose a bounded tool, action, connector, skill, or search.
 4. Explain the action with a compact receipt.
 5. Ask before writes or external effects.
-6. Execute, show a receipt, remember useful state, and continue.
+6. Execute, show the result, remember useful state, and continue.
 
-## Architecture Boundaries
+## Architecture
 
-- `apps/amentia-macos`: native UI, setup, timeline, approvals, model manager, and
-  app-facing state.
-- `crates/amentia-runtime-bin`: JSON-RPC process, routing, notifications, request
-  supervision, and lock boundaries.
-- `crates/amentia-core`: orchestration, turn lifecycle, context selection, memory
-  use, plugin execution, and local execution safety.
+- `apps/amentia-macos`: native UI, setup, timeline, approvals, model manager,
+  settings, and app-facing state.
+- `crates/amentia-runtime-bin`: JSON-RPC process, routing, notifications,
+  request supervision, and lock boundaries.
+- `crates/amentia-core`: turn lifecycle, context selection, plugin execution,
+  approvals, receipts, and local execution policy.
 - `crates/amentia-tools`: bounded workspace tools, shell, Web Search, output
   shaping, and path safety.
 - `crates/amentia-sandbox`: native sandbox policy and diagnostics.
-- `crates/amentia-model-runtime`: local model discovery, validation, health,
-  bounded inference, and failure wording.
+- `crates/amentia-model-runtime`: model discovery, validation, health, bounded
+  inference, and failure wording.
 - `crates/amentia-memory`: memory meaning, ranking, summaries, and context
   selection.
-- `crates/amentia-storage`: durable records for threads, workspace state,
-  approvals, workspace change ledger, memory notes, and plugin state.
+- `crates/amentia-storage`: SQLite-owned durable records for sessions,
+  workspace state, approvals, change ledger, memory, and plugin state.
 - `crates/amentia-plugin-host`: manifests, discovery, validation, registries,
   connector metadata, and bundle lifecycle.
 
-Memory owns meaning and ranking. Storage owns durable records. Connector
-receipts stay generic at protocol and timeline layers; service-specific detail
-belongs in connector attributes and narrow presenter adapters. Refactor only
-when ownership, contracts, or user-facing clarity improve; do not split or merge
-files cosmetically.
+Ownership rules:
 
-## Current State
+- Memory owns meaning and ranking. Storage owns records.
+- Connector receipts stay generic; service-specific wording belongs in narrow
+  presenters.
+- Refactor only when ownership, contracts, or user-facing clarity improve.
+- Do not split, merge, or rename files cosmetically.
 
-Active milestone: **M15 Cowork Continuity**.
+## Current Baseline
 
-Implemented foundations:
+M12 Public Release, M13 Product Quality, and M14 Connector Platform are complete
+as baselines. Their details should live in code, tests, release artifacts, and
+Git history, not as a growing plan backlog.
 
-- Local model setup has the core path in place: in-app download, verification,
-  activation, pause, resume, cancel, recovery, backend launch probing,
-  file-backed bounded inference, in-app model self-check, Reset Amentia,
-  curated model choice, and one active model.
-- Cowork loop foundations are in place: project-scoped tools, Web Search
-  retrieval, approvals, sandbox diagnostics, bounded subprocesses, human
-  receipts, session delete, and session-level change preview/revert.
-- Extension baseline: local plugin registry, installation lifecycle, actions,
-  connections, skills, MCP servers, tools, checks, credentials, retries, generic
-  receipt surfaces, and Notion as the reference connection.
-- Product language: normal setup, model, project, session, readiness, timeline,
-  inspector, plugin, connection, permission, and local-data paths avoid raw
-  protocol names, paths, IDs, hashes, and manifest details by default.
-- Timeline presentation internals use receipt terminology and shared readable
-  text helpers so UI copy stays consistent without changing protocol fields.
-- Timeline events separate general session, runtime, model, and memory
-  presentation from plugin lifecycle, connection, and action presentation.
-- Core and macOS cleanup is collapsing thin facade files and misleading legacy
-  names while keeping real domain boundaries intact.
-- Core cleanup now favors direct module ownership over facade-of-facade imports
-  for turns, plugin permissions, hooks, lifecycle requests, and readiness.
-- Test cleanup now favors behavior contracts over internal field snapshots:
-  keep core setup, execution, permission, credential, sandbox, and receipt paths
-  covered while deleting repeated fixture construction and fragile detail
-  assertions.
-- Workflow policy tests now use table-driven contract cases so CI structure
-  remains strict without repeating temporary repository setup in every assertion.
-- Source hygiene now treats generated previews, CI logs, Python caches, and local
-  diagnostics as disposable artifacts, not source or plan material.
-- Amentia now treats app state as fresh SQLite-owned state: legacy JSON thread
-  import and legacy model-path aliases are removed from the active path.
-- macOS plugin cleanup keeps summary data, dashboard state, surface/status
-  display, validation copy, and guidance/check copy in separate owners so
-  protocol-shaped data does not become UI glue.
-- Plugin UI rows keep capability display, capability presentation, and
-  connection actions in separate owners.
-- Plugin execution UI keeps action rows and check rows in separate owners.
-- Plugin manager navigation stays separate from management and execution
-  section content.
-- Plugin dashboard presentation keeps count summaries, detail text, and preview
-  selection in separate owners.
-- Primary window foundations are in place: native sidebar density, calm timeline
-  cards, focused composer, readiness, first-run setup, session sidebar
-  ownership, model management, project search, plugin management, inspector
-  sections, settings surfaces, and subtle state-driven motion without fixed dark
-  styling.
-- Release baseline: unsigned x86_64 DMG, concise GitHub Release assets, install
-  guidance, checksum, manifest, package smoke receipt, manual acceptance receipt,
-  transparent-corner macOS icon packaging, and split CI as the source of truth.
+The current product baseline includes:
 
-Current transition gates:
+- Unsigned x86_64 DMG release flow with concise public assets.
+- In-app model download, verification, activation, pause, resume, cancel, and
+  one active model.
+- Packaged local backend launch probing and bounded file-backed inference.
+- Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
+  cancellable subprocesses, and human receipts.
+- Session delete, session change preview, and session revert.
+- Reset Amentia for app-owned data.
+- Local plugin registry, installation lifecycle, Actions, Connections, Skills,
+  MCP, Tools, Checks, credentials, retries, and generic connector receipts.
+- Notion as the reference connection, not as a hardcoded platform direction.
+- Product-first UI language that avoids raw protocol names, hashes, paths, and
+  manifest details in normal use.
+- Amentia is a fresh app identity; legacy state migration and legacy model-path
+  aliases are out of the active path.
 
-- Maintainer-installed app verification has accepted the model deployment and
-  reference connector paths. Milestone-specific acceptance machinery stays out of the
-  active path after the milestone closes.
-- Architecture cleanup is now the first gate before M15 feature growth. Remove
-  stale code, collapse duplicated contracts, and split or merge only when
-  ownership becomes clearer.
-- Product clarity remains a continuous gate. Default UI should stay human and
-  calm; raw protocol names, manifest strings, hashes, internal paths, and schema
-  details belong only in diagnostics or reveal-on-demand receipts.
-
-Current constraints:
-
-- Installed-app reliability beats platform expansion: first-run model download
-  and activation, packaged backend launch, human default UI, visible session
-  deletion, and Reset Amentia must stay reliable before broader connector surface
-  area.
-- Treat M13 as the installed-app quality baseline; only return to product polish
-  when real use exposes confusing copy, stale UI, or release blockers.
-- Keep Web Search as retrieval; generic local document RAG remains deferred.
-- Keep post-M14 platform growth focused on safe local extension execution before
-  broad connector catalogs, marketplaces, or remote transports.
-- Do not bundle Git, model weights, package-manager payloads, extra
-  architectures, or unused runtimes.
-- Release assets stay limited to the DMG, checksum, `README-FIRST.txt`, and
-  release manifest.
-- Visible ad-hoc prereleases require an explicit manual acceptance receipt.
-- `Amentia` is the product, app, package, runtime, crate, environment variable,
-  plugin manifest, and GitHub repository namespace.
-
-## M12: Public Release
-
-Goal: ship a usable macOS installer from GitHub Releases.
-
-Status: packaging baseline complete; each visible public tag still needs a
-fresh release acceptance receipt.
-
-Completed:
-
-- The release exposes exactly the DMG, checksum, `README-FIRST.txt`, and release
-  manifest.
-- The GitHub Release page stays concise; detailed install, Gatekeeper,
-  verification, and package metadata stay in `README-FIRST.txt` and the release
-  manifest.
-
-Release acceptance:
-
-- A fresh unsigned install completes the daily cowork loop without hosted model
-  dependency or manual model import.
-- The GitHub Release exposes exactly the four public assets and final publish
-  validation passes against the live release.
-- Release plan, release manifest, `README-FIRST.txt`, release notes, packaged
-  smoke receipt, manual acceptance receipt, and downloaded-asset rehearsal must
-  describe the same user path for each visible release.
-- CI stays fast, split, strict, and understandable enough to block release
-  contract drift.
-
-## M13: Product Quality and Identity
-
-Status: baseline established; quality bar remains active.
-
-Goal: make the shipped app feel intentional, maintainable, and worthy of daily
-use before expanding the platform surface.
-
-Completed baseline:
-
-- Clean the installed app experience: human UI copy, first-run model setup,
-  light-mode/system appearance support, and no internal wording in the normal
-  cowork path.
-- Polish the primary window: native sidebar density, readable timeline width,
-  calm inspector sections, and subtle state-driven motion inspired by Codex and
-  Claude rather than decorative animation.
-- Keep receipts useful but quiet: receipts are human-readable first; protocol
-  fields, raw counters, hashes, paths, and setup files stay in technical detail
-  surfaces or reveal-on-demand actions.
-- Preserve architecture clarity: remove dead code and stale release scaffolding,
-  keep root views composition-only, split presenter or runner ownership only
-  when contracts are mixed, and avoid cosmetic moves.
-- Keep execution reliable: long work is observable, cancellable, resumable when
-  appropriate, receipt-backed, and CI-verified through shared scripts instead of
-  repeated workflow shell blocks.
-- Finish product identity around the approved Amentia lockup reference, derive
-  the Dock icon mark from that source, keep SVG previews lightweight, require
-  transparent outer icon corners, and ship through the native macOS icon package
-  contract.
-- Keep extension management understandable: plugin installation is the bundle
-  workflow, while capabilities are grouped as Actions, Connections, Skills,
-  MCP, Tools, and Checks.
-- Keep plugin management clean enough for real users: confirmation dialogs show
-  what a plugin can do, what access it needs, and what Amentia will store without
-  exposing source paths or manifest capability strings.
-- Keep timeline and inspector receipts product-first: domain presenters own copy
-  and receipt detail for runtime, model, session, plugin, connection, and action
-  surfaces; paths and protocol fields stay secondary.
-- Keep model manager details product-first: default summaries describe context and
-  response limits, while runner, path, and package details stay diagnostic.
-- Keep reset and session deletion copy explicit: Amentia data, chat history,
-  activity cards, saved connections, and project folders are described in user
-  terms before destructive actions run.
-- Keep support diagnostics available without letting them dominate the default
-  inspector path.
-- Treat Amentia as a fresh app identity: app-owned data lives under `Amentia`,
-  Reset Amentia deletes only Amentia-owned files, and legacy product data is not
-  migrated or cleaned implicitly.
-- Keep release and settings copy product-first: internal package filenames and
-  schema details stay out of normal user-facing explanations.
-
-Remaining quality bar:
-
-- A fresh install can download, verify, activate, re-download, recover, and
-  invoke a local model without expert context; readiness must fail early if the
-  packaged backend cannot launch, and generation must use bounded file-backed
-  prompt input with an automatic short self-check after model selection plus a
-  visible manual check from first-use setup and the model manager.
-- Users can delete a session, review or revert session changes, and Reset Amentia
-  from visible UI without learning hidden menus; Reset Amentia must remove
-  app-owned folders, paused downloads, preferences, caches, saved app state, and
-  local connector tokens or keys.
-- The default path avoids raw runtime, manifest, checksum, ID, and backend
-  wording; advanced diagnostics remain available only when useful.
-- Amentia can run the cowork loop, use Web Search, manage sessions, and recover or
-  revert approved work without expert context.
-- Extension surfaces use precise ecosystem language: Plugins are installed
-  bundles; Actions, Connections, Skills, MCP, Tools, and Checks are capabilities
-  when present. Slash routes and manifest strings stay out of the primary path.
-- CI stays fast, split, strict, and green for the release package path.
-- The app has a polished blue Dock icon and no obvious stale, unused, or
-  confusing UI surfaces left in the primary path.
-- The approved Dock icon uses a 2048 px PNG master, lightweight SVG reference
-  wrappers, and native macOS icon packaging checks.
-
-## M14: Connector and Skill Platform
-
-Status: complete by maintainer-installed-app validation; milestone-specific
-acceptance machinery has been removed.
-
-Goal: make third-party local plugins safe and useful without building a
-marketplace too early.
-
-Completed baseline:
-
-- Plugins are installed bundles. Actions, Connections, Skills, MCP servers,
-  Tools, and Checks are capabilities inside those bundles.
-- The plugin host validates manifests, keeps skill paths and MCP commands inside
-  bundle roots, bounds runner output, supervises registry loading, and fails
-  closed when setup, credentials, or local secrets are missing.
-- Notion is the reference connection. Its authorization metadata, local token or
-  key handling, missing-secret state, cleanup, timeline receipts, retries, and
-  receipts exercise the generic connector contract.
-- Executable connector workflow commands declare explicit input and output
-  envelopes so third-party bundles do not depend on implicit runner defaults.
-- Connector receipts stay generic in protocol and timeline data. Service names,
-  access scopes, auth type, receipt labels, and repair copy are translated by
-  narrow presenters.
-- Skills are bounded, read-only context packs with query selection, strict
-  budgets, explicit `skill:<id>` capabilities, reviewable receipts, and a plugin
-  disable path for revocation. Legacy `prompt_pack:<id>` entries may remain only
-  as compatibility aliases for declared skills.
-- Checks are verification surfaces with product-facing trigger copy and the same
-  plugin disable path, not arbitrary always-on automation.
-- Plugin manager surfaces expose capability meaning progressively. Source paths,
-  manifest keys, raw event names, routes, hashes, and storage details stay out of
-  the default path.
-- Plugin action, connection, workflow, skill, and setup details use product
-  labels instead of log-style field names in default summaries.
-- Manual release acceptance validates the installed-app receipt and cross-checks
-  the candidate tag, DMG name, checksum, and selected model before publishing.
-
-Retained guardrails:
-
-- Release acceptance keeps one installed-app receipt path for visible builds.
-  Milestone-specific acceptance scripts do not remain after their milestone closes.
-- Runner receipts, product clarity, bounded output, timeout or cancellation, and
-  product-facing errors remain required for new plugin execution surfaces.
-- Do not start broad connector catalog work until one more real connector proves
-  the generic contract beyond Notion.
-
-## M15: Cowork Continuity
+## M15 Cowork Continuity
 
 Status: active.
 
-Goal: make Amentia better over time without turning it into a remote server agent.
+Goal: make Amentia useful across real sessions without turning it into a remote
+server agent or a code-only assistant.
 
-Immediate work:
+Exit criteria:
 
-- Continue structural cleanup after the rename and M14 acceptance work: keep
-  release metadata and user-visible UI on receipt language, collapse thin
-  wrappers, remove stale code, and avoid cosmetic file churn.
-- Keep tests lean: cover user-visible and safety-critical contracts, consolidate
-  plugin fixtures, and remove redundant implementation-detail assertions.
-- Keep generated artifacts out of source review; use checked-in assets only when
-  they are product inputs such as the approved brand references.
-- Add a local follow-up queue for user-approved next actions.
-- Add cross-session recall through bounded memory and session search before any
-  local document RAG.
-- Add scheduled work only after approvals, sandbox policy, and receipts work
-  headlessly and fail closed.
-- Keep background work explicit, pausable, and easy to inspect from the app.
-- Do not add messaging gateways, remote control channels, or multi-agent
-  orchestration until the local single-agent experience is excellent.
+- A fresh install can download, activate, self-check, and invoke a local model
+  without expert context.
+- Users can delete sessions, revert session changes, and Reset Amentia from
+  visible UI without leaving app-owned garbage behind.
+- Web Search, workspace context, memory ranking, and session search provide
+  enough retrieval for daily cowork use without a generic local RAG system.
+- Long-running work is visible, cancellable, receipt-backed, and fails closed.
+- Default UI stays calm, readable, system-appearance friendly, and free of
+  unexplained internal terms.
+- Tests cover user-visible and safety-critical contracts without repeating
+  fixture scaffolding or implementation snapshots.
+
+Work order:
+
+1. Finish structural cleanup after the rename: remove stale compatibility code,
+   collapse duplicated test fixtures, and keep storage/model/plugin contracts
+   narrow.
+2. Harden the local model loop: first-use guidance, activation recovery, backend
+   failure wording, self-check, and model manager clarity.
+3. Tighten session continuity: deletion, change ledger, revert, receipts,
+   session search, and clear recovery states.
+4. Improve cowork retrieval: Web Search by default, bounded memory ranking, and
+   project/session context before any local document RAG.
+5. Add a local follow-up queue only after approvals, receipts, and cancellation
+   remain reliable.
+6. Keep UI polish focused on the primary cowork path, not on admin panels or
+   diagnostic surfaces.
+
+## M16 Extension Hardening
+
+Start only after M15 is reliable in installed-app use.
+
+- Prove one more real connector beyond Notion before broad connector catalog work.
+- Keep plugin execution local, bounded, cancellable, and receipt-backed.
+- Improve sandbox policy and diagnostics without exposing implementation noise to
+  normal users.
+- Keep Skills and MCP as real interfaces, not renamed concepts or prompt
+  templates.
+- Defer marketplace, remote MCP transport, messaging gateways, and multi-agent
+  orchestration until the single local cowork loop is excellent.
 
 ## Later
 
 - Developer ID signing and notarization when an Apple Developer account exists.
-- Broader connector ecosystem after the local connector contract is proven.
-- Native sandbox hardening beyond the current workspace and subprocess
-  boundaries.
-- Optional bundled Git only if bounded system Git proves insufficient for real
-  packaged users.
+- Optional bundled Git only if bounded system Git is insufficient for packaged
+  users.
 - Local document RAG only after Web Search, workspace context, memory ranking,
   and session search are reliable in daily use.
+- Broader connector ecosystem after the local connector contract is proven.
 
 ## Guardrails
 
 - No hosted model dependency.
-- No required Amentia login, hosted user session, or subscription gate.
-- No generic local vector database before Web Search and workspace context are
-  reliable.
+- No required login, hosted user session, or subscription gate.
+- No model weights, package-manager payloads, extra architectures, or unused
+  runtimes in the app bundle.
+- No generic local vector database before simpler retrieval is excellent.
 - No multi-agent orchestration before the single cowork loop is excellent.
-- No marketplace or remote MCP transport until local connector execution is safe
-  and useful.
-- Keep established ecosystem terms such as plugin, skill, and MCP when they
-  describe real interfaces; clarify them instead of renaming them away.
-- No cosmetic or line-count-only refactor; split by ownership, contract clarity,
-  or user-facing clarity.
+- Release assets stay limited to DMG, checksum, `README-FIRST.txt`, and release
+  manifest.
+- Visible ad-hoc prereleases require a manual acceptance receipt.
+- CI is remote source of truth; local checks should stay focused and lightweight.
 - English-only source, docs, commits, branches, and PR text.
