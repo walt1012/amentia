@@ -152,7 +152,7 @@ REQUIRED_APP_COPY_SNIPPETS = (
   "from saved resume data",
   "Refresh local model setup if readiness still fails",
   "Download Local Model",
-  "Repair Model Setup",
+  "Refresh Model Setup",
   "Open Anyway",
   f"Control-click {APP_NAME}.app",
   f"no {APP_NAME} account required",

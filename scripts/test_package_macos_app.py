@@ -461,7 +461,7 @@ def main() -> int:
           "from saved resume data",
           "Refresh local model setup if readiness still fails",
           "Download Local Model",
-          "Repair Model Setup",
+          "Refresh Model Setup",
           "Open Anyway",
           "Control-click Amentia.app",
           "no Amentia account required",
