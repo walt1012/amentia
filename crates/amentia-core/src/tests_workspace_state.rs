@@ -1,4 +1,4 @@
-use super::test_support::{create_temp_workspace, request};
+use super::test_support::{create_temp_workspace, remove_temp_workspace, request};
 use super::*;
 use amentia_protocol::methods;
 use serde_json::json;
@@ -19,7 +19,7 @@ fn workspace_open_sets_runtime_workspace() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(response.error.is_none());
   let result = response.result.expect("workspace open result");
@@ -54,7 +54,7 @@ fn runtime_readiness_tracks_workspace_thread_setup() {
   );
   let response = handle_request(&mut context, request(methods::RUNTIME_READINESS, None));
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(response.error.is_none());
   let result = response.result.expect("runtime readiness result");
@@ -104,7 +104,7 @@ fn workspace_search_returns_matching_lines() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(response.error.is_none());
   let result = response.result.expect("workspace search result");
@@ -140,7 +140,7 @@ fn memory_create_adds_manual_workspace_note() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(create_response.error.is_none());
   let result = create_response.result.expect("memory create result");

@@ -1,4 +1,6 @@
-use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
+use super::test_support::{
+  create_temp_workspace, enable_full_access_plugin, remove_temp_workspace, request,
+};
 use super::*;
 use amentia_protocol::methods;
 use serde_json::json;
@@ -94,8 +96,8 @@ fn thread_turns_stay_bound_to_the_thread_workspace() {
     ),
   );
 
-  fs::remove_dir_all(&workspace_a).expect("cleanup workspace a");
-  fs::remove_dir_all(&workspace_b).expect("cleanup workspace b");
+  remove_temp_workspace(&workspace_a);
+  remove_temp_workspace(&workspace_b);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -148,7 +150,7 @@ fn thread_delete_removes_session_without_touching_workspace_files() {
   let list_response = handle_request(&mut context, request(methods::THREAD_LIST, None));
 
   let file_content = fs::read_to_string(&workspace_file).expect("workspace file remains readable");
-  fs::remove_dir_all(&workspace).expect("cleanup workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(delete_response.error.is_none());
   let delete_result = delete_response.result.expect("delete result");

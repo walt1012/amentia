@@ -1,5 +1,8 @@
 #[cfg(unix)]
-use super::test_support::{create_temp_plugin_bundle, create_temp_workspace, request};
+use super::test_support::{
+  create_temp_plugin_bundle, create_temp_workspace, remove_temp_plugin_source,
+  remove_temp_workspace, request,
+};
 #[cfg(unix)]
 use super::{handle_request, RuntimeContext};
 #[cfg(unix)]
@@ -215,10 +218,9 @@ printf '{"content":"connector=%s input=%s credentialEnv=%s tokenLeak=%s"}\n' "$c
     "connector=true input=true credentialEnv=true tokenLeak=false"
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup workspace");
+  remove_temp_workspace(&workspace);
   fs::remove_dir_all(&install_root).expect("cleanup install root");
-  fs::remove_dir_all(source_root.parent().expect("plugin source root"))
-    .expect("cleanup source root");
+  remove_temp_plugin_source(&source_root);
 }
 
 #[cfg(unix)]

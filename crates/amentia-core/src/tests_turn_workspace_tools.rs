@@ -1,4 +1,6 @@
-use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
+use super::test_support::{
+  create_temp_workspace, enable_full_access_plugin, remove_temp_workspace, request,
+};
 use super::*;
 use amentia_protocol::methods;
 use serde_json::json;
@@ -45,7 +47,7 @@ fn turn_start_reads_a_requested_workspace_file() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -169,7 +171,7 @@ fn turn_start_searches_workspace_content() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -239,7 +241,7 @@ fn turn_start_reads_single_file_search_result_as_second_step() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -320,7 +322,7 @@ fn turn_start_reads_entry_point_and_manifest_after_project_overview() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -409,7 +411,7 @@ fn turn_start_direct_readme_explanation_does_not_auto_read_manifest() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -461,7 +463,7 @@ fn turn_start_list_workspace_does_not_auto_read_entry_point() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");

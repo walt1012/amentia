@@ -1,5 +1,6 @@
 use super::test_support::{
-  bundled_plugin_entry, create_temp_workspace, replace_plugin_catalog, request,
+  bundled_plugin_entry, create_temp_workspace, remove_temp_workspace, replace_plugin_catalog,
+  request,
 };
 use super::*;
 use amentia_protocol::methods;
@@ -53,7 +54,7 @@ fn file_reads_require_plugin_permission() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(response.error.is_none());
   let result = response.result.expect("turn result");
@@ -109,7 +110,7 @@ fn shell_requests_require_plugin_permission_before_approval() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(response.error.is_none());
   let result = response.result.expect("turn result");
@@ -189,7 +190,7 @@ fn approval_resolution_rechecks_plugin_permissions() {
   );
 
   let written_file = workspace.join("docs").join("output.txt");
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(approval_response.error.is_none());
   let approval_result = approval_response.result.expect("approval result");

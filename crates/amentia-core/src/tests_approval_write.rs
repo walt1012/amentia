@@ -1,4 +1,6 @@
-use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
+use super::test_support::{
+  create_temp_workspace, enable_full_access_plugin, remove_temp_workspace, request,
+};
 use super::*;
 use amentia_protocol::methods;
 use amentia_storage::RuntimeStore;
@@ -119,7 +121,7 @@ fn approval_respond_writes_file_after_approval() {
     .load_workspace_changes_for_thread("thread-1")
     .expect("load reverted workspace changes");
   let file_exists_after_revert = workspace.join("docs").join("output.txt").exists();
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
   fs::remove_dir_all(&store_root).expect("cleanup temp store");
 
   assert!(approval_response.error.is_none());
@@ -285,7 +287,7 @@ fn thread_revert_changes_refuses_user_modified_file() {
   );
   let preserved_content =
     fs::read_to_string(workspace.join("docs").join("output.txt")).expect("read output");
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
   fs::remove_dir_all(&store_root).expect("cleanup temp store");
 
   assert!(preview_response.error.is_none());
@@ -363,7 +365,7 @@ fn natural_handoff_save_uses_write_approval() {
 
   let written_content =
     fs::read_to_string(workspace.join("docs").join("handoff.md")).expect("read handoff");
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(approval_response.error.is_none());
   assert_eq!(written_content, "Ship M7 carefully.");
@@ -422,7 +424,7 @@ fn approved_workspace_execution_writes_without_pending_approval() {
 
   let written_content =
     fs::read_to_string(workspace.join("docs").join("auto.txt")).expect("read written output");
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let turn_result = turn_response.result.expect("turn result");
@@ -478,7 +480,7 @@ fn explore_mode_blocks_workspace_write_even_with_permission() {
   );
 
   let target_exists = workspace.join("docs").join("explore.txt").exists();
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let turn_result = turn_response.result.expect("turn result");

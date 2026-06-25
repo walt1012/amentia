@@ -1,6 +1,7 @@
 #[cfg(unix)]
 use super::test_support::{
-  create_temp_plugin_bundle, create_temp_workspace, replace_plugin_catalog, request,
+  create_temp_plugin_bundle, create_temp_workspace, remove_temp_workspace,
+  replace_plugin_catalog, request,
 };
 #[cfg(unix)]
 use super::{handle_request, RuntimeContext};
@@ -308,7 +309,7 @@ fn run_mcp_content_case(case: McpContentCase<'_>) -> Vec<Value> {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
   fs::remove_dir_all(source_root.parent().expect("plugin root")).expect("cleanup plugin source");
 
   assert!(response.error.is_none());

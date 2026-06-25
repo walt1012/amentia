@@ -1,4 +1,6 @@
-use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
+use super::test_support::{
+  create_temp_workspace, enable_full_access_plugin, remove_temp_workspace, request,
+};
 use super::*;
 use amentia_protocol::methods;
 use serde_json::json;
@@ -55,7 +57,7 @@ fn thread_summary_memory_note_is_updated_after_approval_resolution() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(approval_response.error.is_none());
   let summary_note = context
@@ -132,7 +134,7 @@ fn follow_up_turn_retrieves_recent_memory_notes() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(follow_up_turn.error.is_none());
   let items = follow_up_turn.result.expect("follow-up turn result")["items"]

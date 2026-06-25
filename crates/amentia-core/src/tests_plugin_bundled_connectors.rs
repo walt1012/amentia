@@ -1,7 +1,8 @@
 #![cfg(unix)]
 
 use super::test_support::{
-  bundled_manifest_plugin_entry, create_temp_workspace, replace_plugin_catalog, request,
+  bundled_manifest_plugin_entry, create_temp_workspace, remove_temp_workspace,
+  replace_plugin_catalog, request,
 };
 use super::*;
 use amentia_protocol::methods;
@@ -51,7 +52,7 @@ fn bundled_notion_connector_runs_local_mcp_draft_after_approval() {
   );
 
   let approval_result = approve_pending(&mut context, &result);
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   let items = approval_result["items"].as_array().expect("approval items");
   assert_local_draft_items(&context, items);
@@ -89,7 +90,7 @@ fn bundled_notion_connector_natural_turn_resumes_the_same_agent_step() {
   assert_eq!(items[2]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
 
   let approval_result = approve_pending(&mut context, &result);
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   let approved_items = approval_result["items"].as_array().expect("approval items");
   let draft_item = approved_items
@@ -155,7 +156,7 @@ fn bundled_notion_connector_natural_turn_carries_saved_handoff_reference() {
   );
 
   let approval_result = approve_pending(&mut context, &result);
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   let approved_items = approval_result["items"].as_array().expect("approval items");
   let draft_item = approved_items
@@ -233,7 +234,7 @@ fn bundled_notion_connector_natural_publish_request_routes_to_write_inspection()
   assert_eq!(items[2]["attributes"]["connectorId"], NOTION_CONNECTOR_ID);
 
   let approval_result = approve_pending(&mut context, &result);
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   let approved_items = approval_result["items"].as_array().expect("approval items");
   assert!(approved_items
@@ -285,7 +286,7 @@ fn bundled_notion_connector_inspects_remote_write_after_approval() {
   );
 
   let approval_result = approve_pending(&mut context, &result);
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   let approved_items = approval_result["items"].as_array().expect("approval items");
   let inspection_item = approved_items

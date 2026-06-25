@@ -1,4 +1,6 @@
-use super::test_support::{create_temp_workspace, enable_full_access_plugin, request};
+use super::test_support::{
+  create_temp_workspace, enable_full_access_plugin, remove_temp_workspace, request,
+};
 use super::*;
 use amentia_protocol::methods;
 use serde_json::json;
@@ -50,7 +52,7 @@ fn collect_notifications_emits_thread_update_for_active_turn() {
 
   let notifications = collect_notifications(&mut context).expect("collect notifications");
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert_eq!(notifications.len(), 1);
   assert_eq!(
@@ -130,7 +132,7 @@ fn turn_cancel_stops_an_active_assistant_response() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(cancel_response.error.is_none());
   let cancel_result = cancel_response.result.expect("cancel result");

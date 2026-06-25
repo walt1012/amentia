@@ -1,6 +1,6 @@
 use super::test_support::{
   bundled_manifest_plugin_entry, create_temp_workspace, enable_full_access_plugin,
-  replace_plugin_catalog, request,
+  remove_temp_workspace, replace_plugin_catalog, request,
 };
 use super::*;
 use amentia_protocol::methods;
@@ -81,7 +81,7 @@ fn approval_respond_runs_shell_after_approval() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(approval_response.error.is_none());
   let approval_result = approval_response.result.expect("approval result");
@@ -197,7 +197,7 @@ fn approved_shell_execution_honors_pending_cancellation() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(approval_response.error.is_none());
   let approval_result = approval_response.result.expect("approval result");
@@ -257,7 +257,7 @@ fn approved_workspace_execution_runs_shell_without_pending_approval() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let turn_result = turn_response.result.expect("turn result");
@@ -313,7 +313,7 @@ fn explore_mode_blocks_shell_even_with_permission() {
   );
 
   let target_exists = target.exists();
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let turn_result = turn_response.result.expect("turn result");

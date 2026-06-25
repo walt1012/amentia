@@ -26,6 +26,10 @@ pub(crate) fn create_temp_workspace(label: &str) -> PathBuf {
   path
 }
 
+pub(crate) fn remove_temp_workspace(workspace: &Path) {
+  fs::remove_dir_all(workspace).expect("cleanup temp workspace");
+}
+
 pub(crate) fn create_temp_plugin_bundle(
   label: &str,
   plugin_name: &str,

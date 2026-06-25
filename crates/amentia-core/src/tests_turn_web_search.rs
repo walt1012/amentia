@@ -1,6 +1,6 @@
 use super::test_support::{
-  bundled_plugin_entry, create_temp_workspace, enable_full_access_plugin, replace_plugin_catalog,
-  request,
+  bundled_plugin_entry, create_temp_workspace, enable_full_access_plugin,
+  remove_temp_workspace, replace_plugin_catalog, request,
 };
 use super::*;
 use amentia_protocol::methods;
@@ -265,7 +265,7 @@ fn turn_start_prefers_workspace_file_over_fresh_web_search() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -329,7 +329,7 @@ fn turn_start_routes_fresh_find_requests_to_web_search_with_workspace_open() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
@@ -384,7 +384,7 @@ fn turn_start_executes_web_search_with_fixture_client() {
     ),
   );
 
-  fs::remove_dir_all(&workspace).expect("cleanup temp workspace");
+  remove_temp_workspace(&workspace);
 
   assert!(turn_response.error.is_none());
   let result = turn_response.result.expect("turn result");
