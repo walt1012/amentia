@@ -82,6 +82,8 @@ extension AppViewModel {
       runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady(),
       hasActiveTurn: hasActiveOrPendingTurn(),
+      isCheckingModel: isCheckingLocalModel,
+      hasPendingModelCheck: localModelProbeCoordinator.hasPendingPostActivationCheck,
       downloadingModel: localModel(for: modelDownloadState.activeModelID),
       pausedModel: localModel(for: modelDownloadState.pausedModelID),
       selectedSetupModel: selectedSetupModel(),

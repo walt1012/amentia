@@ -7,6 +7,10 @@ struct LocalModelProbeRequest: Equatable {
 final class LocalModelProbeCoordinator {
   private var pendingPostActivationRequest: LocalModelProbeRequest?
 
+  var hasPendingPostActivationCheck: Bool {
+    pendingPostActivationRequest != nil
+  }
+
   func schedulePostActivationCheck(modelID: String) {
     pendingPostActivationRequest = LocalModelProbeRequest(modelID: modelID)
   }

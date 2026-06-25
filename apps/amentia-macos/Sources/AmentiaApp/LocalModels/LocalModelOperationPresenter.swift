@@ -4,6 +4,8 @@ struct LocalModelOperationSnapshot {
   let runtimeState: RuntimeBridge.ConnectionState
   let isLocalModelReady: Bool
   let hasActiveTurn: Bool
+  let isCheckingModel: Bool
+  let hasPendingModelCheck: Bool
   let downloadingModel: LocalModelSummary?
   let pausedModel: LocalModelSummary?
   let selectedSetupModel: LocalModelSummary?
@@ -102,6 +104,12 @@ enum LocalModelOperationPresenter {
     if snapshot.hasActiveTurn {
       return "Active: \(snapshot.activeModelDisplayName ?? "local model"). Switching waits for the current work."
     }
+    if snapshot.isCheckingModel {
+      return "Checking the active local model before using it for cowork."
+    }
+    if snapshot.hasPendingModelCheck {
+      return "Selected: \(snapshot.activeModelDisplayName ?? "local model"). Amentia will confirm it can answer after startup settles."
+    }
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
     let localSize = LocalModelByteFormatter.string(snapshot.downloadedLocalSizeBytes)
@@ -153,6 +161,29 @@ enum LocalModelOperationPresenter {
         detail: "Finish or stop the current work before switching the active model.",
         actionSummary: "Finish or stop the current work before switching the active model.",
         readinessDetail: "Working",
+        tone: .active
+      )
+    }
+
+    if snapshot.isCheckingModel {
+      return LocalModelSetupGuidance(
+        title: "Checking Local Model",
+        summary: "Amentia is confirming the active local model can answer.",
+        detail: "This short local check runs on this Mac and does not call a hosted model API.",
+        actionSummary: "Checking the active local model...",
+        readinessDetail: "Checking",
+        tone: .active
+      )
+    }
+
+    if snapshot.hasPendingModelCheck {
+      let activeModel = snapshot.activeModelDisplayName ?? "the selected local model"
+      return LocalModelSetupGuidance(
+        title: "Confirm Local Model",
+        summary: "\(activeModel) is selected. Amentia will run a short local check next.",
+        detail: "Startup is settling before the model check begins.",
+        actionSummary: "Waiting to confirm the active local model can answer.",
+        readinessDetail: "Checking",
         tone: .active
       )
     }
@@ -241,6 +272,14 @@ enum LocalModelOperationPresenter {
 
     if snapshot.hasActiveTurn {
       return "Finish or stop the current work before changing models."
+    }
+
+    if snapshot.isCheckingModel {
+      return "Amentia is running a short local check to confirm the active model can answer."
+    }
+
+    if snapshot.hasPendingModelCheck {
+      return "Amentia will check the active model as soon as startup and setup are ready."
     }
 
     if snapshot.isLocalModelReady {

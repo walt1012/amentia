@@ -378,6 +378,53 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(recoverySummary.contains("turn"))
   }
 
+  func testPendingModelCheckHasClearUserGuidance() {
+    let selectedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: true,
+      active: true
+    )
+    let snapshot = operationSnapshot(
+      isLocalModelReady: false,
+      hasPendingModelCheck: true,
+      selectedModel: selectedModel,
+      activeModelDisplayName: "Granite 4.0-H-350M"
+    )
+
+    let guidance = LocalModelOperationPresenter.setupGuidance(snapshot)
+    let managerSummary = LocalModelOperationPresenter.managerSummary(snapshot)
+    let recoverySummary = LocalModelOperationPresenter.recoverySummary(snapshot)
+
+    XCTAssertEqual(guidance.title, "Confirm Local Model")
+    XCTAssertEqual(guidance.readinessDetail, "Checking")
+    XCTAssertTrue(managerSummary.contains("confirm it can answer"))
+    XCTAssertTrue(recoverySummary.contains("check the active model"))
+    XCTAssertFalse(guidance.detail.contains("llama"))
+  }
+
+  func testRunningModelCheckHasClearUserGuidance() {
+    let selectedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: true,
+      active: true
+    )
+    let snapshot = operationSnapshot(
+      isLocalModelReady: false,
+      isCheckingModel: true,
+      selectedModel: selectedModel,
+      activeModelDisplayName: "Granite 4.0-H-350M"
+    )
+
+    let guidance = LocalModelOperationPresenter.setupGuidance(snapshot)
+
+    XCTAssertEqual(guidance.title, "Checking Local Model")
+    XCTAssertEqual(guidance.tone, .active)
+    XCTAssertTrue(guidance.actionSummary.contains("Checking"))
+    XCTAssertFalse(guidance.summary.contains("probe"))
+  }
+
   func testSetupPrimaryActionOffersModelCheckWhenReady() {
     let action = LocalModelActionPlanner.setupPrimaryAction(actionSnapshot(
       isLocalModelReady: true,
@@ -458,6 +505,8 @@ final class LocalModelPresenterTests: XCTestCase {
     runtimeState: RuntimeBridge.ConnectionState = .ready,
     isLocalModelReady: Bool = false,
     hasActiveTurn: Bool = false,
+    isCheckingModel: Bool = false,
+    hasPendingModelCheck: Bool = false,
     downloadingModel: LocalModelSummary? = nil,
     pausedModel: LocalModelSummary? = nil,
     selectedModel: LocalModelSummary? = nil,
@@ -471,6 +520,8 @@ final class LocalModelPresenterTests: XCTestCase {
       runtimeState: runtimeState,
       isLocalModelReady: isLocalModelReady,
       hasActiveTurn: hasActiveTurn,
+      isCheckingModel: isCheckingModel,
+      hasPendingModelCheck: hasPendingModelCheck,
       downloadingModel: downloadingModel,
       pausedModel: pausedModel,
       selectedSetupModel: selectedModel,
