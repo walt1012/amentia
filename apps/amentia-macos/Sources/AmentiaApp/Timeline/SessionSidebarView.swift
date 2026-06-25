@@ -4,6 +4,7 @@ struct SessionSidebarView: View {
   @ObservedObject var viewModel: AppViewModel
   @State private var sessionDeleteCandidate: ThreadSummary?
   @State private var sessionRevertCandidate: SessionRevertCandidate?
+  @State private var sessionSearchText = ""
   @State private var confirmsResetAmentia = false
 
   var body: some View {
@@ -14,8 +15,13 @@ struct SessionSidebarView: View {
             title: "No Sessions Yet",
             detail: viewModel.sidebarEmptyStateDetail()
           )
+        } else if filteredSessions.isEmpty {
+          SidebarEmptyState(
+            title: "No Matching Sessions",
+            detail: "Try a different session title or recent request."
+          )
         } else {
-          ForEach(viewModel.threads) { thread in
+          ForEach(filteredSessions) { thread in
             SidebarSessionRow(thread: thread)
               .tag(thread.id)
               .contextMenu {
@@ -61,6 +67,7 @@ struct SessionSidebarView: View {
     .listStyle(.sidebar)
     .background(AmentiaVisualStyle.windowBackground)
     .animation(AmentiaMotionStyle.sectionReveal, value: viewModel.threads.count)
+    .searchable(text: $sessionSearchText)
     .alert(item: $sessionDeleteCandidate) { thread in
       let prompt = SessionChangePresenter.deletePrompt()
       return Alert(
@@ -110,6 +117,18 @@ struct SessionSidebarView: View {
 
   private var selectedSession: ThreadSummary? {
     viewModel.threads.first { $0.id == viewModel.selectedThreadID }
+  }
+
+  private var filteredSessions: [ThreadSummary] {
+    let query = sessionSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !query.isEmpty else {
+      return viewModel.threads
+    }
+
+    return viewModel.threads.filter { thread in
+      thread.title.localizedCaseInsensitiveContains(query)
+        || thread.preview.localizedCaseInsensitiveContains(query)
+    }
   }
 
   private var resetSummary: LocalDataSettingsSummary {
