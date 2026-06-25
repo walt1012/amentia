@@ -184,11 +184,13 @@ final class CoworkFirstPresentationTests: XCTestCase {
 
   func testTimelineFailureUsesRequestLanguage() {
     let entry = TimelineEventPresenter.turnFailed(
-      error: RuntimeBridge.RuntimeError.rpc("failed")
+      error: RuntimeBridge.RuntimeError.rpc("backend stack trace")
     )
 
     XCTAssertEqual(entry.title, "Request Failed")
+    XCTAssertTrue(entry.body.contains("prompt was restored"))
     XCTAssertFalse(entry.title.contains("Turn"))
+    XCTAssertFalse(entry.body.contains("backend stack trace"))
   }
 
   func testReadinessStripStaysVisibleForToolSetup() {

@@ -77,6 +77,8 @@ The current product baseline includes:
   cancellable subprocesses, and human receipts.
 - Session search, delete, deletion receipts, change preview, and revert.
 - First prompt drafting and sending from the setup checklist or composer.
+- Failed first prompts keep the user draft, show a retryable recovery message,
+  and update the session preview without exposing backend details.
 - Reset Amentia for app-owned data, downloaded models, and paused downloads.
 - Local plugin registry, installation lifecycle, Actions, Connections, Skills,
   MCP, Tools, Checks, credentials, retries, and generic connector receipts.

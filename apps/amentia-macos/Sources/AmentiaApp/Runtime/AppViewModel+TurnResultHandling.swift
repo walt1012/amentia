@@ -82,7 +82,11 @@ extension AppViewModel {
     if draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       draftMessage = message
     }
-    runtimeDetail = error.localizedDescription
+    runtimeDetail = TimelineEventPresenter.turnFailedDetail
+    refreshThreadPreview(
+      threadID: threadID,
+      preview: TimelineEventPresenter.failedResponsePreview
+    )
     appendEntry(
       to: threadID,
       TimelineEventPresenter.turnFailed(error: error)

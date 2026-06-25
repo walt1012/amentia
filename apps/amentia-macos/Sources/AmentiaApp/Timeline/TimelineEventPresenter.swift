@@ -4,9 +4,11 @@ enum TimelineEventPresenter {
   static let generatingLocalResponseDetail = "Amentia is preparing a response..."
   static let pendingTurnCancelledDetail = "Request cancelled."
   static let cancellingTurnDetail = "Cancelling request..."
+  static let turnFailedDetail = "Amentia could not finish the response. Your prompt is still in the composer."
 
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
+  static let failedResponsePreview = "Response failed"
 
   static func turnPreview(turnID: String, activeTurnID: String?) -> String {
     activeTurnID == nil ? "Response ready" : "Response in progress"
@@ -39,8 +41,11 @@ enum TimelineEventPresenter {
   static func turnFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Request Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: "Amentia could not finish the response. Your prompt was restored so you can try again after checking the local model.",
+      attributes: [
+        "failureKind": "request",
+        "recovery": "retry-or-check-local-model"
+      ]
     )
   }
 
