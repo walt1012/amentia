@@ -75,7 +75,7 @@ The current product baseline includes:
 - Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
   cancellable subprocesses, and human receipts.
 - Session search, delete, deletion receipts, change preview, and revert.
-- Reset Amentia for app-owned data.
+- Reset Amentia for app-owned data, downloaded models, and paused downloads.
 - Local plugin registry, installation lifecycle, Actions, Connections, Skills,
   MCP, Tools, Checks, credentials, retries, and generic connector receipts.
 - Legacy prompt-pack aliases are out of the active plugin contract.

@@ -20,7 +20,7 @@ extension AppViewModel {
     runtimeState != .launching
       && !localDataResetInProgress
       && !hasActiveOrPendingTurn()
-      && !modelDownloadCoordinator.isDownloading
+      && !isCheckingLocalModel
       && !localModelActivationCoordinator.isActivating
       && !pluginLifecycleOperations.isActive
   }
@@ -51,6 +51,7 @@ extension AppViewModel {
     turnCancellationCoordinator.cancel()
     runtimeRelaunchCoordinator.cancel()
     localModelMetadataCoordinator.cancel()
+    localModelProbeCoordinator.cancelPendingPostActivationCheck()
     localModelActivationCoordinator.cancel()
     pluginLifecycleOperations.cancel()
     modelDownloadCoordinator.cancelActiveDownload()
