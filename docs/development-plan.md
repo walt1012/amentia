@@ -70,7 +70,8 @@ The current product baseline includes:
 
 - Unsigned x86_64 DMG release flow with concise public assets.
 - In-app model download, verification, activation, pause, resume, cancel, and
-  one active model.
+  one active model, with first-use model check guidance in the model panel and
+  composer.
 - Packaged local backend launch probing and bounded file-backed inference.
 - Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
   cancellable subprocesses, and human receipts.

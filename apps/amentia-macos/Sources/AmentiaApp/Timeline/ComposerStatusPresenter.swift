@@ -4,6 +4,7 @@ struct ComposerStatusSnapshot {
   let runtimeState: RuntimeBridge.ConnectionState
   let modelSetupTitle: String
   let modelSetupSummary: String
+  let modelSetupActionSummary: String
   let isLocalModelReady: Bool
   let hasWorkspace: Bool
   let hasRuntimeThreadSelection: Bool
@@ -65,7 +66,7 @@ enum ComposerStatusPresenter {
       return "Restart Amentia to recover."
     case .ready:
       if !snapshot.isLocalModelReady {
-        return "\(snapshot.modelSetupSummary) Continue model setup to run locally."
+        return "\(snapshot.modelSetupSummary) \(snapshot.modelSetupActionSummary)"
       }
 
       if !snapshot.hasWorkspace {

@@ -402,6 +402,29 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(summary, "Ask mode is ready. Review the restored prompt, then send it.")
   }
 
+  func testComposerShowsModelSetupNextActionBeforeCoworkUnlocks() {
+    let snapshot = ComposerStatusSnapshot(
+      runtimeState: .ready,
+      modelSetupTitle: "Almost Ready",
+      modelSetupSummary: "Granite is selected. Amentia will run one final local check next.",
+      modelSetupActionSummary: "Run the model check to unlock cowork.",
+      isLocalModelReady: false,
+      hasWorkspace: true,
+      hasRuntimeThreadSelection: true,
+      hasActiveTurn: false,
+      isWaitingForFirstMessage: true,
+      hasDraftMessage: false,
+      hasRestoredLocalExecutionDraft: false
+    )
+
+    XCTAssertEqual(ComposerStatusPresenter.placeholder(snapshot), "Almost Ready")
+    XCTAssertEqual(
+      ComposerStatusPresenter.statusSummary(snapshot),
+      "Granite is selected. Amentia will run one final local check next. Run the model check to unlock cowork."
+    )
+    XCTAssertFalse(ComposerStatusPresenter.statusSummary(snapshot).contains("Continue model setup"))
+  }
+
   func testActiveWorkCopyAvoidsLocalExecutionTerminology() {
     let composer = composerSnapshot(hasDraftMessage: false, hasActiveTurn: true)
     let inspector = InspectorSessionSnapshot(
@@ -1395,6 +1418,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       runtimeState: .ready,
       modelSetupTitle: "Download model",
       modelSetupSummary: "Model ready.",
+      modelSetupActionSummary: "Continue setup.",
       isLocalModelReady: true,
       hasWorkspace: true,
       hasRuntimeThreadSelection: true,

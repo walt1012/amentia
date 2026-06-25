@@ -24,6 +24,7 @@ extension AppViewModel {
       runtimeState: runtimeState,
       modelSetupTitle: modelGuidance.title,
       modelSetupSummary: modelGuidance.summary,
+      modelSetupActionSummary: modelGuidance.actionSummary,
       isLocalModelReady: isLocalModelReady(),
       hasWorkspace: workspace != nil,
       hasRuntimeThreadSelection: hasRuntimeThreadSelection(),
