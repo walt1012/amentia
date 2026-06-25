@@ -25,7 +25,7 @@ final class LocalModelProbeCoordinatorTests: XCTestCase {
     coordinator.schedulePostActivationCheck(modelID: "granite-4.0-h-350m")
 
     XCTAssertNil(coordinator.consumePostActivationCheck(
-      activeModelID: "granite-4.0-h-350m",
+      activeModelID: "minicpm5-1b",
       canProbe: true
     ))
     XCTAssertNil(coordinator.consumePostActivationCheck(

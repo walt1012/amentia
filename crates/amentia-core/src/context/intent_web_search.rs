@@ -157,15 +157,16 @@ mod tests {
       infer_explicit_web_search_intent("web search for `Amentia local model`?").expect("intent");
     assert_eq!(local_model.query, "Amentia local model");
 
-    let granite =
-      infer_explicit_web_search_intent("search the web for IBM Granite 4.0-H-350M").expect("intent");
+    let granite = infer_explicit_web_search_intent("search the web for IBM Granite 4.0-H-350M")
+      .expect("intent");
     assert_eq!(granite.query, "IBM Granite 4.0-H-350M");
 
     let plugins = infer_explicit_web_search_intent("websearch amentia plugins").expect("intent");
     assert_eq!(plugins.query, "amentia plugins");
     let browser = infer_explicit_web_search_intent("browse the web for Amentia").expect("intent");
     assert_eq!(browser.query, "Amentia");
-    let online = infer_explicit_web_search_intent("check online for Granite 4.0-H-350M").expect("intent");
+    let online =
+      infer_explicit_web_search_intent("check online for Granite 4.0-H-350M").expect("intent");
     assert_eq!(online.query, "Granite 4.0-H-350M");
     let lookup = infer_explicit_web_search_intent("look up IBM Granite").expect("lookup intent");
     assert_eq!(lookup.query, "IBM Granite");
@@ -175,16 +176,19 @@ mod tests {
 
   #[test]
   fn fresh_web_search_query_inference_uses_current_information_signals() {
-    let release =
-      infer_fresh_web_search_intent("What is the latest Granite 4.0-H-350M release?").expect("intent");
-    assert_eq!(release.query, "What is the latest Granite 4.0-H-350M release");
+    let release = infer_fresh_web_search_intent("What is the latest Granite 4.0-H-350M release?")
+      .expect("intent");
+    assert_eq!(
+      release.query,
+      "What is the latest Granite 4.0-H-350M release"
+    );
     let ceo = infer_fresh_web_search_intent("Who is the CEO of IBM?").expect("intent");
     assert_eq!(ceo.routing_reason, "freshPublicInformation");
     let stock =
       infer_fresh_web_search_intent("What is Apple's stock price today?").expect("intent");
     assert_eq!(stock.query, "What is Apple's stock price today");
-    let current =
-      infer_fresh_web_search_intent("Is the Granite 4.0-H-350M model list up to date?").expect("intent");
+    let current = infer_fresh_web_search_intent("Is the Granite 4.0-H-350M model list up to date?")
+      .expect("intent");
     assert_eq!(current.routing_reason, "freshPublicInformation");
     assert!(infer_fresh_web_search_intent("What changed in this repo?").is_none());
     assert!(infer_fresh_web_search_intent("What version is in Cargo.toml?").is_none());
