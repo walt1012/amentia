@@ -396,8 +396,10 @@ final class LocalModelPresenterTests: XCTestCase {
     let managerSummary = LocalModelOperationPresenter.managerSummary(snapshot)
     let recoverySummary = LocalModelOperationPresenter.recoverySummary(snapshot)
 
-    XCTAssertEqual(guidance.title, "Confirm Local Model")
+    XCTAssertEqual(guidance.title, "Almost Ready")
     XCTAssertEqual(guidance.readinessDetail, "Checking")
+    XCTAssertTrue(guidance.summary.contains("final local check"))
+    XCTAssertTrue(guidance.detail.contains("start cowork prompts"))
     XCTAssertTrue(managerSummary.contains("confirm it can answer"))
     XCTAssertTrue(recoverySummary.contains("check the active model"))
     XCTAssertFalse(guidance.detail.contains("llama"))
@@ -422,6 +424,7 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertEqual(guidance.title, "Checking Local Model")
     XCTAssertEqual(guidance.tone, .active)
     XCTAssertTrue(guidance.actionSummary.contains("Checking"))
+    XCTAssertTrue(guidance.summary.contains("cowork unlocks"))
     XCTAssertFalse(guidance.summary.contains("probe"))
   }
 
@@ -451,7 +454,7 @@ final class LocalModelPresenterTests: XCTestCase {
       modelCheckFailureDetail: detail
     ))
 
-    XCTAssertEqual(guidance.title, "Check Local Model")
+    XCTAssertEqual(guidance.title, "Model Check Needed")
     XCTAssertEqual(guidance.readinessDetail, "Check Failed")
     XCTAssertEqual(status, "Model check failed")
     XCTAssertEqual(readiness, "Local model setup needs a successful check.")
@@ -478,7 +481,7 @@ final class LocalModelPresenterTests: XCTestCase {
         isLocalModelReady: true,
         canProbeModel: true
       )),
-      "Check Model"
+      "Run Model Check"
     )
   }
 

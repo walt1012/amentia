@@ -87,7 +87,7 @@ The current product baseline includes:
 
 ## M15 Cowork Continuity
 
-Status: active. Current focus: confirmed local model use and session continuity.
+Status: active. Current focus: first-use local model confirmation and session continuity.
 
 Goal: make Amentia useful across real sessions without turning it into a remote
 server agent or a code-only assistant.

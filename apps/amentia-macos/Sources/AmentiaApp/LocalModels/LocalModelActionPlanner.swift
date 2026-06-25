@@ -112,7 +112,7 @@ enum LocalModelActionPlanner {
     case .bootstrapModelPackMetadata:
       return "Repair Model"
     case .probeModel:
-      return snapshot.isCheckingModel ? "Checking Model" : "Check Model"
+      return snapshot.isCheckingModel ? "Checking Model" : "Run Model Check"
     }
   }
 

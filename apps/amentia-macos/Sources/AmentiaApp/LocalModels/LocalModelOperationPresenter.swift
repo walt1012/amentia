@@ -172,9 +172,9 @@ enum LocalModelOperationPresenter {
     if snapshot.isCheckingModel {
       return LocalModelSetupGuidance(
         title: "Checking Local Model",
-        summary: "Amentia is confirming the active local model can answer.",
-        detail: "This short local check runs on this Mac and does not call a hosted model API.",
-        actionSummary: "Checking the active local model...",
+        summary: "Amentia is running the final local check before cowork unlocks.",
+        detail: "This short check runs on this Mac and confirms the selected model can answer.",
+        actionSummary: "Checking the selected model before cowork starts...",
         readinessDetail: "Checking",
         tone: .active
       )
@@ -183,10 +183,10 @@ enum LocalModelOperationPresenter {
     if snapshot.hasPendingModelCheck {
       let activeModel = snapshot.activeModelDisplayName ?? "the selected local model"
       return LocalModelSetupGuidance(
-        title: "Confirm Local Model",
-        summary: "\(activeModel) is selected. Amentia will run a short local check next.",
-        detail: "Startup is settling before the model check begins.",
-        actionSummary: "Waiting to confirm the active local model can answer.",
+        title: "Almost Ready",
+        summary: "\(activeModel) is selected. Amentia will run one final local check next.",
+        detail: "After this check passes, you can start cowork prompts.",
+        actionSummary: "Waiting for the final local model check.",
         readinessDetail: "Checking",
         tone: .active
       )
@@ -194,7 +194,7 @@ enum LocalModelOperationPresenter {
 
     if let failureDetail = snapshot.modelCheckFailureDetail {
       return LocalModelSetupGuidance(
-        title: "Check Local Model",
+        title: "Model Check Needed",
         summary: "The active local model did not answer successfully.",
         detail: failureDetail,
         actionSummary: "Check the model again, restart Amentia, or re-download the selected model.",
@@ -208,7 +208,7 @@ enum LocalModelOperationPresenter {
       return LocalModelSetupGuidance(
         title: "Local Model Ready",
         summary: "\(activeModel) is ready for local cowork.",
-        detail: "Amentia will use one active local model at a time for generation.",
+        detail: "You can start cowork prompts now. Amentia will use one active local model at a time.",
         actionSummary: "Local model is ready for cowork.",
         readinessDetail: "Ready",
         tone: .ready
