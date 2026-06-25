@@ -4,15 +4,15 @@ import XCTest
 final class LocalModelPresenterTests: XCTestCase {
   func testDefaultDownloadButtonNamesSelectedFirstUseModel() {
     let snapshot = statusSnapshot(selectedModel: model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     ))
 
     XCTAssertEqual(
       LocalModelStatusPresenter.defaultDownloadButtonTitle(snapshot),
-      "Download LFM2.5-350M"
+      "Download Granite 4.0-H-350M"
     )
   }
 
@@ -32,8 +32,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testPausedDownloadActionNamesSelectedModel() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
@@ -44,14 +44,14 @@ final class LocalModelPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       LocalModelStatusPresenter.defaultDownloadButtonTitle(snapshot),
-      "Continue LFM2.5-350M"
+      "Continue Granite 4.0-H-350M"
     )
   }
 
   func testRecoverySummaryExplainsPausedDownloadChoices() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
@@ -59,7 +59,7 @@ final class LocalModelPresenterTests: XCTestCase {
       operationSnapshot(pausedModel: selectedModel, selectedModel: selectedModel)
     )
 
-    XCTAssertTrue(summary.contains("Continue LFM2.5-350M"))
+    XCTAssertTrue(summary.contains("Continue Granite 4.0-H-350M"))
     XCTAssertFalse(summary.contains("Q4_K_M"))
     XCTAssertTrue(summary.contains("cancel to remove the partial file"))
   }
@@ -83,8 +83,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testSetupGuidanceNamesModelDownloadInsteadOfEngineDownload() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
@@ -101,8 +101,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testSetupModelChoiceDetailAvoidsTechnicalSeparators() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
@@ -111,7 +111,7 @@ final class LocalModelPresenterTests: XCTestCase {
       defaultModelID: selectedModel.id
     )
 
-    XCTAssertTrue(detail.contains("LFM2.5-350M"))
+    XCTAssertTrue(detail.contains("Granite 4.0-H-350M"))
     XCTAssertTrue(detail.contains("one verified local model"))
     XCTAssertFalse(detail.contains("|"))
     XCTAssertFalse(detail.contains("Q4_K_M"))
@@ -119,8 +119,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testLocalModelStatusSummaryAvoidsPipeSeparators() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: true,
       active: true
     )
@@ -136,8 +136,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testModelFitSummaryAvoidsInternalTags() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
@@ -154,8 +154,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testModelMetricsSummaryAvoidsBackendTerminology() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: true,
       active: true
     )
@@ -174,7 +174,7 @@ final class LocalModelPresenterTests: XCTestCase {
         metrics: [
           "contextSize": "4096",
           "modelContextSize": "32768",
-          "maxOutputTokens": "160",
+          "maxOutputTokens": "192",
           "backend": "llama.cpp",
         ]
       ),
@@ -182,7 +182,7 @@ final class LocalModelPresenterTests: XCTestCase {
     )
     let summary = LocalModelStatusPresenter.metricsSummary(snapshot)
 
-    XCTAssertEqual(summary, "Context: 4096 active / 32768 limit. Response limit: 160 tokens.")
+    XCTAssertEqual(summary, "Context: 4096 active / 32768 limit. Response limit: 192 tokens.")
     XCTAssertFalse(summary.contains("Backend"))
     XCTAssertFalse(summary.contains("llama"))
     XCTAssertFalse(summary.contains("/Applications"))
@@ -190,15 +190,15 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testFirstUseModelChoiceSummariesExplainCuratedFit() {
     let defaultModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
-      downloaded: false,
-      active: false,
-      tags: ["default", "tiny", "edge"]
-    )
-    let recommendedModel = model(
       id: "granite-4.0-h-350m",
       displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: false,
+      active: false,
+      tags: ["default", "recommended", "tiny", "tools", "code"]
+    )
+    let recommendedModel = model(
+      id: "balanced-tiny",
+      displayName: "Balanced Tiny Q4_K_M",
       downloaded: false,
       active: false,
       tags: ["recommended", "tiny", "tools", "code"]
@@ -258,8 +258,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testSetupGuidanceDescribesThreeModelTiers() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
@@ -275,7 +275,7 @@ final class LocalModelPresenterTests: XCTestCase {
   func testModelIntegrityErrorsAvoidRawPathsAndHashes() {
     let missingSize = LocalModelIntegrityError.missingSize(path: "/Users/example/model.gguf")
     let mismatch = LocalModelIntegrityError.checksumMismatch(
-      displayName: "LFM2.5-350M",
+      displayName: "Granite 4.0-H-350M",
       expected: String(repeating: "a", count: 64),
       actual: String(repeating: "b", count: 64)
     )
@@ -289,8 +289,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testDownloadProgressSummaryAvoidsPipeSeparators() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
@@ -318,15 +318,15 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testDownloadInterruptionCopyUsesFriendlyModelName() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: false,
       active: false
     )
     let plan = LocalModelDownloadInterruptionPlanner.cancellationPlan(model: selectedModel)
 
     XCTAssertEqual(plan.timelineTitle, "Model Download Cancelled")
-    XCTAssertTrue(plan.runtimeDetail.contains("LFM2.5-350M"))
+    XCTAssertTrue(plan.runtimeDetail.contains("Granite 4.0-H-350M"))
     XCTAssertFalse(plan.runtimeDetail.contains("Q4_K_M"))
     XCTAssertFalse(plan.timelineTitle.contains("Engine"))
   }
@@ -350,8 +350,8 @@ final class LocalModelPresenterTests: XCTestCase {
 
   func testActiveWorkModelGuidanceAvoidsTurnAndStreamingLanguage() {
     let selectedModel = model(
-      id: "lfm2.5-350m",
-      displayName: "LFM2.5-350M Q4_K_M",
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
       downloaded: true,
       active: true
     )
@@ -359,7 +359,7 @@ final class LocalModelPresenterTests: XCTestCase {
       isLocalModelReady: true,
       hasActiveTurn: true,
       selectedModel: selectedModel,
-      activeModelDisplayName: "LFM2.5-350M"
+      activeModelDisplayName: "Granite 4.0-H-350M"
     )
 
     let guidance = LocalModelOperationPresenter.setupGuidance(snapshot)
@@ -407,7 +407,7 @@ final class LocalModelPresenterTests: XCTestCase {
       status: "ready",
       detail: "The active local model answered a short probe.",
       backend: "llama.cpp",
-      modelID: "lfm2.5-350m",
+      modelID: "granite-4.0-h-350m",
       sample: "Amentia model ready."
     ))
 
@@ -423,7 +423,7 @@ final class LocalModelPresenterTests: XCTestCase {
       status: "error",
       detail: "Local llama.cpp inference failed.",
       backend: "llama.cpp",
-      modelID: "lfm2.5-350m",
+      modelID: "granite-4.0-h-350m",
       sample: nil
     ))
 
@@ -521,7 +521,7 @@ final class LocalModelPresenterTests: XCTestCase {
     active: Bool,
     contextSize: Int = 4096,
     modelContextSize: Int = 32_768,
-    maxOutputTokens: Int = 160,
+    maxOutputTokens: Int = 192,
     tags: [String] = ["tiny"]
   ) -> LocalModelSummary {
     LocalModelSummary(

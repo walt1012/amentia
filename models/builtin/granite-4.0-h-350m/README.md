@@ -1,6 +1,6 @@
 ## Default Model Catalog Entry
 
-This directory tracks the default `LFM2.5-350M` catalog manifest for Amentia.
+This directory tracks the default `Granite 4.0-H-350M` catalog manifest for Amentia.
 
 What belongs in git:
 
@@ -10,7 +10,7 @@ What belongs in git:
 
 What does not belong in git history:
 
-- `LFM2.5-350M-Q4_K_M.gguf`
+- `granite-4.0-h-350m-Q4_K_M.gguf`
 - converted weight shards
 - large runtime binaries
 
@@ -20,12 +20,12 @@ Recommended local layout:
 <AMENTIA_DATA_DIR>/
 `-- models/
     `-- builtin/
-        `-- lfm2.5-350m/
+        `-- granite-4.0-h-350m/
             |-- model-pack.json
-            `-- LFM2.5-350M-Q4_K_M.gguf
+            `-- granite-4.0-h-350m-Q4_K_M.gguf
 ```
 
-Amentia can download the recommended Q4_K_M GGUF from the catalog manifest into the suggested app data path. The download target stays local and is never tracked in git.
+Amentia downloads the default Q4_K_M GGUF from the catalog manifest into the app-owned data path. The download target stays local and is never tracked in git.
 
 Manifest sizing metadata is intentionally split:
 

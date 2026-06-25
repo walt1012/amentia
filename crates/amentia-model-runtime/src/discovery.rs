@@ -62,14 +62,14 @@ pub(crate) fn resolve_manifest() -> Option<ManifestResolution> {
       current_dir
         .join("models")
         .join("builtin")
-        .join("lfm2.5-350m")
+        .join("granite-4.0-h-350m")
         .join("model-pack.json"),
       "default-manifest".to_string(),
     ));
     candidates.push((
       current_dir
         .join("model-packs")
-        .join("lfm2.5-350m")
+        .join("granite-4.0-h-350m")
         .join("model-pack.json"),
       "default-manifest".to_string(),
     ));
@@ -105,11 +105,11 @@ pub(crate) fn resolve_bootstrap_manifest(
       current_dir
         .join("models")
         .join("builtin")
-        .join("lfm2.5-350m")
+        .join("granite-4.0-h-350m")
         .join("model-pack.json"),
       current_dir
         .join("model-packs")
-        .join("lfm2.5-350m")
+        .join("granite-4.0-h-350m")
         .join("model-pack.json"),
     ];
 
@@ -175,9 +175,9 @@ fn default_binary_candidates() -> Vec<PathBuf> {
 
 fn default_model_candidates() -> Vec<PathBuf> {
   let file_names = [
-    "LFM2.5-350M-Q4_K_M.gguf",
-    "LFM2.5-350M.gguf",
-    "lfm2.5-350m.gguf",
+    "granite-4.0-h-350m-Q4_K_M.gguf",
+    "granite-4.0-h-350m.gguf",
+    "Granite-4.0-H-350M-Q4_K_M.gguf",
   ];
   let mut candidates = vec![];
 
@@ -265,14 +265,14 @@ pub(crate) fn discovery_roots() -> Vec<PathBuf> {
 pub(crate) fn suggested_manifest_install_path() -> PathBuf {
   suggested_model_root()
     .join("builtin")
-    .join("lfm2.5-350m")
+    .join("granite-4.0-h-350m")
     .join("model-pack.json")
 }
 
 pub(crate) fn suggested_model_install_path(file_name: &str) -> PathBuf {
   suggested_model_root()
     .join("builtin")
-    .join("lfm2.5-350m")
+    .join("granite-4.0-h-350m")
     .join(file_name)
 }
 

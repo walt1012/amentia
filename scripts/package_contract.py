@@ -14,9 +14,9 @@ APP_NAME = "Amentia"
 PACKAGE_MANIFEST_SCHEMA_VERSION = 1
 SUPPORTED_ARCH = "x86_64"
 MINIMUM_SYSTEM_VERSION = "12.0"
-DEFAULT_MODEL_ID = "lfm2.5-350m"
+DEFAULT_MODEL_ID = "granite-4.0-h-350m"
 DEFAULT_MODEL_MANIFEST_RELATIVE_PATH = Path(
-  "models/builtin/lfm2.5-350m/model-pack.json"
+  "models/builtin/granite-4.0-h-350m/model-pack.json"
 )
 MODEL_DELIVERY_MODE = "in-app-download"
 MODEL_WEIGHTS_BUNDLED = False

@@ -13,8 +13,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-MANIFEST_PATH = REPO_ROOT / "models" / "builtin" / "lfm2.5-350m" / "model-pack.json"
-README_PATH = REPO_ROOT / "models" / "builtin" / "lfm2.5-350m" / "README.md"
+MANIFEST_PATH = REPO_ROOT / "models" / "builtin" / "granite-4.0-h-350m" / "model-pack.json"
+README_PATH = REPO_ROOT / "models" / "builtin" / "granite-4.0-h-350m" / "README.md"
 SWIFT_SOURCE_ROOT = (
   REPO_ROOT
   / "apps"
@@ -86,8 +86,8 @@ def main() -> int:
   if missing_keys:
     raise SystemExit(f"model manifest missing keys: {', '.join(missing_keys)}")
 
-  if manifest["id"] != "lfm2.5-350m":
-    raise SystemExit("model manifest id must be lfm2.5-350m")
+  if manifest["id"] != "granite-4.0-h-350m":
+    raise SystemExit("model manifest id must be granite-4.0-h-350m")
   if manifest["backend"] != "llama.cpp":
     raise SystemExit("model manifest backend must be llama.cpp")
   if not str(manifest["file_name"]).lower().endswith(".gguf"):
@@ -104,7 +104,7 @@ def main() -> int:
     validate_remote_catalog_entries(swift_catalog_entries)
   swift_catalog = next(
     entry for entry in swift_catalog_entries
-    if entry["id"] == "lfm2.5-350m"
+    if entry["id"] == "granite-4.0-h-350m"
   )
   for manifest_key, (swift_key, _value_type) in CATALOG_FIELD_MAP.items():
     if manifest[manifest_key] != swift_catalog[swift_key]:
@@ -184,8 +184,8 @@ def validate_curated_catalog_shape(entries: list[dict[str, object]]) -> None:
     raise SystemExit(
       f"Swift model catalog has duplicate ids: {', '.join(duplicate_ids)}"
     )
-  if model_ids[0] != "lfm2.5-350m":
-    raise SystemExit("Swift model catalog must keep lfm2.5-350m as the first-use default")
+  if model_ids[0] != "granite-4.0-h-350m":
+    raise SystemExit("Swift model catalog must keep granite-4.0-h-350m as the first-use default")
 
   rejected_ids = sorted(REJECTED_CATALOG_MODEL_IDS.intersection(model_ids))
   if rejected_ids:

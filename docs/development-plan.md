@@ -7,7 +7,7 @@ Amentia is a small, strong, local-first macOS cowork agent for real daily work.
 - Native `Amentia` app, macOS 12+, `x86_64` only.
 - Cowork first; coding is one workflow, not the product boundary.
 - Local model by default, no required hosted model API, one active model at a time.
-- First use downloads and verifies a curated small model in app.
+- First use downloads and verifies Granite 4.0-H-350M as the default small model in app.
 - Web Search is the active retrieval layer; generic local document RAG is deferred.
 - Plugins are installable local bundles with bounded capabilities: Actions,
   Connections, Skills, MCP, Tools, and Checks.

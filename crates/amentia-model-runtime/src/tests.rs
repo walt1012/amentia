@@ -15,7 +15,7 @@ fn runtime_reports_unconfigured_backend_when_paths_are_missing() {
   let runtime = LocalModelRuntime::from_paths(None, None);
   let health = runtime.health();
 
-  assert_eq!(health.display_name, "LFM2.5-350M");
+  assert_eq!(health.display_name, "Granite 4.0-H-350M");
   assert_eq!(health.backend, "unconfigured");
   assert_eq!(health.status, "unavailable");
   assert!(health.detail.contains("Local model runtime is unavailable"));
@@ -45,7 +45,7 @@ fn unconfigured_generation_returns_unavailable_error() {
     .contains("could not produce a local summarizer response"));
   assert_eq!(response.backend, "unconfigured");
   assert_eq!(response.status, "unavailable");
-  assert_eq!(response.model_id, "lfm2.5-350m");
+  assert_eq!(response.model_id, "granite-4.0-h-350m");
 }
 
 #[test]
@@ -236,22 +236,22 @@ fn bootstrap_pack_metadata_copies_manifest_and_readme_into_data_dir() {
   let source_pack_root = source_root
     .join("models")
     .join("builtin")
-    .join("lfm2.5-350m");
+    .join("granite-4.0-h-350m");
   fs::create_dir_all(&source_pack_root).expect("source pack root");
   fs::write(
     source_pack_root.join("model-pack.json"),
     r#"{
-  "id": "lfm2.5-350m",
-  "display_name": "LFM2.5-350M Q4_K_M",
-  "file_name": "LFM2.5-350M-Q4_K_M.gguf",
+  "id": "granite-4.0-h-350m",
+  "display_name": "Granite 4.0-H-350M Q4_K_M",
+  "file_name": "granite-4.0-h-350m-Q4_K_M.gguf",
   "context_size": 4096,
   "model_context_size": 32768,
-  "max_output_tokens": 160,
+  "max_output_tokens": 192,
   "backend": "llama.cpp",
-  "license": "lfm1.0",
-  "download_url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
-  "sha256": "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4",
-  "size_bytes": 229312224
+  "license": "apache-2.0",
+  "download_url": "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/main/granite-4.0-h-350m-Q4_K_M.gguf",
+  "sha256": "0a8d6a7373602fadfba274a640ba784b86cc6847f1c67f1b0a90fa2ec266b7fb",
+  "size_bytes": 222662560
 }"#,
   )
   .expect("manifest");

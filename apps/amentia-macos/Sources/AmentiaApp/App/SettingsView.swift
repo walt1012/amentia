@@ -65,7 +65,7 @@ struct SettingsView: View {
     SettingsCard(title: "Local Models", systemImage: "cpu", tone: .ready) {
       Text("Amentia downloads and verifies one local model in app.")
         .font(.caption)
-      Text("Default: LFM2.5-350M. Alternatives: Granite 4.0-H-350M and MiniCPM5-1B.")
+      Text("Default: Granite 4.0-H-350M. Alternative: MiniCPM5-1B.")
         .font(.caption)
         .foregroundColor(.secondary)
       Text("Reset Amentia removes downloaded models and starts setup fresh.")

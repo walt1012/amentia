@@ -46,12 +46,12 @@ pub(crate) fn model_metrics(
   } else {
     metrics.insert("backend".to_string(), "llama.cpp".to_string());
     metrics.insert("contextSize".to_string(), "4096".to_string());
-    metrics.insert("maxOutputTokens".to_string(), "160".to_string());
+    metrics.insert("maxOutputTokens".to_string(), "192".to_string());
   }
 
   let suggested_file_name = manifest
     .map(|item| item.file_name.as_str())
-    .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
+    .unwrap_or("granite-4.0-h-350m-Q4_K_M.gguf");
   let suggested_manifest_path = suggested_manifest_install_path();
   let suggested_model_path = manifest_path
     .and_then(|path| path.parent())
@@ -128,7 +128,7 @@ fn install_hint(
 ) -> String {
   let file_name = manifest
     .map(|item| item.file_name.as_str())
-    .unwrap_or("LFM2.5-350M-Q4_K_M.gguf");
+    .unwrap_or("granite-4.0-h-350m-Q4_K_M.gguf");
   let suggested_manifest = suggested_manifest_install_path();
   let suggested_model = manifest_path
     .and_then(|path| path.parent())

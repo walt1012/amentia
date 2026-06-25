@@ -112,8 +112,8 @@ pub struct ModelBootstrap {
 
 pub fn built_in_model_pack() -> ModelPackDescriptor {
   ModelPackDescriptor {
-    id: "lfm2.5-350m".to_string(),
-    display_name: "LFM2.5-350M".to_string(),
+    id: "granite-4.0-h-350m".to_string(),
+    display_name: "Granite 4.0-H-350M".to_string(),
     default_role: ModelRole::Default,
   }
 }

@@ -106,7 +106,7 @@ def valid_manifest() -> dict[str, object]:
 
 def main() -> int:
   assert_equal(SUPPORTED_ARCH, "x86_64")
-  assert_equal(DEFAULT_MODEL_ID, "lfm2.5-350m")
+  assert_equal(DEFAULT_MODEL_ID, "granite-4.0-h-350m")
   assert_equal(MODEL_DELIVERY_MODE, "in-app-download")
   assert_equal(MODEL_WEIGHTS_BUNDLED, False)
   assert_equal(AMENTIA_ACCOUNT_REQUIRED, False)

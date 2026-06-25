@@ -51,14 +51,14 @@ NOTION_PARENT_PAGE_URL = (
   "https://www.notion.so/Amentia-Smoke-11112222333344445555666677778888?pvs=4"
 )
 NOTION_PARENT_PAGE_ID = "11112222-3333-4444-5555-666677778888"
-DEFAULT_MODEL_DISPLAY_NAME = "LFM2.5-350M Q4_K_M"
-DEFAULT_MODEL_FILE_NAME = "LFM2.5-350M-Q4_K_M.gguf"
+DEFAULT_MODEL_DISPLAY_NAME = "Granite 4.0-H-350M Q4_K_M"
+DEFAULT_MODEL_FILE_NAME = "granite-4.0-h-350m-Q4_K_M.gguf"
 DEFAULT_MODEL_DOWNLOAD_URL = (
-  "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/"
-  "LFM2.5-350M-Q4_K_M.gguf"
+  "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/main/"
+  "granite-4.0-h-350m-Q4_K_M.gguf"
 )
-DEFAULT_MODEL_SHA256 = "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4"
-DEFAULT_MODEL_SIZE_BYTES = 229312224
+DEFAULT_MODEL_SHA256 = "0a8d6a7373602fadfba274a640ba784b86cc6847f1c67f1b0a90fa2ec266b7fb"
+DEFAULT_MODEL_SIZE_BYTES = 222662560
 PACKAGED_SOURCE_COMMIT_HEX_LENGTH = 40
 SMOKE_MODEL_ID = "packaged-smoke-local-model"
 SMOKE_MODEL_FILE_NAME = "smoke-local-model.gguf"
@@ -339,7 +339,7 @@ def validate_default_model_manifest(manifest_path: Path) -> None:
     "file_name": DEFAULT_MODEL_FILE_NAME,
     "context_size": 4096,
     "model_context_size": 32768,
-    "max_output_tokens": 160,
+    "max_output_tokens": 192,
     "backend": "llama.cpp",
     "download_url": DEFAULT_MODEL_DOWNLOAD_URL,
     "sha256": DEFAULT_MODEL_SHA256,

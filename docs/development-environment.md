@@ -228,19 +228,19 @@ The default model pack path resolves in this order:
 
 1. `AMENTIA_MODEL_PACK_MANIFEST`
 2. `AMENTIA_MODEL_PACK_ROOT`
-3. `AMENTIA_DATA_DIR/models/builtin/lfm2.5-350m/model-pack.json`
-4. an executable-relative `models/builtin/lfm2.5-350m/model-pack.json`
-5. an executable-relative `model-packs/lfm2.5-350m/model-pack.json`
-6. repo-local `models/builtin/lfm2.5-350m/model-pack.json`
-7. repo-local `model-packs/lfm2.5-350m/model-pack.json`
+3. `AMENTIA_DATA_DIR/models/builtin/granite-4.0-h-350m/model-pack.json`
+4. an executable-relative `models/builtin/granite-4.0-h-350m/model-pack.json`
+5. an executable-relative `model-packs/granite-4.0-h-350m/model-pack.json`
+6. repo-local `models/builtin/granite-4.0-h-350m/model-pack.json`
+7. repo-local `model-packs/granite-4.0-h-350m/model-pack.json`
 
 The resolved model file path then checks:
 
 1. `AMENTIA_MODEL_PATH`
 2. a sibling of the resolved manifest using the manifest `file_name`
-3. `AMENTIA_DATA_DIR/models/LFM2.5-350M-Q4_K_M.gguf`
-4. repo-local `models/LFM2.5-350M-Q4_K_M.gguf`
-5. repo-local `model-packs/LFM2.5-350M-Q4_K_M.gguf`
+3. `AMENTIA_DATA_DIR/models/granite-4.0-h-350m-Q4_K_M.gguf`
+4. repo-local `models/granite-4.0-h-350m-Q4_K_M.gguf`
+5. repo-local `model-packs/granite-4.0-h-350m-Q4_K_M.gguf`
 
 The repository tracks manifests, licensing notes, and small metadata only. Model
 weights are downloaded in app, verified, and stored in the suggested app data
@@ -265,7 +265,7 @@ setup example is:
 ```bash
 export AMENTIA_LLAMACPP_PATH=/absolute/path/to/llama-cli
 export AMENTIA_MODEL_PACK_MANIFEST=/absolute/path/to/model-pack.json
-export AMENTIA_MODEL_PATH=/absolute/path/to/LFM2.5-350M-Q4_K_M.gguf
+export AMENTIA_MODEL_PATH=/absolute/path/to/granite-4.0-h-350m-Q4_K_M.gguf
 ```
 
 ## Plugin Discovery

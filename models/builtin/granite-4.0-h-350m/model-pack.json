@@ -1,0 +1,14 @@
+{
+  "id": "granite-4.0-h-350m",
+  "display_name": "Granite 4.0-H-350M Q4_K_M",
+  "file_name": "granite-4.0-h-350m-Q4_K_M.gguf",
+  "context_size": 4096,
+  "model_context_size": 32768,
+  "max_output_tokens": 192,
+  "backend": "llama.cpp",
+  "license": "apache-2.0",
+  "homepage": "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF",
+  "download_url": "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/main/granite-4.0-h-350m-Q4_K_M.gguf",
+  "sha256": "0a8d6a7373602fadfba274a640ba784b86cc6847f1c67f1b0a90fa2ec266b7fb",
+  "size_bytes": 222662560
+}

@@ -201,7 +201,7 @@ fn model_health_returns_local_model_status() {
 
   assert!(response.error.is_none());
   let result = response.result.expect("model health result");
-  assert_eq!(result["displayName"], "LFM2.5-350M");
+  assert_eq!(result["displayName"], "Granite 4.0-H-350M");
   assert!(result["backend"].is_string());
   assert!(result["status"].is_string());
 }

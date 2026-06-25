@@ -206,7 +206,7 @@ fn turn_start_routes_fresh_public_requests_to_enabled_web_search() {
       methods::TURN_START,
       Some(json!({
         "threadId": "thread-1",
-        "message": "What is the latest LFM2.5 release?"
+        "message": "What is the latest Granite 4.0-H-350M release?"
       })),
     ),
   );
@@ -324,7 +324,7 @@ fn turn_start_routes_fresh_find_requests_to_web_search_with_workspace_open() {
       methods::TURN_START,
       Some(json!({
         "threadId": "thread-1",
-        "message": "Find latest LFM2.5 release"
+        "message": "Find latest Granite 4.0-H-350M release"
       })),
     ),
   );

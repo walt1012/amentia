@@ -1,7 +1,7 @@
 import Foundation
 
 enum LocalModelCatalog {
-  static let defaultFirstUseModelID = "lfm2.5-350m"
+  static let defaultFirstUseModelID = "granite-4.0-h-350m"
 
   static func summaries(
     storageRootPath: String,

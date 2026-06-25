@@ -48,7 +48,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
   func testSummaryExplainsDownloadedModelStorage() {
     let summary = LocalDataSettingsPresenter.summary(
       LocalDataSettingsSnapshot(
-        downloadedModelBytes: 229_312_224,
+        downloadedModelBytes: 222_662_560,
         canDeleteLocalData: true,
         localDataPath: "/Users/example/Library/Application Support/Amentia"
       )

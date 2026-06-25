@@ -321,7 +321,7 @@ mod tests {
   #[test]
   fn query_encoding_preserves_utf8() {
     assert_eq!(percent_encode("amentia web search"), "amentia+web+search");
-    assert_eq!(percent_encode("LFM2.5/350M"), "LFM2.5%2F350M");
+    assert_eq!(percent_encode("MiniCPM5/1B"), "MiniCPM5%2F1B");
   }
 
   #[test]
