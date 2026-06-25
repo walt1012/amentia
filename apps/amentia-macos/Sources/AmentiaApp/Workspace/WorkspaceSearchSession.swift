@@ -181,8 +181,8 @@ final class WorkspaceSearchSession {
     return "Found \(matchCount) useful matches for \"\(query)\"."
   }
 
-  static func failureStatus(error: Error) -> String {
-    "Project search needs attention: \(error.localizedDescription)"
+  static func failureStatus(error _: Error) -> String {
+    UserFacingFailurePresenter.projectSearchFailureStatus()
   }
 
   static func emptyStateSummary(

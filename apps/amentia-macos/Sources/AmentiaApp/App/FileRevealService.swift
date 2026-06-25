@@ -24,7 +24,7 @@ enum FileRevealService {
           withIntermediateDirectories: true
         )
       } catch {
-        return "Amentia could not prepare the requested folder: \(error.localizedDescription)"
+        return UserFacingFailurePresenter.fileRevealFailureDetail()
       }
     }
 

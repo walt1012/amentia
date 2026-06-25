@@ -177,7 +177,9 @@ extension AppViewModel {
             enabled: enabled,
             error: error
           ),
-          detail: error.localizedDescription,
+          detail: UserFacingFailurePresenter.pluginLifecycleFailureBody(
+            action: enabled ? "enable" : "disable"
+          ),
           preview: enabled ? "Plugin enable failed" : "Plugin disable failed"
         )
       }
@@ -232,7 +234,7 @@ extension AppViewModel {
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelinePluginEventPresenter.pluginRemovalFailed(pluginID: pluginID, error: error),
-          detail: error.localizedDescription,
+          detail: UserFacingFailurePresenter.pluginLifecycleFailureBody(action: "removal"),
           preview: "Plugin removal failed"
         )
       }
@@ -255,7 +257,7 @@ extension AppViewModel {
           repairHint: repairHint,
           sourcePath: sourcePath
         ),
-        detail: error.localizedDescription,
+        detail: UserFacingFailurePresenter.pluginPreviewFailureBody(repairHint: repairHint),
         preview: "Plugin preview failed"
       )
       return
@@ -268,7 +270,7 @@ extension AppViewModel {
         repairHint: repairHint,
         sourcePath: confirmedPreview?.sourcePath
       ),
-      detail: error.localizedDescription,
+      detail: UserFacingFailurePresenter.pluginInstallFailureBody(repairHint: repairHint),
       preview: "Plugin install failed"
     )
   }

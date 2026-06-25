@@ -104,6 +104,8 @@ The current product baseline includes:
   instead of JSON-RPC method names or helper process labels.
 - Startup, local data deletion, and common timeline failures show recovery copy
   first while keeping technical details in diagnostics attributes.
+- Project search, file reveal, and plugin entry failures keep raw paths and
+  runner errors out of normal UI while preserving diagnostics attributes.
 - Amentia is a fresh app identity; legacy state migration and legacy model-path
   aliases are out of the active path.
 

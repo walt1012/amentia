@@ -37,6 +37,14 @@ enum UserFacingFailurePresenter {
     "Could not delete all local Amentia data. Close Amentia, reopen it, and try Delete All Local Data again."
   }
 
+  static func fileRevealFailureDetail() -> String {
+    "Amentia could not open that folder. Check Finder permissions, then try again."
+  }
+
+  static func projectSearchFailureStatus() -> String {
+    "Project search needs attention. Check Amentia status, then try again."
+  }
+
   static func threadCreationFailureBody() -> String {
     "Could not create a new session. Restart Amentia, then try again."
   }
@@ -67,6 +75,48 @@ enum UserFacingFailurePresenter {
 
   static func memoryNoteFailureBody() -> String {
     "Could not save that memory note. Try again after the current request finishes."
+  }
+
+  static func pluginActionFailureBody(isBlocked: Bool) -> String {
+    isBlocked
+      ? "Plugin action needs attention. Select this item for the repair hint."
+      : "Plugin action failed. Select this item for details, then try again."
+  }
+
+  static func pluginInstallFailureBody(repairHint: String) -> String {
+    let base = "Plugin install failed. Check the plugin source, then try again."
+    let trimmedHint = repairHint.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmedHint.isEmpty ? base : "\(base)\n\nRepair Hint: \(trimmedHint)"
+  }
+
+  static func pluginPreviewFailureBody(repairHint: String) -> String {
+    let base = "Plugin preview failed. Check the plugin source, then try again."
+    let trimmedHint = repairHint.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmedHint.isEmpty ? base : "\(base)\n\nRepair Hint: \(trimmedHint)"
+  }
+
+  static func pluginLifecycleFailureBody(action: String) -> String {
+    "Plugin \(action) failed. Check plugin setup, then try again."
+  }
+
+  static func pluginRefreshDiagnostic(label: String) -> String {
+    switch label {
+    case "catalog refresh", "catalog":
+      return "Plugin catalog needs attention."
+    case "capability registry", "command registry", "connector registry",
+         "hook registry", "skill registry":
+      return "Plugin capabilities need attention."
+    default:
+      return "Plugin setup needs attention."
+    }
+  }
+
+  static func connectionAuthorizationFailureBody() -> String {
+    "Connection authorization failed. Check the saved token or key, then try again."
+  }
+
+  static func connectionAuthorizationClearFailureBody() -> String {
+    "Could not clear connection authorization. Restart Amentia, then try again."
   }
 
   static func technicalErrorAttributes(_ error: Error) -> [String: String] {

@@ -57,7 +57,7 @@ extension AppViewModel {
         appendPluginStatusEntry(
           to: timelineThreadID,
           TimelinePluginEventPresenter.pluginConnectorAuthFailed(connectorID: connectorID, error: error),
-          detail: error.localizedDescription,
+          detail: UserFacingFailurePresenter.connectionAuthorizationFailureBody(),
           preview: "Connection authorization failed"
         )
       }
@@ -111,7 +111,7 @@ extension AppViewModel {
             connectorID: connectorID,
             error: error
           ),
-          detail: error.localizedDescription,
+          detail: UserFacingFailurePresenter.connectionAuthorizationClearFailureBody(),
           preview: "Connection authorization clear failed"
         )
       }

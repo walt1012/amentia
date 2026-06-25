@@ -255,7 +255,7 @@ extension AppViewModel {
         preview: TimelinePluginEventPresenter.failedPluginCommandPreview
       )
     }
-    runtimeDetail = error.localizedDescription
+    runtimeDetail = TimelinePluginEventPresenter.pluginCommandFailedDetail
     appendEntry(
       to: request.threadID,
       failureEntry

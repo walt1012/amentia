@@ -109,10 +109,16 @@ enum PluginStateLoader {
       guard !Task.isCancelled else {
         return (nil, nil, [:])
       }
+      var recoveryAttributes = runtimeRecoveryAttributes(from: error)
+      recoveryAttributes.merge(
+        UserFacingFailurePresenter.technicalErrorAttributes(error)
+      ) { current, _ in
+        current
+      }
       return (
         nil,
-        "\(label): \(error.localizedDescription)",
-        runtimeRecoveryAttributes(from: error)
+        UserFacingFailurePresenter.pluginRefreshDiagnostic(label: label),
+        recoveryAttributes
       )
     }
   }

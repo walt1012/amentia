@@ -71,13 +71,9 @@ enum TimelinePluginEventPresenter {
     repairHint: String,
     sourcePath: String
   ) -> TimelineEntry {
-    let body = repairHint.isEmpty
-      ? error.localizedDescription
-      : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
-
     return TimelineEntryFactory.warning(
       title: "Plugin Preview Failed",
-      body: body,
+      body: UserFacingFailurePresenter.pluginPreviewFailureBody(repairHint: repairHint),
       attributes: pluginInstallFailureAttributes(
         error,
         fallbackStatus: "previewFailed",
@@ -179,13 +175,9 @@ enum TimelinePluginEventPresenter {
     repairHint: String,
     sourcePath: String?
   ) -> TimelineEntry {
-    let body = repairHint.isEmpty
-      ? error.localizedDescription
-      : "\(error.localizedDescription)\n\nRepair Hint: \(repairHint)"
-
     return TimelineEntryFactory.warning(
       title: "Plugin Install Failed",
-      body: body,
+      body: UserFacingFailurePresenter.pluginInstallFailureBody(repairHint: repairHint),
       attributes: pluginInstallFailureAttributes(
         error,
         fallbackStatus: "failed",
@@ -212,7 +204,9 @@ enum TimelinePluginEventPresenter {
   static func pluginUpdateFailed(pluginID: String, enabled: Bool, error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Plugin Update Failed",
-      body: error.localizedDescription,
+      body: UserFacingFailurePresenter.pluginLifecycleFailureBody(
+        action: enabled ? "enable" : "disable"
+      ),
       attributes: pluginLifecycleFailureAttributes(
         error,
         fallbackOperation: enabled ? "enable" : "disable",
@@ -236,7 +230,7 @@ enum TimelinePluginEventPresenter {
   static func pluginRemovalFailed(pluginID: String, error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Plugin Removal Failed",
-      body: error.localizedDescription,
+      body: UserFacingFailurePresenter.pluginLifecycleFailureBody(action: "removal"),
       attributes: pluginLifecycleFailureAttributes(
         error,
         fallbackOperation: "remove",
@@ -274,7 +268,7 @@ enum TimelinePluginEventPresenter {
 
     return TimelineEntryFactory.warning(
       title: "Connection Authorization Failed",
-      body: error.localizedDescription,
+      body: UserFacingFailurePresenter.connectionAuthorizationFailureBody(),
       attributes: attributes
     )
   }
@@ -306,7 +300,7 @@ enum TimelinePluginEventPresenter {
 
     return TimelineEntryFactory.warning(
       title: "Connection Authorization Clear Failed",
-      body: error.localizedDescription,
+      body: UserFacingFailurePresenter.connectionAuthorizationClearFailureBody(),
       attributes: attributes
     )
   }
@@ -381,7 +375,7 @@ enum TimelinePluginEventPresenter {
 
     return TimelineEntryFactory.warning(
       title: isBlocked ? "Plugin Action Needs Attention" : "Plugin Action Failed",
-      body: error.localizedDescription,
+      body: UserFacingFailurePresenter.pluginActionFailureBody(isBlocked: isBlocked),
       attributes: attributes
     )
   }
@@ -456,6 +450,9 @@ enum TimelinePluginEventPresenter {
     repairHint: String
   ) -> [String: String] {
     var attributes = recoveryAttributes(error)
+    attributes.merge(UserFacingFailurePresenter.technicalErrorAttributes(error)) { current, _ in
+      current
+    }
     if attributes["pluginInstallStatus"] == nil {
       attributes["pluginInstallStatus"] = fallbackStatus
     }
@@ -483,6 +480,9 @@ enum TimelinePluginEventPresenter {
     pluginID: String
   ) -> [String: String] {
     var attributes = recoveryAttributes(error)
+    attributes.merge(UserFacingFailurePresenter.technicalErrorAttributes(error)) { current, _ in
+      current
+    }
     if attributes["pluginId"] == nil {
       attributes["pluginId"] = pluginID
     }
@@ -499,7 +499,11 @@ enum TimelinePluginEventPresenter {
   }
 
   private static func pluginCommandFailureAttributes(_ error: Error) -> [String: String] {
-    recoveryAttributes(error)
+    var attributes = recoveryAttributes(error)
+    attributes.merge(UserFacingFailurePresenter.technicalErrorAttributes(error)) { current, _ in
+      current
+    }
+    return attributes
   }
 
   private static func pluginConnectorFailureAttributes(

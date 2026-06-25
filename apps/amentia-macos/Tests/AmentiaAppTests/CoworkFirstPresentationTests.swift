@@ -532,6 +532,77 @@ final class CoworkFirstPresentationTests: XCTestCase {
     )
   }
 
+  func testProjectSearchFailureKeepsRawErrorsOutOfStatus() {
+    let status = WorkspaceSearchSession.failureStatus(
+      error: TestPresentationError(message: "ripgrep failed at /Users/example/project")
+    )
+
+    XCTAssertEqual(
+      status,
+      "Project search needs attention. Check Amentia status, then try again."
+    )
+    XCTAssertFalse(status.contains("/Users/example"))
+    XCTAssertFalse(status.contains("ripgrep"))
+  }
+
+  func testFileRevealFailureCopyAvoidsRawPaths() {
+    let detail = UserFacingFailurePresenter.fileRevealFailureDetail()
+
+    XCTAssertTrue(detail.contains("Finder permissions"))
+    XCTAssertFalse(detail.contains("/Users/example"))
+    XCTAssertFalse(detail.contains("NSWorkspace"))
+  }
+
+  func testPluginFailureBodiesKeepRawErrorsInAttributesOnly() {
+    let error = TestPresentationError(message: "runner failed at /Users/example/plugin.json")
+    let entries = [
+      TimelinePluginEventPresenter.pluginInstallPreviewFailed(
+        error: error,
+        repairHint: "Use a valid plugin folder.",
+        sourcePath: "/Users/example/plugin"
+      ),
+      TimelinePluginEventPresenter.pluginInstallFailed(
+        error: error,
+        repairHint: "",
+        sourcePath: "/Users/example/plugin"
+      ),
+      TimelinePluginEventPresenter.pluginUpdateFailed(
+        pluginID: "notion",
+        enabled: true,
+        error: error
+      ),
+      TimelinePluginEventPresenter.pluginRemovalFailed(pluginID: "notion", error: error),
+      TimelinePluginEventPresenter.pluginConnectorAuthFailed(
+        connectorID: "notion::main",
+        error: error
+      ),
+      TimelinePluginEventPresenter.pluginConnectorCredentialClearFailed(
+        connectorID: "notion::main",
+        error: error
+      ),
+      TimelinePluginEventPresenter.pluginCommandFailed(error: error),
+    ]
+
+    for entry in entries {
+      XCTAssertFalse(entry.body.contains("/Users/example"))
+      XCTAssertFalse(entry.body.contains("runner failed"))
+      XCTAssertEqual(
+        entry.attributes["technicalError"],
+        "runner failed at /Users/example/plugin.json"
+      )
+    }
+  }
+
+  func testPluginRefreshDiagnosticsAvoidRawRegistryErrors() {
+    let diagnostic = UserFacingFailurePresenter.pluginRefreshDiagnostic(
+      label: "command registry"
+    )
+
+    XCTAssertEqual(diagnostic, "Plugin capabilities need attention.")
+    XCTAssertFalse(diagnostic.contains("registry:"))
+    XCTAssertFalse(diagnostic.contains("/Users/example"))
+  }
+
   func testAppSupportFailureCopyAvoidsLocalPaths() {
     let detail = UserFacingFailurePresenter.appSupportDirectoryFailureDetail()
 
