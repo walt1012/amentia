@@ -255,7 +255,7 @@ enum LocalModelOperationPresenter {
         title: "Download Local Model",
         summary: "Fresh installs need one curated local model before Amentia can answer locally. \(LocalModelDisplayPresenter.actionName(model)) is selected.",
         detail: modelDetail(model),
-        actionSummary: "Choose the fast default, balanced tiny model, or stronger small model.",
+        actionSummary: "Choose the fast default or a stronger local option.",
         readinessDetail: "Download",
         tone: .warning
       )

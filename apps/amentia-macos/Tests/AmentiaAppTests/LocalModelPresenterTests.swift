@@ -147,9 +147,19 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertTrue(summary.contains("Default path"))
-    XCTAssertTrue(summary.contains("lightest local loop"))
+    XCTAssertTrue(summary.contains("lightest local use"))
     XCTAssertFalse(summary.contains("tiny"))
     XCTAssertFalse(summary.contains("Q4_K_M"))
+  }
+
+  func testCatalogDescriptionsStayUserFacing() {
+    for item in LocalModelCatalog.items() {
+      XCTAssertFalse(item.description.contains("tools"))
+      XCTAssertFalse(item.description.contains("code"))
+      XCTAssertFalse(item.description.contains("long-context"))
+      XCTAssertFalse(item.description.contains("Q4_K_M"))
+      XCTAssertFalse(item.description.contains("memory-assisted"))
+    }
   }
 
   func testModelMetricsSummaryAvoidsBackendTerminology() {
@@ -228,13 +238,13 @@ final class LocalModelPresenterTests: XCTestCase {
       LocalModelDisplayPresenter.setupFitSummary(
         recommendedModel,
         defaultModelID: defaultModel.id
-      ).contains("Balanced tiny model")
+      ).contains("Balanced option")
     )
     XCTAssertTrue(
       LocalModelDisplayPresenter.setupFitSummary(
         longContextModel,
         defaultModelID: defaultModel.id
-      ).contains("longer context")
+      ).contains("larger project files")
     )
   }
 
@@ -272,8 +282,9 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertTrue(guidance.actionSummary.contains("fast default"))
-    XCTAssertTrue(guidance.actionSummary.contains("balanced tiny model"))
-    XCTAssertTrue(guidance.actionSummary.contains("stronger small model"))
+    XCTAssertTrue(guidance.actionSummary.contains("stronger local option"))
+    XCTAssertFalse(guidance.actionSummary.contains("tiny"))
+    XCTAssertFalse(guidance.actionSummary.contains("small model"))
   }
 
   func testModelIntegrityErrorsAvoidRawPathsAndHashes() {

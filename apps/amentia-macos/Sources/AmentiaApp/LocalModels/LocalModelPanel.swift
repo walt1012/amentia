@@ -69,7 +69,7 @@ struct LocalModelPanel: View {
         }
       }
 
-      DisclosureGroup("Choose Model", isExpanded: $modelChooserExpanded) {
+      DisclosureGroup("Model Options", isExpanded: $modelChooserExpanded) {
         modelManager
       }
 
@@ -116,7 +116,7 @@ struct LocalModelPanel: View {
           .font(.caption2)
           .foregroundColor(.secondary)
         Spacer()
-        Button("Reset Model") {
+        Button("Forget Active Model") {
           viewModel.resetActiveLocalModel()
         }
         .buttonStyle(.bordered)

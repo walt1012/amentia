@@ -22,11 +22,11 @@ enum LocalModelDisplayPresenter {
     }
 
     if model.tags.contains("recommended") {
-      return "Balanced tiny model for tools, code, and everyday cowork tasks."
+      return "Balanced option for everyday project help and cowork tasks."
     }
 
     if model.tags.contains("long-context") {
-      return "Stronger small model for longer context and heavier project work."
+      return "Stronger option for longer sessions and larger project files."
     }
 
     return "Optional local model for specialized cowork tasks."
@@ -34,11 +34,11 @@ enum LocalModelDisplayPresenter {
 
   static func setupCapabilitySummary(_ model: LocalModelSummary) -> String {
     if model.tags.contains("long-context") {
-      return "Better for larger files, longer sessions, and heavier cowork tasks."
+      return "Better for larger files, longer sessions, and deeper project help."
     }
 
     if model.tags.contains("recommended") {
-      return "Good everyday balance for project help, tools, and code review."
+      return "Good everyday balance for project help, reviews, and follow-up tasks."
     }
 
     return "Best for fast first setup, simple edits, and lightweight cowork."
@@ -54,14 +54,14 @@ enum LocalModelDisplayPresenter {
 
   static func firstUseFit(_ model: LocalModelSummary, defaultModelID: String) -> String {
     if model.id == defaultModelID {
-      return "Default path: fastest first setup and the lightest local loop."
+      return "Default path: fastest first setup and lightest local use."
     }
 
     if model.tags.contains("recommended") {
-      return "Recommended alternative: still tiny, stronger for tools and code."
+      return "Recommended alternative: still compact, stronger for project work."
     }
 
-    return "Optional local model for longer or heavier cowork tasks."
+    return "Optional local model for longer sessions and deeper cowork tasks."
   }
 
   private static func statusSummary(_ status: String) -> String {

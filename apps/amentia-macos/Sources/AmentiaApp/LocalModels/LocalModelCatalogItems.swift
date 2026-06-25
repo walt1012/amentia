@@ -6,7 +6,7 @@ extension LocalModelCatalog {
       LocalModelCatalogItem(
         id: defaultFirstUseModelID,
         displayName: "Granite 4.0-H-350M Q4_K_M",
-        description: "Default Apache-2.0 tiny model for local cowork, tools, code, and memory-assisted workflows.",
+        description: "Default lightweight model for fast local setup and everyday cowork.",
         fileName: "granite-4.0-h-350m-Q4_K_M.gguf",
         downloadURL: "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/main/granite-4.0-h-350m-Q4_K_M.gguf",
         homepage: "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF",
@@ -22,7 +22,7 @@ extension LocalModelCatalog {
       LocalModelCatalogItem(
         id: "minicpm5-1b",
         displayName: "MiniCPM5-1B Q4_K_M",
-        description: "Newer Apache-2.0 1B model for local cowork, tools, code, and long-context tasks.",
+        description: "Stronger local model for larger files, longer sessions, and deeper project help.",
         fileName: "MiniCPM5-1B-Q4_K_M.gguf",
         downloadURL: "https://huggingface.co/openbmb/MiniCPM5-1B-GGUF/resolve/main/MiniCPM5-1B-Q4_K_M.gguf",
         homepage: "https://huggingface.co/openbmb/MiniCPM5-1B-GGUF",
