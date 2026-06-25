@@ -35,7 +35,7 @@ enum LocalModelProbePresenter {
       attributes["detail"] = detail
     }
 
-    LocalModelProbePresentation(
+    return LocalModelProbePresentation(
       runtimeDetail: recoveryDetail,
       timelineTitle: "Local Model Check Failed",
       timelineBody:
@@ -73,7 +73,7 @@ enum LocalModelProbePresenter {
       attributes["detail"] = detail
     }
 
-    LocalModelProbePresentation(
+    return LocalModelProbePresentation(
       runtimeDetail: recoveryDetail,
       timelineTitle: "Local Model Check Failed",
       timelineBody:
