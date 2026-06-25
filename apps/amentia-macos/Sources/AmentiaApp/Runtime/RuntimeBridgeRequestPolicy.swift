@@ -41,4 +41,29 @@ enum RuntimeBridgeRequestPolicy {
       return true
     }
   }
+
+  static func userFacingRequestName(for method: String) -> String {
+    switch method {
+    case "turn/start":
+      return "current request"
+    case "model/probe":
+      return "model check"
+    case "workspace/search":
+      return "project search"
+    case "plugin/commandRun":
+      return "action"
+    case "plugin/install":
+      return "plugin install"
+    case "plugin/remove":
+      return "plugin removal"
+    case "plugin/refresh":
+      return "plugin refresh"
+    case "plugin/connectorAuthorize":
+      return "connection authorization"
+    case "plugin/connectorClearCredential":
+      return "connection reset"
+    default:
+      return "current request"
+    }
+  }
 }

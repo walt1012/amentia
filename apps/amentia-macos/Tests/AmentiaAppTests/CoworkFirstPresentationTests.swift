@@ -487,6 +487,34 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(entry.body.contains("AMENTIA_RUNTIME_PATH"))
   }
 
+  func testTimedOutRequestAvoidsRpcMethodNames() {
+    let error = RuntimeBridge.RuntimeError.requestTimedOut(method: "turn/start", seconds: 210)
+
+    XCTAssertTrue(error.localizedDescription.contains("current request"))
+    XCTAssertTrue(error.localizedDescription.contains("210 seconds"))
+    XCTAssertFalse(error.localizedDescription.contains("turn/start"))
+    XCTAssertFalse(error.localizedDescription.contains("RPC"))
+  }
+
+  func testRequestPolicyMapsInternalMethodsToUserTasks() {
+    XCTAssertEqual(
+      RuntimeBridgeRequestPolicy.userFacingRequestName(for: "model/probe"),
+      "model check"
+    )
+    XCTAssertEqual(
+      RuntimeBridgeRequestPolicy.userFacingRequestName(for: "workspace/search"),
+      "project search"
+    )
+    XCTAssertEqual(
+      RuntimeBridgeRequestPolicy.userFacingRequestName(for: "plugin/connectorAuthorize"),
+      "connection authorization"
+    )
+    XCTAssertEqual(
+      RuntimeBridgeRequestPolicy.userFacingRequestName(for: "unknown/internal"),
+      "current request"
+    )
+  }
+
   func testPluginSurfaceSummarySeparatesBundleFromCapabilities() {
     let surface = PluginSurfaceClassifier.summary(
       capabilities: [

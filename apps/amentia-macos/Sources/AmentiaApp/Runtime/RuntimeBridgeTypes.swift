@@ -33,8 +33,9 @@ extension RuntimeBridge {
       case .invalidResponse:
         return "Amentia returned an invalid response."
       case .requestTimedOut(let method, let seconds):
+        let requestName = RuntimeBridgeRequestPolicy.userFacingRequestName(for: method)
         return
-          "Amentia request \(method) timed out after \(seconds) seconds. " +
+          "The \(requestName) timed out after \(seconds) seconds. " +
           "The request did not finish in time."
       case .rpc(let message):
         return message

@@ -22,9 +22,7 @@ enum RuntimeStateLoader {
 
     return ModelHealthRefresh(
       modelHealth: RuntimeSummaryMapper.modelHealthSummary(from: runtimeModel),
-      runtimeDetail: serverLabel.map {
-        "\($0). \(LocalModelDisplayPresenter.cleanDisplayName(runtimeModel.displayName))"
-      }
+      runtimeDetail: connectedModelDetail(runtimeModel, serverLabel: serverLabel)
     )
   }
 
@@ -52,13 +50,20 @@ enum RuntimeStateLoader {
     }
   }
 
-  private static func modelHealthFailureDetail(serverLabel: String?, error: Error) -> String {
-    let detail = userFacingModelSetupFailure(error)
-    guard let serverLabel, !serverLabel.isEmpty else {
-      return detail
+  private static func modelHealthFailureDetail(serverLabel _: String?, error: Error) -> String {
+    userFacingModelSetupFailure(error)
+  }
+
+  private static func connectedModelDetail(
+    _ runtimeModel: RuntimeBridge.RuntimeModelHealth,
+    serverLabel: String?
+  ) -> String? {
+    guard serverLabel != nil else {
+      return nil
     }
 
-    return "\(serverLabel). \(detail)"
+    let modelName = LocalModelDisplayPresenter.cleanDisplayName(runtimeModel.displayName)
+    return "Amentia is connected. \(modelName)"
   }
 
   private static func userFacingModelSetupFailure(_ error: Error) -> String {

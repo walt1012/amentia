@@ -141,7 +141,8 @@ final class RuntimeBridge {
       return
     }
 
-    let detail = "Amentia request \(method) was cancelled."
+    let requestName = RuntimeBridgeRequestPolicy.userFacingRequestName(for: method)
+    let detail = "The \(requestName) was cancelled."
     continuation.resume(throwing: RuntimeError.rpc(detail))
     if RuntimeBridgeRequestPolicy.shouldStopRuntimeAfterCancelledRequest(method: method) {
       stopRuntimeAfterRequestCancellation(method: method)
@@ -149,15 +150,17 @@ final class RuntimeBridge {
   }
 
   private func stopRuntimeAfterRequestCancellation(method: String) {
+    let requestName = RuntimeBridgeRequestPolicy.userFacingRequestName(for: method)
     let detail =
-      "Amentia request \(method) was cancelled. " +
+      "The \(requestName) was cancelled. " +
       "Restart Amentia to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 
   private func stopRuntimeAfterRequestTimeout(method: String, seconds: Int) {
+    let requestName = RuntimeBridgeRequestPolicy.userFacingRequestName(for: method)
     let detail =
-      "Amentia request \(method) timed out after \(seconds) seconds. " +
+      "The \(requestName) timed out after \(seconds) seconds. " +
       "Restart Amentia to continue."
     stopRuntimeAfterRequestBoundary(detail: detail)
   }

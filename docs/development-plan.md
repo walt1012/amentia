@@ -94,6 +94,8 @@ The current product baseline includes:
 - Notion as the reference connection, not as a hardcoded platform direction.
 - Product-first UI language that avoids raw protocol names, hashes, paths, and
   manifest details in normal use.
+- Request timeout, cancellation, and launch details use cowork task language
+  instead of JSON-RPC method names or helper process labels.
 - Amentia is a fresh app identity; legacy state migration and legacy model-path
   aliases are out of the active path.
 
