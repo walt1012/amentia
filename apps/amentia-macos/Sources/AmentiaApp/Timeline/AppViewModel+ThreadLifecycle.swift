@@ -149,13 +149,18 @@ extension AppViewModel {
     }
 
     let deletedThreadID = thread.id
+    let deletedThreadTitle = thread.title
     Task {
       do {
         let runtimeThreads = try await runtimeBridge.deleteThread(threadID: deletedThreadID)
         guard !Task.isCancelled else {
           return
         }
-        await applyDeletedThread(threadID: deletedThreadID, runtimeThreads: runtimeThreads)
+        await applyDeletedThread(
+          threadID: deletedThreadID,
+          threadTitle: deletedThreadTitle,
+          runtimeThreads: runtimeThreads
+        )
       } catch {
         guard !Task.isCancelled else {
           return
@@ -300,6 +305,7 @@ extension AppViewModel {
 
   private func applyDeletedThread(
     threadID: String,
+    threadTitle: String,
     runtimeThreads: [RuntimeBridge.RuntimeThreadSummary]
   ) async {
     let workspaceThreads: [ThreadSummary]
@@ -319,7 +325,18 @@ extension AppViewModel {
     updateTimelineState { state in
       state.deleteThread(threadID: threadID, remainingThreads: workspaceThreads)
     }
-    runtimeDetail = SessionChangePresenter.deleteSuccessDetail
+    appendEntry(
+      to: selectedThreadID,
+      TimelineEntryFactory.system(
+        title: SessionChangePresenter.deleteReceiptTitle,
+        body: SessionChangePresenter.deleteReceiptBody(threadTitle: threadTitle),
+        attributes: [
+          "action": "thread.delete",
+          "deletedThreadID": threadID,
+        ]
+      )
+    )
+    runtimeDetail = SessionChangePresenter.deleteSuccessDetail(threadTitle: threadTitle)
     announceFirstRequestReadyIfNeeded()
   }
 

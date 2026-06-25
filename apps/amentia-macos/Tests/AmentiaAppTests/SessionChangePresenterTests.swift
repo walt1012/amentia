@@ -14,6 +14,18 @@ final class SessionChangePresenterTests: XCTestCase {
     XCTAssertFalse(prompt.message.contains("approval"))
   }
 
+  func testDeleteSuccessCopyNamesSessionAndPreservesProjectFiles() {
+    XCTAssertEqual(
+      SessionChangePresenter.deleteSuccessDetail(threadTitle: "Design Review"),
+      "Deleted Design Review. Project files were not changed."
+    )
+    XCTAssertEqual(SessionChangePresenter.deleteReceiptTitle, "Session Deleted")
+    XCTAssertEqual(
+      SessionChangePresenter.deleteReceiptBody(threadTitle: "Design Review"),
+      "Design Review was removed from Amentia. Project files and repositories were not changed."
+    )
+  }
+
   func testRevertPromptAllowsCleanRecordedChanges() {
     let prompt = SessionChangePresenter.revertPrompt(for: preview(changes: [
       change(path: "Sources/App.swift"),

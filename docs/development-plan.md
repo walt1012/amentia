@@ -74,7 +74,7 @@ The current product baseline includes:
 - Packaged local backend launch probing and bounded file-backed inference.
 - Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
   cancellable subprocesses, and human receipts.
-- Session delete, session change preview, and session revert.
+- Session delete, deletion receipts, session change preview, and session revert.
 - Reset Amentia for app-owned data.
 - Local plugin registry, installation lifecycle, Actions, Connections, Skills,
   MCP, Tools, Checks, credentials, retries, and generic connector receipts.
@@ -87,7 +87,7 @@ The current product baseline includes:
 
 ## M15 Cowork Continuity
 
-Status: active. Current focus: structural cleanup and confirmed local model use.
+Status: active. Current focus: confirmed local model use and session continuity.
 
 Goal: make Amentia useful across real sessions without turning it into a remote
 server agent or a code-only assistant.

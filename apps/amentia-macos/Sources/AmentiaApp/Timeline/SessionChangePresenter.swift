@@ -17,7 +17,15 @@ enum SessionChangePresenter {
   static let activeWorkBlocksDeleteDetail = "Finish or cancel the current work before deleting a session."
   static let activeWorkBlocksRevertDetail = "Finish or cancel the current work before reverting session changes."
   static let noRevertableChangesDetail = "This session has not saved any project files."
-  static let deleteSuccessDetail = "Deleted session. Project files were not changed."
+  static let deleteReceiptTitle = "Session Deleted"
+
+  static func deleteSuccessDetail(threadTitle: String) -> String {
+    "Deleted \(threadTitle). Project files were not changed."
+  }
+
+  static func deleteReceiptBody(threadTitle: String) -> String {
+    "\(threadTitle) was removed from Amentia. Project files and repositories were not changed."
+  }
 
   static func deleteFailedDetail(error: Error) -> String {
     "Session delete failed: \(error.localizedDescription)"
