@@ -223,7 +223,7 @@ private struct LocalModelRow: View {
           .controlSize(.small)
           .disabled(!viewModel.canDownloadRecommendedModel(modelID: model.id))
 
-          Button("Show File") {
+          Button("Show Download") {
             viewModel.revealRecommendedModel(modelID: model.id)
           }
           .buttonStyle(.bordered)
@@ -264,13 +264,13 @@ private struct ModelTroubleshootingPanel: View {
         .fixedSize(horizontal: false, vertical: true)
 
       HStack(spacing: 8) {
-        Button("Show Model Folder") {
+        Button("Downloaded Models") {
           viewModel.revealSuggestedModelDirectory()
         }
         .buttonStyle(.bordered)
         .disabled(!viewModel.canRevealSuggestedModelDirectory())
 
-        Button("Show Model Support Folder") {
+        Button("App Support") {
           viewModel.revealSuggestedBinaryDirectory()
         }
         .buttonStyle(.bordered)

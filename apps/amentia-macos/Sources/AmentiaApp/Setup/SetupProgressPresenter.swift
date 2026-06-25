@@ -99,7 +99,7 @@ enum SetupProgressPresenter {
     case "Check Failed":
       return "Check Model"
     case "Repair":
-      return "Repair Model"
+      return "Refresh Model"
     case "Choose":
       return "Choose Model"
     default:

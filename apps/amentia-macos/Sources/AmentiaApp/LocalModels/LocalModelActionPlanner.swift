@@ -110,7 +110,7 @@ enum LocalModelActionPlanner {
     case .blockedDownload:
       return "Download Blocked"
     case .bootstrapModelPackMetadata:
-      return "Repair Model"
+      return "Refresh Model Setup"
     case .probeModel:
       return snapshot.isCheckingModel ? "Checking Model" : "Run Model Check"
     }

@@ -151,7 +151,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       )
     )
 
-    XCTAssertEqual(detail, "Next: Repair Model")
+    XCTAssertEqual(detail, "Next: Refresh Model")
   }
 
   func testSetupProgressUsesWorkLanguageWhileBusy() {

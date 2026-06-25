@@ -72,6 +72,8 @@ The current product baseline includes:
 - In-app model download, verification, activation, pause, resume, cancel, and
   one active model, with first-use model check guidance in the model panel and
   composer.
+- Model setup UI uses plain recovery language by default and keeps file/path
+  inspection behind Advanced surfaces.
 - Packaged local backend launch probing and bounded file-backed inference.
 - Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
   cancellable subprocesses, and human receipts.

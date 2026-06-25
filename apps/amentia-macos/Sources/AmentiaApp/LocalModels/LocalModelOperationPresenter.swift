@@ -262,7 +262,7 @@ enum LocalModelOperationPresenter {
     }
 
     return LocalModelSetupGuidance(
-      title: "Repair Model Setup",
+      title: "Refresh Model Setup",
       summary: "Local model choices are unavailable until setup is refreshed.",
       detail: "Refresh local model setup or restart Amentia to restore model choices.",
       actionSummary: "Refresh local model setup before choosing a model.",

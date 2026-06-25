@@ -85,23 +85,30 @@ enum LocalModelStatusPresenter {
 
   static func sourceSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Model source unavailable."
+      return "No local model is selected yet."
     }
 
-    return "Source: \(modelHealth.source)"
+    if modelHealth.source == "local" || modelHealth.source == "default-manifest" {
+      return "Installed locally on this Mac."
+    }
+
+    return "Model setup was restored from Amentia local data."
   }
 
   static func metricsSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard let modelHealth = snapshot.modelHealth else {
-      return "Model details unavailable."
+      return "Model details will appear after setup."
     }
 
-    let contextSize = modelHealth.metrics["contextSize"] ?? "unknown"
-    let modelContextSize = modelHealth.metrics["modelContextSize"]
-      .map { "\(contextSize) active / \($0) limit" }
-      ?? contextSize
-    let maxOutputTokens = modelHealth.metrics["maxOutputTokens"] ?? "unknown"
-    return "Context: \(modelContextSize). Response limit: \(maxOutputTokens) tokens."
+    let contextSize = Int(modelHealth.metrics["contextSize"] ?? "")
+    let modelContextSize = Int(modelHealth.metrics["modelContextSize"] ?? "")
+    if let contextSize,
+       let modelContextSize,
+       modelContextSize > contextSize {
+      return "Uses a compact active context for speed, with larger local context available when needed."
+    }
+
+    return "Tuned for concise local responses on this Mac."
   }
 
   static func readinessSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -152,9 +159,9 @@ enum LocalModelStatusPresenter {
     case "binary_missing":
       return "Amentia's local model runner is missing from the app package. Reinstall Amentia from the latest release."
     case "misconfigured":
-      return "Model setup is incomplete. Use Repair Model, or re-download the selected model."
+      return "Model setup is incomplete. Refresh model setup, or re-download the selected model."
     default:
-      return "Model setup needs attention. Use the model action below to repair or download a verified local model."
+      return "Model setup needs attention. Refresh setup or download a verified local model."
     }
   }
 
@@ -163,7 +170,7 @@ enum LocalModelStatusPresenter {
       return "Local folders appear after Amentia finishes checking setup."
     }
 
-    return "Use the folder buttons below if you need to inspect local model files."
+    return "Advanced: inspect downloaded model files only if setup keeps failing."
   }
 
   static func artifactPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
@@ -171,7 +178,7 @@ enum LocalModelStatusPresenter {
       return "No local model is active yet."
     }
 
-    return "Amentia is using the selected verified local model."
+    return "Amentia manages the selected verified model locally."
   }
 
   static func localModelStatusSummary(

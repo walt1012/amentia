@@ -182,10 +182,14 @@ final class LocalModelPresenterTests: XCTestCase {
     )
     let summary = LocalModelStatusPresenter.metricsSummary(snapshot)
 
-    XCTAssertEqual(summary, "Context: 4096 active / 32768 limit. Response limit: 192 tokens.")
+    XCTAssertEqual(
+      summary,
+      "Uses a compact active context for speed, with larger local context available when needed."
+    )
     XCTAssertFalse(summary.contains("Backend"))
     XCTAssertFalse(summary.contains("llama"))
     XCTAssertFalse(summary.contains("/Applications"))
+    XCTAssertFalse(summary.contains("tokens"))
   }
 
   func testFirstUseModelChoiceSummariesExplainCuratedFit() {
@@ -331,10 +335,10 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(plan.timelineTitle.contains("Engine"))
   }
 
-  func testRepairGuidanceAvoidsInternalSetupInfoLanguage() {
+  func testRefreshGuidanceAvoidsInternalSetupInfoLanguage() {
     let guidance = LocalModelOperationPresenter.setupGuidance(operationSnapshot())
 
-    XCTAssertEqual(guidance.title, "Repair Model Setup")
+    XCTAssertEqual(guidance.title, "Refresh Model Setup")
     XCTAssertTrue(guidance.summary.contains("setup is refreshed"))
     XCTAssertFalse(guidance.detail.contains("setup info"))
   }
