@@ -1,6 +1,6 @@
 use super::test_support::{
-  bundled_plugin_entry, create_temp_workspace, enable_full_access_plugin,
-  remove_temp_workspace, replace_plugin_catalog, request,
+  bundled_plugin_entry, create_temp_workspace, enable_full_access_plugin, remove_temp_workspace,
+  replace_plugin_catalog, request,
 };
 use super::*;
 use amentia_protocol::methods;

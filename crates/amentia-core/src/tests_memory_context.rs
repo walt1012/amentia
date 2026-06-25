@@ -4,7 +4,6 @@ use super::test_support::{
 use super::*;
 use amentia_protocol::methods;
 use serde_json::json;
-use std::fs;
 
 #[test]
 fn thread_summary_memory_note_is_updated_after_approval_resolution() {

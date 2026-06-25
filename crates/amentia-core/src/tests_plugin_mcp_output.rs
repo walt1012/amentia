@@ -1,7 +1,7 @@
 #[cfg(unix)]
 use super::test_support::{
-  create_temp_plugin_bundle, create_temp_workspace, remove_temp_workspace,
-  replace_plugin_catalog, request,
+  create_temp_plugin_bundle, create_temp_workspace, remove_temp_workspace, replace_plugin_catalog,
+  request,
 };
 #[cfg(unix)]
 use super::{handle_request, RuntimeContext};
