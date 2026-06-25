@@ -23,7 +23,7 @@ The repository is intentionally English-only.
 - Judge features by packaged-app usability, not by whether an internal API or script exists.
 - Favor a calm, premium, minimal UI inspired by high-quality agent tools such as Codex and Claude Code.
 - Keep the default intelligence path fully local with no required external model API.
-- Treat `LFM2.5-350M` as the default first-use model while keeping small GGUF alternatives available.
+- Treat Granite 4.0-H-350M as the default first-use model while keeping a very small GGUF catalog available.
 - Design plugins as first-class product modules so `Amentia` can expand beyond code assistance into a broader local agent platform.
 - Prefer free and open source dependencies, tooling, and model delivery paths.
 
@@ -61,24 +61,24 @@ receipts, actionable source/file evidence, session delete and revert safety,
 plugin recovery, Notion connector proof, memory capture, bounded local
 execution, and the x86_64 macOS DMG package path.
 
-The active work is Milestone 14: connector and skill platform. Keep the app
-small, human, and usable from the installed package while proving safe local
-extension execution.
+The active work is Milestone 15: cowork continuity and installed-app
+hardening. Keep the app small, human, and usable from the installed package
+while proving the local model, session, retrieval, reset, and recovery loops.
 
 Detailed milestone scope lives in [docs/development-plan.md](docs/development-plan.md).
 
 Model packaging note:
 
 - the repository tracks model pack manifests and small metadata
-- the actual `LFM2.5-350M-Q4_K_M.gguf` weight file is downloaded by the app into local data storage, not committed to git history
-- the in-app catalog stays intentionally small: default LFM plus modern tiny Granite, with new candidates added only after product-fit validation
+- the actual GGUF model weights are downloaded by the app into local data storage, not committed to git history
+- the in-app catalog stays intentionally small: default Granite plus a small set of validated alternatives, with new candidates added only after product-fit validation
 
 ## Runtime Shape
 
 - Native macOS shell in `SwiftUI`
 - Local runtime in `Rust`
 - JSON-RPC style communication over `stdio`
-- Local model runtime with `LFM2.5-350M` as the default downloadable first-use model option
+- Local model runtime with Granite 4.0-H-350M as the default downloadable first-use model option
 
 ## Development Notes
 

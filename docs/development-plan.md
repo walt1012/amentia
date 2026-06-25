@@ -91,7 +91,14 @@ The current product baseline includes:
 
 ## M15 Cowork Continuity
 
-Status: active. Current focus: first-use local model confirmation and session continuity.
+Status: active, late-stage installed-app hardening.
+
+Current focus:
+
+- Prove the fresh-install model deploy and invoke loop from the user-facing app.
+- Keep session delete, revert, reset, and failure recovery clean and visible.
+- Remove stale identity/model docs and user-visible internal wording.
+- Polish the primary cowork path before adding more extension surface.
 
 Goal: make Amentia useful across real sessions without turning it into a remote
 server agent or a code-only assistant.
@@ -114,13 +121,12 @@ Exit criteria:
 
 Work order:
 
-1. Finish structural cleanup after the rename: remove stale compatibility code,
-   collapse duplicated test fixtures, and keep storage/model/plugin contracts
-   narrow.
-2. Harden the local model loop: first-use guidance, activation recovery, backend
-   failure wording, self-check, and model manager clarity.
-3. Tighten session continuity: deletion, change ledger, revert, receipts,
-   session search, and clear recovery states.
+1. Remove stale identity/model docs, dead compatibility paths, and duplicated
+   fixtures while keeping ownership boundaries narrow.
+2. Prove the local model loop from the packaged app: download, activate,
+   self-check, invoke, fail closed, and recover in plain language.
+3. Finish session continuity: deletion, change ledger, revert, receipts,
+   session search, reset, and clear recovery states.
 4. Improve cowork retrieval: Web Search by default, bounded memory ranking, and
    project/session context before any local document RAG.
 5. Add a local follow-up queue only after approvals, receipts, and cancellation
