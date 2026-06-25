@@ -28,7 +28,7 @@ struct LocalDataResetSummary: Equatable {
 
 enum LocalDataSettingsPresenter {
   static let deleteBlockedDetail =
-    "Finish active work, model checks, or plugin and connection operations before resetting Amentia."
+    "Finish active work, model checks, or plugin and connection operations before deleting local data."
 
   static func summary(_ snapshot: LocalDataSettingsSnapshot) -> LocalDataSettingsSummary {
     LocalDataSettingsSummary(
@@ -36,12 +36,12 @@ enum LocalDataSettingsPresenter {
       ownershipDetail:
         "Amentia keeps downloaded models, sessions, plugins, saved connection sign-ins, preferences, caches, and window layout on this Mac. Project folders are never deleted here.",
       uninstallDetail:
-        "Removing Amentia.app does not remove this data. Use Reset Amentia when you want a fresh first-run setup.",
+        "Removing Amentia.app does not remove this data. Use Delete All Local Data when you want a fresh first-run setup.",
       blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
       localDataPath: snapshot.localDataPath,
-      revealButtonTitle: "Show Amentia Data",
-      deleteButtonTitle: "Delete All Amentia Data...",
-      confirmationTitle: "Delete All Amentia Data on This Mac?",
+      revealButtonTitle: "Show Local Data",
+      deleteButtonTitle: "Delete All Local Data...",
+      confirmationTitle: "Delete All Local Amentia Data?",
       confirmationMessage:
         "Amentia will remove Amentia data from this Mac: downloaded models, sessions, plugins, saved connection sign-ins, paused downloads, preferences, caches, and saved window layout. Your project folders and repositories will not be deleted.",
       canDeleteLocalData: snapshot.canDeleteLocalData
@@ -50,8 +50,8 @@ enum LocalDataSettingsPresenter {
 
   static func resetSummary(_ result: AppDataResetResult) -> LocalDataResetSummary {
     LocalDataResetSummary(
-      runtimeDetail: "Reset Amentia. Restart Amentia to set up again.",
-      timelineTitle: "Amentia Reset",
+      runtimeDetail: "Deleted Amentia local data. Restart Amentia to set up again.",
+      timelineTitle: "Local Data Deleted",
       timelineBody:
         "Amentia removed Amentia data, including downloaded models, sessions, plugins, saved connection sign-ins, paused downloads, preferences, caches, saved window layout, and Amentia support folders. Project folders on disk were not deleted.",
       attributes: [

@@ -68,7 +68,7 @@ struct SettingsView: View {
       Text("Default: Granite 4.0-H-350M. Alternative: MiniCPM5-1B.")
         .font(.caption)
         .foregroundColor(.secondary)
-      Text("Reset Amentia removes downloaded models and starts setup fresh.")
+      Text("Delete All Local Data removes downloaded models and starts setup fresh.")
         .font(.caption2)
         .foregroundColor(.secondary)
     }
@@ -177,7 +177,7 @@ private struct SettingsStorageSection: View {
   @Binding var confirmsLocalDataDelete: Bool
 
   var body: some View {
-    SettingsCard(title: "Storage & Reset", systemImage: "externaldrive", tone: .neutral) {
+    SettingsCard(title: "Local Data", systemImage: "externaldrive", tone: .neutral) {
       Text(summary.storageSummary)
         .font(.caption)
       Text(summary.ownershipDetail)
@@ -215,7 +215,7 @@ private struct SettingsStorageSection: View {
       }
     }
     .alert(summary.confirmationTitle, isPresented: $confirmsLocalDataDelete) {
-      Button("Delete All Amentia Data", role: .destructive) {
+      Button("Delete All Local Data", role: .destructive) {
         delete()
       }
       Button("Cancel", role: .cancel) {}

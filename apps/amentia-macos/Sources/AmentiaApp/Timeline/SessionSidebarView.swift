@@ -102,7 +102,7 @@ struct SessionSidebarView: View {
       )
     }
     .alert(resetSummary.confirmationTitle, isPresented: $confirmsResetAmentia) {
-      Button("Delete All Amentia Data", role: .destructive) {
+      Button("Delete All Local Data", role: .destructive) {
         viewModel.deleteLocalData()
       }
       Button("Cancel", role: .cancel) {}

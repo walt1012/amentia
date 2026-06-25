@@ -42,7 +42,7 @@ extension AppViewModel {
     defer {
       localDataResetInProgress = false
     }
-    runtimeBridge.stopRuntime(detail: "Amentia reset. Restart Amentia to continue.")
+    runtimeBridge.stopRuntime(detail: "Deleting Amentia local data. Restart Amentia to continue.")
     runtimeLaunchCoordinator.cancel()
     workspaceOpenCoordinator.cancel()
     threadCreationCoordinator.cancel()
@@ -62,11 +62,11 @@ extension AppViewModel {
       let result = try AppDataResetService.deleteLocalData()
       applyLocalDataResetSuccess(result)
     } catch {
-      runtimeDetail = "Amentia reset failed: \(error.localizedDescription)"
+      runtimeDetail = "Local data deletion failed: \(error.localizedDescription)"
       appendEntry(
         to: selectedThreadID,
         TimelineEntryFactory.warning(
-          title: "Amentia Reset Failed",
+          title: "Local Data Delete Failed",
           body: error.localizedDescription
         )
       )

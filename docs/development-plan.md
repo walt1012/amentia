@@ -88,6 +88,8 @@ The current product baseline includes:
 - Failed first prompts keep the user draft, show a retryable recovery message,
   and update the session preview without exposing backend details.
 - Reset Amentia for app-owned data, downloaded models, and paused downloads.
+- Local data deletion copy is unified around app-owned data and clearly excludes
+  project folders and repositories.
 - Local plugin registry, installation lifecycle, Actions, Connections, Skills,
   MCP, Tools, Checks, credentials, retries, and generic connector receipts.
 - Legacy prompt-pack aliases are out of the active plugin contract.

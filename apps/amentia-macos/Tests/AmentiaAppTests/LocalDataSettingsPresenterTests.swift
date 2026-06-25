@@ -38,11 +38,11 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(summary.ownershipDetail.contains("window layout"))
     XCTAssertTrue(summary.ownershipDetail.contains("Project folders are never deleted"))
     XCTAssertTrue(summary.uninstallDetail.contains("Removing Amentia.app does not remove this data"))
-    XCTAssertTrue(summary.uninstallDetail.contains("Reset Amentia"))
+    XCTAssertTrue(summary.uninstallDetail.contains("Delete All Local Data"))
     XCTAssertNil(summary.blockedDetail)
-    XCTAssertEqual(summary.revealButtonTitle, "Show Amentia Data")
-    XCTAssertEqual(summary.deleteButtonTitle, "Delete All Amentia Data...")
-    XCTAssertTrue(summary.confirmationTitle.contains("Delete All Amentia Data"))
+    XCTAssertEqual(summary.revealButtonTitle, "Show Local Data")
+    XCTAssertEqual(summary.deleteButtonTitle, "Delete All Local Data...")
+    XCTAssertTrue(summary.confirmationTitle.contains("Delete All Local Amentia Data"))
   }
 
   func testSummaryExplainsDownloadedModelStorage() {
@@ -81,7 +81,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(summary.blockedDetail?.contains("Finish active work") == true)
     XCTAssertFalse(summary.blockedDetail?.contains("model downloads") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("model checks") == true)
-    XCTAssertTrue(summary.blockedDetail?.contains("resetting Amentia") == true)
+    XCTAssertTrue(summary.blockedDetail?.contains("deleting local data") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("plugin and connection operations") == true)
   }
 
@@ -95,9 +95,10 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertEqual(
       reset.runtimeDetail,
-      "Reset Amentia. Restart Amentia to set up again."
+      "Deleted Amentia local data. Restart Amentia to set up again."
     )
     XCTAssertFalse(reset.runtimeDetail.contains("/Users/example"))
+    XCTAssertEqual(reset.timelineTitle, "Local Data Deleted")
     XCTAssertTrue(reset.timelineBody.contains("Amentia data"))
     XCTAssertTrue(reset.timelineBody.contains("Project folders on disk were not deleted"))
     XCTAssertTrue(reset.timelineBody.contains("plugins"))
