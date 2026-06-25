@@ -96,6 +96,8 @@ Exit criteria:
 
 - A fresh install can download, activate, self-check, and invoke a local model
   without expert context.
+- A failed local model self-check blocks cowork use until the model is checked,
+  restarted, or replaced.
 - Users can delete sessions, revert session changes, and Reset Amentia from
   visible UI without leaving app-owned garbage behind.
 - Web Search, workspace context, memory ranking, and session search provide

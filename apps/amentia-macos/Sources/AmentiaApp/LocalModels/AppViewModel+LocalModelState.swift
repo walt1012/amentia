@@ -3,6 +3,14 @@ import Foundation
 @MainActor
 extension AppViewModel {
   func isLocalModelReady() -> Bool {
+    guard hasRunnableLocalModelSetup() else {
+      return false
+    }
+
+    return !localModelReadinessState.blocksReadiness(activeModelID: activeLocalModelID())
+  }
+
+  func hasRunnableLocalModelSetup() -> Bool {
     guard runtimeState == .ready,
           let modelHealth,
           modelHealth.status == "ready",
@@ -46,7 +54,8 @@ extension AppViewModel {
       modelDownloadProgress: modelDownloadState.progress,
       selectedSetupModelID: selectedSetupModelID,
       selectedSetupModel: selectedSetupModel(),
-      hasActiveCatalogModel: hasActiveCatalogModel()
+      hasActiveCatalogModel: hasActiveCatalogModel(),
+      modelCheckFailureDetail: modelCheckFailureDetail()
     )
   }
 
@@ -84,6 +93,7 @@ extension AppViewModel {
       hasActiveTurn: hasActiveOrPendingTurn(),
       isCheckingModel: isCheckingLocalModel,
       hasPendingModelCheck: localModelProbeCoordinator.hasPendingPostActivationCheck,
+      modelCheckFailureDetail: modelCheckFailureDetail(),
       downloadingModel: localModel(for: modelDownloadState.activeModelID),
       pausedModel: localModel(for: modelDownloadState.pausedModelID),
       selectedSetupModel: selectedSetupModel(),
@@ -123,5 +133,9 @@ extension AppViewModel {
 
   private func hasActiveCatalogModel() -> Bool {
     localModels.contains(where: { $0.active })
+  }
+
+  private func modelCheckFailureDetail() -> String? {
+    localModelReadinessState.probeFailureDetail(activeModelID: activeLocalModelID())
   }
 }

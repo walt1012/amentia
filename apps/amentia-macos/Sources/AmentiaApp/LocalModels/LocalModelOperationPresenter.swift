@@ -6,6 +6,7 @@ struct LocalModelOperationSnapshot {
   let hasActiveTurn: Bool
   let isCheckingModel: Bool
   let hasPendingModelCheck: Bool
+  let modelCheckFailureDetail: String?
   let downloadingModel: LocalModelSummary?
   let pausedModel: LocalModelSummary?
   let selectedSetupModel: LocalModelSummary?
@@ -110,6 +111,9 @@ enum LocalModelOperationPresenter {
     if snapshot.hasPendingModelCheck {
       return "Selected: \(snapshot.activeModelDisplayName ?? "local model"). Amentia will confirm it can answer after startup settles."
     }
+    if snapshot.modelCheckFailureDetail != nil {
+      return "The active local model needs a successful check before cowork can continue."
+    }
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
     let localSize = LocalModelByteFormatter.string(snapshot.downloadedLocalSizeBytes)
@@ -185,6 +189,17 @@ enum LocalModelOperationPresenter {
         actionSummary: "Waiting to confirm the active local model can answer.",
         readinessDetail: "Checking",
         tone: .active
+      )
+    }
+
+    if let failureDetail = snapshot.modelCheckFailureDetail {
+      return LocalModelSetupGuidance(
+        title: "Check Local Model",
+        summary: "The active local model did not answer successfully.",
+        detail: failureDetail,
+        actionSummary: "Check the model again, restart Amentia, or re-download the selected model.",
+        readinessDetail: "Check Failed",
+        tone: .warning
       )
     }
 
@@ -280,6 +295,10 @@ enum LocalModelOperationPresenter {
 
     if snapshot.hasPendingModelCheck {
       return "Amentia will check the active model as soon as startup and setup are ready."
+    }
+
+    if let failureDetail = snapshot.modelCheckFailureDetail {
+      return "\(failureDetail) Check the model again after restarting or re-downloading it."
     }
 
     if snapshot.isLocalModelReady {

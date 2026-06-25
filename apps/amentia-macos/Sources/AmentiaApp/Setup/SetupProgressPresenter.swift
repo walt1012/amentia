@@ -96,6 +96,8 @@ enum SetupProgressPresenter {
       return "Finish Work"
     case "Select":
       return "Use Model"
+    case "Check Failed":
+      return "Check Model"
     case "Repair":
       return "Repair Model"
     case "Choose":

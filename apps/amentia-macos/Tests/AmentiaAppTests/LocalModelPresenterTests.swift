@@ -425,6 +425,39 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(guidance.summary.contains("probe"))
   }
 
+  func testFailedModelCheckShowsRecoveryPath() {
+    let selectedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: true,
+      active: true
+    )
+    let detail = "The local model did not answer."
+    let guidance = LocalModelOperationPresenter.setupGuidance(operationSnapshot(
+      modelCheckFailureDetail: detail,
+      selectedModel: selectedModel,
+      activeModelDisplayName: "Granite 4.0-H-350M"
+    ))
+    let status = LocalModelStatusPresenter.statusSummary(statusSnapshot(
+      selectedModel: selectedModel,
+      modelHealth: readyModelHealth(for: selectedModel),
+      hasActiveCatalogModel: true,
+      modelCheckFailureDetail: detail
+    ))
+    let readiness = LocalModelStatusPresenter.readinessSummary(statusSnapshot(
+      selectedModel: selectedModel,
+      modelHealth: readyModelHealth(for: selectedModel),
+      hasActiveCatalogModel: true,
+      modelCheckFailureDetail: detail
+    ))
+
+    XCTAssertEqual(guidance.title, "Check Local Model")
+    XCTAssertEqual(guidance.readinessDetail, "Check Failed")
+    XCTAssertEqual(status, "Model check failed")
+    XCTAssertEqual(readiness, "Local model setup needs a successful check.")
+    XCTAssertTrue(guidance.actionSummary.contains("Check the model again"))
+  }
+
   func testSetupPrimaryActionOffersModelCheckWhenReady() {
     let action = LocalModelActionPlanner.setupPrimaryAction(actionSnapshot(
       isLocalModelReady: true,
@@ -487,7 +520,8 @@ final class LocalModelPresenterTests: XCTestCase {
     modelDownloadID: String? = nil,
     pausedModelDownloadID: String? = nil,
     progress: ModelDownloadProgress? = nil,
-    hasActiveCatalogModel: Bool = false
+    hasActiveCatalogModel: Bool = false,
+    modelCheckFailureDetail: String? = nil
   ) -> LocalModelStatusSnapshot {
     LocalModelStatusSnapshot(
       runtimeState: .ready,
@@ -497,7 +531,8 @@ final class LocalModelPresenterTests: XCTestCase {
       modelDownloadProgress: progress,
       selectedSetupModelID: selectedModel.id,
       selectedSetupModel: selectedModel,
-      hasActiveCatalogModel: hasActiveCatalogModel
+      hasActiveCatalogModel: hasActiveCatalogModel,
+      modelCheckFailureDetail: modelCheckFailureDetail
     )
   }
 
@@ -507,6 +542,7 @@ final class LocalModelPresenterTests: XCTestCase {
     hasActiveTurn: Bool = false,
     isCheckingModel: Bool = false,
     hasPendingModelCheck: Bool = false,
+    modelCheckFailureDetail: String? = nil,
     downloadingModel: LocalModelSummary? = nil,
     pausedModel: LocalModelSummary? = nil,
     selectedModel: LocalModelSummary? = nil,
@@ -522,6 +558,7 @@ final class LocalModelPresenterTests: XCTestCase {
       hasActiveTurn: hasActiveTurn,
       isCheckingModel: isCheckingModel,
       hasPendingModelCheck: hasPendingModelCheck,
+      modelCheckFailureDetail: modelCheckFailureDetail,
       downloadingModel: downloadingModel,
       pausedModel: pausedModel,
       selectedSetupModel: selectedModel,
@@ -593,6 +630,27 @@ final class LocalModelPresenterTests: XCTestCase {
       downloaded: downloaded,
       active: active,
       localSizeBytes: downloaded ? 222_000_000 : nil
+    )
+  }
+
+  private func readyModelHealth(for model: LocalModelSummary) -> ModelHealthSummary {
+    ModelHealthSummary(
+      packID: model.id,
+      displayName: model.displayName,
+      backend: "llama.cpp",
+      status: "ready",
+      detail: "Ready",
+      source: "local",
+      binaryPath: nil,
+      modelPath: model.installPath,
+      manifestPath: "/tmp/model-pack.json",
+      metrics: [
+        "contextSize": "\(model.contextSize)",
+        "modelContextSize": "\(model.modelContextSize)",
+        "maxOutputTokens": "\(model.maxOutputTokens)",
+        "readiness": "ready",
+        "packReady": "true",
+      ]
     )
   }
 }

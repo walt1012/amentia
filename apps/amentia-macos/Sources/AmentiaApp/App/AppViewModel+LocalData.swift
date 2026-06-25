@@ -84,6 +84,7 @@ extension AppViewModel {
       state.selectedSetupModelID = LocalModelCatalog.defaultFirstUseModelID
       state.modelHealth = nil
       state.runtimeReadiness = nil
+      state.clearProbeState()
     }
     updateMemoryState { state in
       state.resetRuntimeData()

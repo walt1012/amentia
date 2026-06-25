@@ -16,17 +16,20 @@ struct LocalModelCatalogRefreshPlan {
 struct LocalModelReadinessState {
   var modelHealth: ModelHealthSummary?
   var runtimeReadiness: RuntimeReadinessSummary?
+  var probeState: LocalModelProbeState?
   var models: [LocalModelSummary]
   var selectedSetupModelID: String
 
   init(
     modelHealth: ModelHealthSummary? = nil,
     runtimeReadiness: RuntimeReadinessSummary? = nil,
+    probeState: LocalModelProbeState? = nil,
     models: [LocalModelSummary],
     selectedSetupModelID: String
   ) {
     self.modelHealth = modelHealth
     self.runtimeReadiness = runtimeReadiness
+    self.probeState = probeState
     self.models = models
     self.selectedSetupModelID = selectedSetupModelID
   }
@@ -34,11 +37,83 @@ struct LocalModelReadinessState {
   mutating func applyCatalogRefresh(_ refreshPlan: LocalModelCatalogRefreshPlan) {
     models = refreshPlan.models
     selectedSetupModelID = refreshPlan.selectedSetupModelID
+    reconcileProbeStateWithActiveModel()
   }
 
   mutating func clearRuntimeReadiness() {
     modelHealth = nil
     runtimeReadiness = nil
+    probeState = nil
+  }
+
+  mutating func clearProbeState() {
+    probeState = nil
+  }
+
+  mutating func markProbeStarted(modelID: String) {
+    probeState = LocalModelProbeState(modelID: modelID, status: .checking, detail: nil)
+  }
+
+  mutating func applyProbeResult(modelID: String, status: String, detail: String?) {
+    if status == "ready" {
+      probeState = LocalModelProbeState(modelID: modelID, status: .passed, detail: nil)
+      return
+    }
+
+    probeState = LocalModelProbeState(modelID: modelID, status: .failed, detail: detail)
+  }
+
+  func blocksReadiness(activeModelID: String?) -> Bool {
+    guard let activeModelID,
+          let probeState,
+          probeState.modelID == activeModelID
+    else {
+      return false
+    }
+
+    return probeState.status.blocksReadiness
+  }
+
+  func probeFailureDetail(activeModelID: String?) -> String? {
+    guard let activeModelID,
+          let probeState,
+          probeState.modelID == activeModelID,
+          probeState.status == .failed
+    else {
+      return nil
+    }
+
+    return probeState.detail ?? "Local model check failed. Check the model again or re-download it."
+  }
+
+  private mutating func reconcileProbeStateWithActiveModel() {
+    let activeModelID = models.first(where: { $0.active })?.id
+    guard probeState?.modelID != activeModelID else {
+      return
+    }
+
+    probeState = nil
+  }
+}
+
+struct LocalModelProbeState: Equatable {
+  let modelID: String
+  let status: LocalModelProbeStatus
+  let detail: String?
+}
+
+enum LocalModelProbeStatus: Equatable {
+  case checking
+  case passed
+  case failed
+
+  var blocksReadiness: Bool {
+    switch self {
+    case .checking, .failed:
+      return true
+    case .passed:
+      return false
+    }
   }
 }
 

@@ -9,6 +9,7 @@ struct LocalModelStatusSnapshot {
   let selectedSetupModelID: String
   let selectedSetupModel: LocalModelSummary?
   let hasActiveCatalogModel: Bool
+  let modelCheckFailureDetail: String?
 }
 
 enum LocalModelStatusPresenter {
@@ -34,6 +35,9 @@ enum LocalModelStatusPresenter {
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
       return "Choose a verified model"
+    }
+    if snapshot.modelCheckFailureDetail != nil {
+      return "Model check failed"
     }
 
     switch modelHealth.status {
@@ -67,6 +71,9 @@ enum LocalModelStatusPresenter {
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
       return "Choose a verified model from Amentia's curated list before running. Removed or external model selections need to be picked again."
+    }
+    if let failureDetail = snapshot.modelCheckFailureDetail {
+      return "\(failureDetail) Check the model again, restart Amentia, or re-download it."
     }
 
     if modelHealth.status != "ready" {
@@ -105,6 +112,10 @@ enum LocalModelStatusPresenter {
     let readiness = modelHealth.metrics["readiness"] ?? "unknown"
     let packReady = modelHealth.metrics["packReady"] ?? "false"
     if readiness == "ready", packReady == "true" {
+      if snapshot.modelCheckFailureDetail != nil {
+        return "Local model setup needs a successful check."
+      }
+
       return "Local model setup is ready."
     }
     return "Local model setup is not ready yet."
@@ -116,6 +127,10 @@ enum LocalModelStatusPresenter {
     }
 
     if modelHealth.status == "ready" {
+      if let failureDetail = snapshot.modelCheckFailureDetail {
+        return "\(failureDetail) Check the model again, restart Amentia, or re-download it."
+      }
+
       return "Local model setup is ready."
     }
 

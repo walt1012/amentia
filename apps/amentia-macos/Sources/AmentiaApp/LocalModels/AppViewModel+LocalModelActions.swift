@@ -39,7 +39,7 @@ extension AppViewModel {
 
   func canProbeLocalModel() -> Bool {
     runtimeState == .ready
-      && isLocalModelReady()
+      && hasRunnableLocalModelSetup()
       && !isCheckingLocalModel
       && !hasActiveOrPendingTurn()
       && !localModelActivationCoordinator.isActivating
@@ -230,6 +230,11 @@ extension AppViewModel {
     }
 
     isCheckingLocalModel = true
+    if let activeModelID = activeLocalModelID() {
+      updateLocalModelReadinessState { state in
+        state.markProbeStarted(modelID: activeModelID)
+      }
+    }
     runtimeDetail = LocalModelProbePresenter.startedDetail()
     Task {
       defer {
@@ -238,8 +243,24 @@ extension AppViewModel {
 
       do {
         let probe = try await runtimeBridge.probeModel()
+        updateLocalModelReadinessState { state in
+          state.applyProbeResult(
+            modelID: probe.modelID,
+            status: probe.status,
+            detail: probe.detail
+          )
+        }
         applyLocalModelProbePresentation(LocalModelProbePresenter.presentation(for: probe))
       } catch {
+        if let activeModelID = activeLocalModelID() {
+          updateLocalModelReadinessState { state in
+            state.applyProbeResult(
+              modelID: activeModelID,
+              status: "request_failed",
+              detail: error.localizedDescription
+            )
+          }
+        }
         applyLocalModelProbePresentation(
           LocalModelProbePresenter.requestFailurePresentation(error: error)
         )
