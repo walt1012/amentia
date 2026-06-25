@@ -42,14 +42,17 @@ enum LocalModelDownloadInterruptionPlanner {
       return cancellationPlan(model: model)
     }
 
+    let errorDetail = error.localizedDescription
     return LocalModelDownloadInterruptionPlan(
       mode: .failed,
-      runtimeDetail: "Model download failed: \(error.localizedDescription)",
+      runtimeDetail:
+        "Model download failed. Check your connection and available disk space, then try again.",
       timelineTitle: "Model Download Failed",
-      timelineBody: "\(modelName) download failed: \(error.localizedDescription)",
+      timelineBody:
+        "\(modelName) download did not finish. Check your connection and available disk space, then try again.",
       timelineKind: .warning,
       attributes: [
-        "error": error.localizedDescription,
+        "error": errorDetail,
         "result": "failed",
       ],
       clearsPausedState: true,

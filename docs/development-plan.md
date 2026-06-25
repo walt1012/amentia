@@ -76,6 +76,8 @@ The current product baseline includes:
   inspection behind Advanced surfaces.
 - Local model self-check failures show user-facing recovery first and keep
   backend error details out of the primary timeline body.
+- Local model download, selection, and setup refresh failures show recovery
+  guidance instead of raw paths, manifests, network errors, or backend terms.
 - Model choice copy presents practical fit, size, and recovery actions instead
   of internal model tags or runner terminology.
 - Packaged local backend launch probing and bounded file-backed inference.

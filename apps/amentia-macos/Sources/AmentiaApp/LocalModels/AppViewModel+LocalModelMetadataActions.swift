@@ -42,10 +42,16 @@ extension AppViewModel {
         else {
           return
         }
-        runtimeDetail = "Model setup refresh failed: \(error.localizedDescription)"
+        runtimeDetail = LocalModelMetadataPresenter.refreshFailureDetail()
       }
     }
     localModelMetadataCoordinator.bind(task: task, token: requestToken)
+  }
+}
+
+enum LocalModelMetadataPresenter {
+  static func refreshFailureDetail() -> String {
+    "Could not refresh local model setup. Restart Amentia or re-download the selected model, then try again."
   }
 }
 

@@ -346,6 +346,59 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(plan.timelineTitle.contains("Engine"))
   }
 
+  func testDownloadFailureCopyKeepsRawErrorOutOfUserFacingText() {
+    let selectedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: false,
+      active: false
+    )
+    let plan = LocalModelDownloadInterruptionPlanner.plan(
+      model: selectedModel,
+      error: NSError(domain: "AmentiaTests", code: 1, userInfo: [
+        NSLocalizedDescriptionKey: "HTTP 503 from https://example.com/model.gguf"
+      ])
+    )
+
+    XCTAssertEqual(plan.timelineTitle, "Model Download Failed")
+    XCTAssertTrue(plan.runtimeDetail.contains("Check your connection"))
+    XCTAssertTrue(plan.timelineBody.contains("try again"))
+    XCTAssertFalse(plan.runtimeDetail.contains("https://"))
+    XCTAssertFalse(plan.timelineBody.contains("HTTP 503"))
+    XCTAssertEqual(plan.attributes["error"], "HTTP 503 from https://example.com/model.gguf")
+  }
+
+  func testModelActivationFailureCopyAvoidsRawLocalDetails() {
+    let rawError = NSError(domain: "AmentiaTests", code: 2, userInfo: [
+      NSLocalizedDescriptionKey: "manifest write failed at /Users/example/model-pack.json"
+    ])
+
+    let manifestFailure = LocalModelActivationPlanner.failurePlan(
+      error: LocalModelActivationPreparationError.manifestWriteFailed(rawError)
+    )
+    let integrityFailure = LocalModelActivationPlanner.failurePlan(
+      error: LocalModelActivationPreparationError.integrityCheckFailed(rawError)
+    )
+    let genericFailure = LocalModelActivationPlanner.failurePlan(error: rawError)
+
+    XCTAssertTrue(manifestFailure.runtimeDetail.contains("Restart Amentia"))
+    XCTAssertFalse(manifestFailure.runtimeDetail.contains("/Users/example"))
+    XCTAssertTrue(integrityFailure.runtimeDetail.contains("Download the model again"))
+    XCTAssertFalse(integrityFailure.runtimeDetail.contains("manifest"))
+    XCTAssertTrue(genericFailure.runtimeDetail.contains("Model selection failed"))
+    XCTAssertFalse(genericFailure.runtimeDetail.contains("/Users/example"))
+  }
+
+  func testModelSetupRefreshFailureCopyAvoidsBackendDetails() {
+    let detail = LocalModelMetadataPresenter.refreshFailureDetail()
+
+    XCTAssertTrue(detail.contains("Restart Amentia"))
+    XCTAssertTrue(detail.contains("re-download the selected model"))
+    XCTAssertFalse(detail.contains("JSON-RPC"))
+    XCTAssertFalse(detail.contains("manifest"))
+    XCTAssertFalse(detail.contains("llama"))
+  }
+
   func testRefreshGuidanceAvoidsInternalSetupInfoLanguage() {
     let guidance = LocalModelOperationPresenter.setupGuidance(operationSnapshot())
 

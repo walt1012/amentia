@@ -52,8 +52,10 @@ enum LocalModelActivationPreparationError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .integrityCheckFailed(let error), .manifestWriteFailed(let error):
-      return error.localizedDescription
+    case .integrityCheckFailed:
+      return "The selected model could not be verified. Download it again to repair setup."
+    case .manifestWriteFailed:
+      return "Amentia could not save the selected model setup. Restart Amentia, then try again."
     }
   }
 }
@@ -125,22 +127,26 @@ enum LocalModelActivationPlanner {
   }
 
   static func selectionFailureDetail(error: Error) -> String {
-    "Model selection failed: \(error.localizedDescription)"
+    if let activationError = error as? LocalModelActivationPreparationError {
+      return activationError.localizedDescription
+    }
+
+    return "Model selection failed. Restart Amentia or re-download the selected model, then try again."
   }
 
   static func failurePlan(error: Error) -> LocalModelActivationFailurePlan {
     if let activationError = error as? LocalModelActivationPreparationError {
       switch activationError {
-      case .integrityCheckFailed(let underlyingError):
+      case .integrityCheckFailed:
         return LocalModelActivationFailurePlan(
           runtimeDetail:
-            "Model check failed: \(underlyingError.localizedDescription) Amentia removed the bad file. Download the model again to repair setup.",
+            "The selected model could not be verified. Amentia removed the bad file. Download the model again to repair setup.",
           removesModelFile: true,
           refreshesCatalog: true
         )
-      case .manifestWriteFailed(let underlyingError):
+      case .manifestWriteFailed:
         return LocalModelActivationFailurePlan(
-          runtimeDetail: selectionFailureDetail(error: underlyingError),
+          runtimeDetail: selectionFailureDetail(error: activationError),
           removesModelFile: false,
           refreshesCatalog: false
         )
