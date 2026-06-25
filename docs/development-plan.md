@@ -84,6 +84,8 @@ The current product baseline includes:
 - Session search, delete, deletion receipts, change preview, and revert.
 - Session delete and revert confirmations name the target session and keep
   project-file ownership clear.
+- Session delete and revert failures keep raw local errors out of the primary
+  status copy and point users back to safe retry paths.
 - First prompt drafting and sending from the setup checklist or composer.
 - Failed first prompts keep the user draft, show a retryable recovery message,
   and update the session preview without exposing backend details.

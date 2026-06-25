@@ -27,20 +27,22 @@ enum SessionChangePresenter {
     "\(threadTitle) was removed from Amentia. Project files and repositories were not changed."
   }
 
-  static func deleteFailedDetail(error: Error) -> String {
-    "Session delete failed: \(error.localizedDescription)"
+  static func deleteFailedDetail(error _: Error) -> String {
+    "Could not delete the session. Try again after Amentia finishes syncing local state."
   }
 
-  static func revertPreviewFailedDetail(error: Error) -> String {
-    "Could not review session changes: \(error.localizedDescription)"
+  static func revertPreviewFailedDetail(error _: Error) -> String {
+    "Could not review session changes. Check that the project is still available, then try again."
   }
 
-  static func revertFailedDetail(error: Error) -> String {
-    "Session revert failed: \(error.localizedDescription)"
+  static func revertFailedDetail(error _: Error) -> String {
+    "Could not revert session changes. Review the session changes again before retrying."
   }
 
   static func revertSuccessDetail(revertedCount: Int) -> String {
     switch revertedCount {
+    case 0:
+      return "No files were reverted. Project files were not changed."
     case 1:
       return "Reverted 1 file saved by this session."
     default:

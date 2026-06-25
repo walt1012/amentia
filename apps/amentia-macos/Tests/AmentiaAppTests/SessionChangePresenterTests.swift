@@ -27,6 +27,41 @@ final class SessionChangePresenterTests: XCTestCase {
     )
   }
 
+  func testSessionChangeFailuresAvoidInternalErrors() {
+    let error = NSError(domain: "AmentiaTests", code: 1, userInfo: [
+      NSLocalizedDescriptionKey: "JSON-RPC thread/delete failed for /tmp/project"
+    ])
+
+    let delete = SessionChangePresenter.deleteFailedDetail(error: error)
+    let preview = SessionChangePresenter.revertPreviewFailedDetail(error: error)
+    let revert = SessionChangePresenter.revertFailedDetail(error: error)
+
+    XCTAssertTrue(delete.contains("Could not delete the session"))
+    XCTAssertTrue(preview.contains("project is still available"))
+    XCTAssertTrue(revert.contains("Review the session changes again"))
+
+    for detail in [delete, preview, revert] {
+      XCTAssertFalse(detail.contains("JSON-RPC"))
+      XCTAssertFalse(detail.contains("thread/delete"))
+      XCTAssertFalse(detail.contains("/tmp/project"))
+    }
+  }
+
+  func testRevertSuccessCopyHandlesZeroOneAndManyFiles() {
+    XCTAssertEqual(
+      SessionChangePresenter.revertSuccessDetail(revertedCount: 0),
+      "No files were reverted. Project files were not changed."
+    )
+    XCTAssertEqual(
+      SessionChangePresenter.revertSuccessDetail(revertedCount: 1),
+      "Reverted 1 file saved by this session."
+    )
+    XCTAssertEqual(
+      SessionChangePresenter.revertSuccessDetail(revertedCount: 3),
+      "Reverted 3 files saved by this session."
+    )
+  }
+
   func testRevertPromptAllowsCleanRecordedChanges() {
     let prompt = SessionChangePresenter.revertPrompt(
       for: preview(changes: [
