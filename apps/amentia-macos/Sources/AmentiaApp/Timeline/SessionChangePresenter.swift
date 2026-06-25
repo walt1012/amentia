@@ -53,7 +53,7 @@ enum SessionChangePresenter {
       .map { "Amentia will delete \"\($0)\" from the session list." }
       ?? "Amentia will delete this session from the session list."
 
-    SessionDeletePrompt(
+    return SessionDeletePrompt(
       title: "Delete Session?",
       message: """
       \(titleLine)
