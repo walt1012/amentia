@@ -485,7 +485,7 @@ final class LocalModelPresenterTests: XCTestCase {
         isLocalModelReady: true,
         canProbeModel: true
       )),
-      "Run Model Check"
+      "Check Model"
     )
   }
 
@@ -516,9 +516,27 @@ final class LocalModelPresenterTests: XCTestCase {
 
     XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
     XCTAssertEqual(presentation.timelineKind, .warning)
-    XCTAssertTrue(presentation.runtimeDetail.contains("Re-download the model"))
-    XCTAssertTrue(presentation.runtimeDetail.contains("restart Amentia"))
+    XCTAssertTrue(presentation.runtimeDetail.contains("re-download the selected model"))
+    XCTAssertTrue(presentation.runtimeDetail.contains("Restart Amentia"))
+    XCTAssertFalse(presentation.timelineBody.contains("llama.cpp"))
+    XCTAssertEqual(presentation.attributes["detail"], "Local llama.cpp inference failed.")
     XCTAssertNil(presentation.attributes["sample"])
+  }
+
+  func testModelProbeRequestFailureKeepsTimelineBodyUserFacing() {
+    let presentation = LocalModelProbePresenter.requestFailurePresentation(
+      error: NSError(domain: "AmentiaTests", code: 1, userInfo: [
+        NSLocalizedDescriptionKey: "JSON-RPC request failed: backend pipe closed."
+      ])
+    )
+
+    XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
+    XCTAssertTrue(presentation.runtimeDetail.contains("Restart Amentia"))
+    XCTAssertFalse(presentation.timelineBody.contains("JSON-RPC"))
+    XCTAssertEqual(
+      presentation.attributes["detail"],
+      "JSON-RPC request failed: backend pipe closed."
+    )
   }
 
   private func statusSnapshot(

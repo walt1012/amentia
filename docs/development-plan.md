@@ -74,6 +74,8 @@ The current product baseline includes:
   composer.
 - Model setup UI uses plain recovery language by default and keeps file/path
   inspection behind Advanced surfaces.
+- Local model self-check failures show user-facing recovery first and keep
+  backend error details out of the primary timeline body.
 - Packaged local backend launch probing and bounded file-backed inference.
 - Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
   cancellable subprocesses, and human receipts.

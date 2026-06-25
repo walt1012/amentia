@@ -27,14 +27,21 @@ enum LocalModelProbePresenter {
   }
 
   static func requestFailurePresentation(error: Error) -> LocalModelProbePresentation {
+    let detail = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+    var attributes = [
+      "status": "request_failed"
+    ]
+    if !detail.isEmpty {
+      attributes["detail"] = detail
+    }
+
     LocalModelProbePresentation(
-      runtimeDetail: "Local model check failed: \(error.localizedDescription)",
+      runtimeDetail: recoveryDetail,
       timelineTitle: "Local Model Check Failed",
-      timelineBody: error.localizedDescription,
+      timelineBody:
+        "Amentia could not complete the local model check. Restart Amentia or re-download the selected model, then check again.",
       timelineKind: .warning,
-      attributes: [
-        "status": "request_failed"
-      ]
+      attributes: attributes
     )
   }
 
@@ -60,15 +67,24 @@ enum LocalModelProbePresenter {
   private static func failurePresentation(
     for probe: RuntimeBridge.RuntimeModelProbe
   ) -> LocalModelProbePresentation {
+    var attributes = baseAttributes(for: probe)
+    let detail = probe.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !detail.isEmpty {
+      attributes["detail"] = detail
+    }
+
     LocalModelProbePresentation(
-      runtimeDetail:
-        "Local model check failed. Re-download the model or restart Amentia, then check again.",
+      runtimeDetail: recoveryDetail,
       timelineTitle: "Local Model Check Failed",
-      timelineBody: probe.detail,
+      timelineBody:
+        "The selected local model did not answer the check prompt. Restart Amentia or re-download the model, then check again.",
       timelineKind: .warning,
-      attributes: baseAttributes(for: probe)
+      attributes: attributes
     )
   }
+
+  private static let recoveryDetail =
+    "Local model check failed. Restart Amentia or re-download the selected model, then check again."
 
   private static func baseAttributes(
     for probe: RuntimeBridge.RuntimeModelProbe
