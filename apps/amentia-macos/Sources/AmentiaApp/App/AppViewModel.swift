@@ -330,6 +330,14 @@ final class AppViewModel: ObservableObject {
     localModelReadinessState = nextState
   }
 
+  func localModelProbeBlocksReadiness(activeModelID: String?) -> Bool {
+    localModelReadinessState.blocksReadiness(activeModelID: activeModelID)
+  }
+
+  func localModelProbeFailureDetail(activeModelID: String?) -> String? {
+    localModelReadinessState.probeFailureDetail(activeModelID: activeModelID)
+  }
+
   func updateMemoryState(_ update: (inout MemoryRuntimeState) -> Void) {
     var nextState = memoryState
     update(&nextState)

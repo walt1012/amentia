@@ -7,7 +7,7 @@ extension AppViewModel {
       return false
     }
 
-    return !localModelReadinessState.blocksReadiness(activeModelID: activeLocalModelID())
+    return !localModelProbeBlocksReadiness(activeModelID: activeLocalModelID())
   }
 
   func hasRunnableLocalModelSetup() -> Bool {
@@ -136,6 +136,6 @@ extension AppViewModel {
   }
 
   private func modelCheckFailureDetail() -> String? {
-    localModelReadinessState.probeFailureDetail(activeModelID: activeLocalModelID())
+    localModelProbeFailureDetail(activeModelID: activeLocalModelID())
   }
 }
