@@ -44,7 +44,7 @@ final class RuntimeBridge {
       }
 
       let detail = stopRuntimeAfterRequestBoundary(
-        detail: "Amentia initialization failed: \(error.localizedDescription)"
+        detail: UserFacingFailurePresenter.runtimeInitializationFailureDetail()
       )
       throw RuntimeError.rpc(detail)
     }
@@ -204,11 +204,12 @@ final class RuntimeBridge {
     _ detail: String,
     session: RuntimeBridgeProcessSession? = nil
   ) -> String {
-    guard let summary = (session ?? currentProcessSession())?.recentErrorSummary else {
+    let hasRuntimeLog = (session ?? currentProcessSession())?.recentErrorSummary?.isEmpty == false
+    guard hasRuntimeLog else {
       return detail
     }
 
-    return "\(detail) Amentia log: \(summary)"
+    return UserFacingFailurePresenter.runtimeStoppedUnexpectedlyDetail()
   }
 
   private func resetProcessState() {
@@ -344,10 +345,8 @@ final class RuntimeBridge {
     return try decoder.decode(JSONRPCResponse<ResultType>.self, from: data)
   }
 
-  private func stopRuntimeAfterRequestWriteFailure(method: String, error: Error) {
-    let detail =
-      "Amentia request \(method) could not be written: \(error.localizedDescription). " +
-      "Restart Amentia to continue."
+  private func stopRuntimeAfterRequestWriteFailure(method: String, error _: Error) {
+    let detail = UserFacingFailurePresenter.requestWriteFailureDetail(method: method)
     stopRuntimeAfterRequestBoundary(detail: detail)
   }
 

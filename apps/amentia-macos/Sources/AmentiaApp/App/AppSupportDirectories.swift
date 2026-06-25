@@ -37,7 +37,7 @@ enum AppSupportDirectories {
       try prepareAppOwnedDirectories(rootDirectory: rootDirectory())
       return nil
     } catch {
-      return "App support directory setup failed: \(error.localizedDescription)"
+      return UserFacingFailurePresenter.appSupportDirectoryFailureDetail()
     }
   }
 

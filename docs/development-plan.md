@@ -102,6 +102,8 @@ The current product baseline includes:
   manifest details in normal use.
 - Request timeout, cancellation, and launch details use cowork task language
   instead of JSON-RPC method names or helper process labels.
+- Startup, local data deletion, and common timeline failures show recovery copy
+  first while keeping technical details in diagnostics attributes.
 - Amentia is a fresh app identity; legacy state migration and legacy model-path
   aliases are out of the active path.
 

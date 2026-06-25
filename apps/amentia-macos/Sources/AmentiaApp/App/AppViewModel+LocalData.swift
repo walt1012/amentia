@@ -62,12 +62,13 @@ extension AppViewModel {
       let result = try AppDataResetService.deleteLocalData()
       applyLocalDataResetSuccess(result)
     } catch {
-      runtimeDetail = "Local data deletion failed: \(error.localizedDescription)"
+      runtimeDetail = UserFacingFailurePresenter.localDataDeletionFailureDetail()
       appendEntry(
         to: selectedThreadID,
         TimelineEntryFactory.warning(
           title: "Local Data Delete Failed",
-          body: error.localizedDescription
+          body: UserFacingFailurePresenter.localDataDeletionFailureDetail(),
+          attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
         )
       )
     }

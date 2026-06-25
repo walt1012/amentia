@@ -17,8 +17,8 @@ enum TimelineEventPresenter {
   static func threadCreationFailed(error: Error) -> TimelineEntry {
     return TimelineEntryFactory.warning(
       title: "Session Creation Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: UserFacingFailurePresenter.threadCreationFailureBody(),
+      attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
     )
   }
 
@@ -52,40 +52,40 @@ enum TimelineEventPresenter {
   static func approvalResponseFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Approval Response Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: UserFacingFailurePresenter.approvalResponseFailureBody(),
+      attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
     )
   }
 
   static func approvalResponseFailedDetail(error: Error) -> String {
-    "Approval response failed: \(error.localizedDescription)"
+    UserFacingFailurePresenter.approvalResponseFailureDetail()
   }
 
   static func turnCancelFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Cancel Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: UserFacingFailurePresenter.requestCancelFailureBody(),
+      attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
     )
   }
 
   static func turnCancelFailedDetail(error: Error) -> String {
-    "Cancel failed: \(error.localizedDescription)"
+    UserFacingFailurePresenter.requestCancelFailureDetail()
   }
 
   static func threadLoadFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Session Load Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: UserFacingFailurePresenter.threadLoadFailureBody(),
+      attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
     )
   }
 
   static func workspaceOpenFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Project Open Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: UserFacingFailurePresenter.workspaceOpenFailureBody(),
+      attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
     )
   }
 
@@ -123,8 +123,8 @@ enum TimelineEventPresenter {
   static func runtimeLaunchFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Amentia Launch Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: UserFacingFailurePresenter.runtimeLaunchFailureDetail(error: error),
+      attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
     )
   }
 
@@ -192,8 +192,8 @@ enum TimelineEventPresenter {
   static func memoryNoteFailed(error: Error) -> TimelineEntry {
     TimelineEntryFactory.warning(
       title: "Memory Note Failed",
-      body: error.localizedDescription,
-      attributes: [:]
+      body: UserFacingFailurePresenter.memoryNoteFailureBody(),
+      attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
     )
   }
 

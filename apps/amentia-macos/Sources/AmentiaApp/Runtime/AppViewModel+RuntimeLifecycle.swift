@@ -205,7 +205,7 @@ extension AppViewModel {
 
   private func applyRuntimeLaunchFailure(_ error: Error, timelineThreadID: ThreadSummary.ID?) {
     runtimeState = .failed
-    runtimeDetail = error.localizedDescription
+    runtimeDetail = UserFacingFailurePresenter.runtimeLaunchFailureDetail(error: error)
     updateLocalModelReadinessState { state in
       state.clearRuntimeReadiness()
     }

@@ -496,6 +496,50 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(error.localizedDescription.contains("RPC"))
   }
 
+  func testGenericRuntimeLaunchFailureUsesRecoveryCopy() {
+    let error = RuntimeBridge.RuntimeError.rpc("JSON-RPC failed at /tmp/amentia-runtime")
+    let detail = UserFacingFailurePresenter.runtimeLaunchFailureDetail(error: error)
+    let entry = TimelineEventPresenter.runtimeLaunchFailed(error: error)
+
+    XCTAssertTrue(detail.contains("Restart Amentia"))
+    XCTAssertFalse(detail.contains("JSON-RPC"))
+    XCTAssertFalse(detail.contains("/tmp"))
+    XCTAssertEqual(entry.body, detail)
+    XCTAssertEqual(entry.attributes["technicalError"], "JSON-RPC failed at /tmp/amentia-runtime")
+  }
+
+  func testCommonTimelineFailuresKeepRawErrorsOutOfBody() {
+    let error = TestPresentationError(message: "backend failed at /Users/example/private.log")
+    let entries = [
+      TimelineEventPresenter.threadCreationFailed(error: error),
+      TimelineEventPresenter.approvalResponseFailed(error: error),
+      TimelineEventPresenter.turnCancelFailed(error: error),
+      TimelineEventPresenter.threadLoadFailed(error: error),
+      TimelineEventPresenter.workspaceOpenFailed(error: error),
+      TimelineEventPresenter.memoryNoteFailed(error: error),
+    ]
+
+    for entry in entries {
+      XCTAssertFalse(entry.body.contains("backend failed"))
+      XCTAssertFalse(entry.body.contains("/Users/example"))
+      XCTAssertEqual(entry.attributes["technicalError"], "backend failed at /Users/example/private.log")
+    }
+    XCTAssertFalse(
+      TimelineEventPresenter.approvalResponseFailedDetail(error: error).contains("backend failed")
+    )
+    XCTAssertFalse(
+      TimelineEventPresenter.turnCancelFailedDetail(error: error).contains("backend failed")
+    )
+  }
+
+  func testAppSupportFailureCopyAvoidsLocalPaths() {
+    let detail = UserFacingFailurePresenter.appSupportDirectoryFailureDetail()
+
+    XCTAssertTrue(detail.contains("local data folder"))
+    XCTAssertFalse(detail.contains("/Users"))
+    XCTAssertFalse(detail.contains("symbolic link"))
+  }
+
   func testRequestPolicyMapsInternalMethodsToUserTasks() {
     XCTAssertEqual(
       RuntimeBridgeRequestPolicy.userFacingRequestName(for: "model/probe"),

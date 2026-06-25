@@ -123,6 +123,14 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertFalse(detail.contains("Keychain"))
   }
 
+  func testLocalDataDeletionFailureCopyAvoidsRawPaths() {
+    let detail = UserFacingFailurePresenter.localDataDeletionFailureDetail()
+
+    XCTAssertTrue(detail.contains("Delete All Local Data"))
+    XCTAssertFalse(detail.contains("/Users/example"))
+    XCTAssertFalse(detail.contains("Application Support"))
+  }
+
   func testSystemResiduePathsIncludeOnlyAmentiaBundle() {
     let libraryURL = URL(fileURLWithPath: "/Users/example/Library", isDirectory: true)
     let paths = AppDataResetService.systemResiduePaths(libraryDirectory: libraryURL)
