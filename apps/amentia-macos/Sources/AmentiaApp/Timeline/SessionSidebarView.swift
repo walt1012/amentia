@@ -69,7 +69,7 @@ struct SessionSidebarView: View {
     .animation(AmentiaMotionStyle.sectionReveal, value: viewModel.threads.count)
     .searchable(text: $sessionSearchText)
     .alert(item: $sessionDeleteCandidate) { thread in
-      let prompt = SessionChangePresenter.deletePrompt()
+      let prompt = SessionChangePresenter.deletePrompt(threadTitle: thread.title)
       return Alert(
         title: Text(prompt.title),
         message: Text(prompt.message),
@@ -80,7 +80,10 @@ struct SessionSidebarView: View {
       )
     }
     .alert(item: $sessionRevertCandidate) { candidate in
-      let prompt = SessionChangePresenter.revertPrompt(for: candidate.preview)
+      let prompt = SessionChangePresenter.revertPrompt(
+        for: candidate.preview,
+        threadTitle: candidate.thread.title
+      )
       if !prompt.allowsRevert {
         return Alert(
           title: Text(prompt.title),

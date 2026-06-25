@@ -48,11 +48,17 @@ enum SessionChangePresenter {
     }
   }
 
-  static func deletePrompt() -> SessionDeletePrompt {
+  static func deletePrompt(threadTitle: String? = nil) -> SessionDeletePrompt {
+    let titleLine = threadTitle
+      .map { "Amentia will delete \"\($0)\" from the session list." }
+      ?? "Amentia will delete this session from the session list."
+
     SessionDeletePrompt(
       title: "Delete Session?",
       message: """
-      Amentia will delete this session's chat history, activity cards, and unfinished permission requests.
+      \(titleLine)
+
+      This removes chat history, activity cards, and unfinished permission requests for that session.
 
       Project files and repositories will not be deleted or reverted.
       If you want to undo files Amentia saved, use Review Session Changes before deleting the session.
@@ -61,9 +67,15 @@ enum SessionChangePresenter {
     )
   }
 
-  static func revertPrompt(for preview: RuntimeBridge.RuntimeThreadChangePreview) -> SessionRevertPrompt {
+  static func revertPrompt(
+    for preview: RuntimeBridge.RuntimeThreadChangePreview,
+    threadTitle: String? = nil
+  ) -> SessionRevertPrompt {
     let hasConflicts = preview.changes.contains { !$0.canRevert }
     let title = hasConflicts ? "Review Session Changes" : "Revert Session Changes?"
+    let titleLine = threadTitle
+      .map { "Amentia will review changes saved by \"\($0)\"." }
+      ?? "Amentia will review changes saved by this session."
     let actionLine = hasConflicts
       ? "Some files changed after Amentia saved them, so Amentia will leave everything untouched for now."
       : "Amentia will only revert files that still match what it saved."
@@ -71,6 +83,8 @@ enum SessionChangePresenter {
     return SessionRevertPrompt(
       title: title,
       message: """
+      \(titleLine)
+
       \(countLine(preview.changes.count))
 
       \(changeList(preview.changes))

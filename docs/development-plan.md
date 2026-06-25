@@ -78,6 +78,8 @@ The current product baseline includes:
 - Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
   cancellable subprocesses, and human receipts.
 - Session search, delete, deletion receipts, change preview, and revert.
+- Session delete and revert confirmations name the target session and keep
+  project-file ownership clear.
 - First prompt drafting and sending from the setup checklist or composer.
 - Failed first prompts keep the user draft, show a retryable recovery message,
   and update the session preview without exposing backend details.

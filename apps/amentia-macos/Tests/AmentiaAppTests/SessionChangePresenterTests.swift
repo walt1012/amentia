@@ -3,10 +3,11 @@ import XCTest
 
 final class SessionChangePresenterTests: XCTestCase {
   func testDeletePromptSeparatesSessionRemovalFromWorkspaceFiles() {
-    let prompt = SessionChangePresenter.deletePrompt()
+    let prompt = SessionChangePresenter.deletePrompt(threadTitle: "Design Review")
 
     XCTAssertEqual(prompt.title, "Delete Session?")
     XCTAssertEqual(prompt.confirmButtonTitle, "Delete Session")
+    XCTAssertTrue(prompt.message.contains("delete \"Design Review\" from the session list"))
     XCTAssertTrue(prompt.message.contains("chat history, activity cards, and unfinished permission requests"))
     XCTAssertTrue(prompt.message.contains("Project files and repositories will not be deleted"))
     XCTAssertTrue(prompt.message.contains("use Review Session Changes before deleting"))
@@ -27,14 +28,18 @@ final class SessionChangePresenterTests: XCTestCase {
   }
 
   func testRevertPromptAllowsCleanRecordedChanges() {
-    let prompt = SessionChangePresenter.revertPrompt(for: preview(changes: [
-      change(path: "Sources/App.swift"),
-      change(path: "README.md"),
-    ]))
+    let prompt = SessionChangePresenter.revertPrompt(
+      for: preview(changes: [
+        change(path: "Sources/App.swift"),
+        change(path: "README.md"),
+      ]),
+      threadTitle: "Design Review"
+    )
 
     XCTAssertEqual(prompt.title, "Revert Session Changes?")
     XCTAssertEqual(prompt.confirmButtonTitle, "Revert Changes")
     XCTAssertTrue(prompt.allowsRevert)
+    XCTAssertTrue(prompt.message.contains("changes saved by \"Design Review\""))
     XCTAssertTrue(prompt.message.contains("Amentia can review 2 files"))
     XCTAssertTrue(prompt.message.contains("- Sources/App.swift"))
     XCTAssertTrue(prompt.message.contains("The session itself will stay"))
