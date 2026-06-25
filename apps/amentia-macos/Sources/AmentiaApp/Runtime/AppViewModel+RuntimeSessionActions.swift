@@ -35,6 +35,8 @@ extension AppViewModel {
       openWorkspace()
     case .createThread:
       createThread()
+    case .draftFirstRequest:
+      useFirstRequestSuggestion(id: FirstRequestPromptPresenter.mapWorkspaceID)
     case .sendFirstRequest:
       sendDraftMessage()
     case .enableWebSearchPlugin:

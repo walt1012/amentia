@@ -23,6 +23,7 @@ enum RuntimeReadinessAction {
   case setupModel
   case openWorkspace
   case createThread
+  case draftFirstRequest
   case sendFirstRequest
   case enableWebSearchPlugin
   case openPluginAccess
@@ -70,6 +71,8 @@ enum RuntimeReadinessActionPlanner {
       return "Open"
     case .createThread:
       return "New"
+    case .draftFirstRequest:
+      return "Draft"
     case .sendFirstRequest:
       return "Send"
     case .enableWebSearchPlugin:
@@ -100,6 +103,8 @@ enum RuntimeReadinessActionPlanner {
       return snapshot.canOpenWorkspace
     case .createThread:
       return snapshot.canCreateThread
+    case .draftFirstRequest:
+      return snapshot.canUseComposer
     case .sendFirstRequest:
       return snapshot.hasDraftMessage
     case .enableWebSearchPlugin:
@@ -163,7 +168,7 @@ enum RuntimeReadinessActionPlanner {
       return nil
     }
 
-    return snapshot.hasDraftMessage ? .sendFirstRequest : nil
+    return snapshot.hasDraftMessage ? .sendFirstRequest : .draftFirstRequest
   }
 
   private static func toolsAction(

@@ -331,7 +331,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: snapshot))
   }
 
-  func testFirstRequestReadinessStepNamesPromptChoice() {
+  func testFirstRequestReadinessStepDraftsStarterPromptWhenEmpty() {
     guard let step = RuntimeReadinessPresenter.steps(readinessSnapshotForFirstRequest())
       .first(where: { $0.id == "first-request" })
     else {
@@ -350,9 +350,11 @@ final class CoworkFirstPresentationTests: XCTestCase {
       snapshot: actionSnapshot
     )
 
-    XCTAssertNil(action)
-    XCTAssertNil(RuntimeReadinessActionPlanner.title(for: action, snapshot: actionSnapshot))
-    XCTAssertFalse(RuntimeReadinessActionPlanner.canRun(action, snapshot: actionSnapshot))
+    XCTAssertEqual(
+      RuntimeReadinessActionPlanner.title(for: action, snapshot: actionSnapshot),
+      "Draft"
+    )
+    XCTAssertTrue(RuntimeReadinessActionPlanner.canRun(action, snapshot: actionSnapshot))
   }
 
   func testFirstRequestReadinessStepOnlySendsExistingDraft() {
