@@ -17,9 +17,15 @@ enum TimelineEventPresenter {
     activeTurnID == nil ? "Response ready" : "Response in progress"
   }
 
-  static func hasModelInvocationFailure(_ items: [TimelineEntry]) -> Bool {
-    items.contains { item in
-      guard let modelStatus = item.attributes["modelStatus"] else {
+  static func hasModelInvocationFailure(
+    _ items: [RuntimeBridge.RuntimeTimelineItemResult]
+  ) -> Bool {
+    hasModelInvocationFailure(in: items.map(\.attributes))
+  }
+
+  static func hasModelInvocationFailure(in itemAttributes: [[String: String]]) -> Bool {
+    itemAttributes.contains { attributes in
+      guard let modelStatus = attributes["modelStatus"] else {
         return false
       }
       return modelStatus != "ready" && modelStatus != "cancelled"

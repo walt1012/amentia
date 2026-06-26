@@ -194,24 +194,16 @@ final class CoworkFirstPresentationTests: XCTestCase {
   }
 
   func testTimelineDetectsModelInvocationFailure() {
-    let failedItem = TimelineEntryFactory.warning(
-      title: "Assistant",
-      body: "The local model could not answer.",
-      attributes: [
-        "modelStatus": "error",
-        "modelBackend": "llama.cpp",
-      ]
-    )
-    let readyItem = TimelineEntryFactory.system(
-      title: "Assistant",
-      body: "Ready.",
-      attributes: [
-        "modelStatus": "ready"
-      ]
-    )
+    let failedAttributes = [
+      "modelStatus": "error",
+      "modelBackend": "llama.cpp",
+    ]
+    let readyAttributes = [
+      "modelStatus": "ready"
+    ]
 
-    XCTAssertTrue(TimelineEventPresenter.hasModelInvocationFailure([failedItem]))
-    XCTAssertFalse(TimelineEventPresenter.hasModelInvocationFailure([readyItem]))
+    XCTAssertTrue(TimelineEventPresenter.hasModelInvocationFailure(in: [failedAttributes]))
+    XCTAssertFalse(TimelineEventPresenter.hasModelInvocationFailure(in: [readyAttributes]))
     XCTAssertEqual(TimelineEventPresenter.modelInvocationFailedPreview, "Model response failed")
   }
 
