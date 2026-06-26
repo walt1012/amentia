@@ -51,7 +51,7 @@ enum RuntimeStateLoader {
   }
 
   private static func modelHealthFailureDetail(serverLabel _: String?, error: Error) -> String {
-    userFacingModelSetupFailure(error)
+    RuntimeModelSetupFailurePresenter.detail(error: error)
   }
 
   private static func connectedModelDetail(
@@ -67,14 +67,13 @@ enum RuntimeStateLoader {
   }
 
   private static func userFacingModelSetupFailure(_ error: Error) -> String {
-    let rawDetail = error.localizedDescription.lowercased()
-    if rawDetail.contains("setup verification")
-      || rawDetail.contains("backend")
-      || rawDetail.contains("llama")
-    {
-      return "Amentia could not start its local model engine. Reinstall Amentia from the latest release, then reopen the app."
-    }
+    RuntimeModelSetupFailurePresenter.detail(error: error)
+  }
+}
 
+enum RuntimeModelSetupFailurePresenter {
+  static func detail(error: Error) -> String {
+    let rawDetail = error.localizedDescription.lowercased()
     if rawDetail.contains("checksum")
       || rawDetail.contains("integrity")
       || rawDetail.contains("sha")
@@ -82,6 +81,12 @@ enum RuntimeStateLoader {
       return "The selected model did not pass verification. Re-download the model from Amentia before using it."
     }
 
-    return "Amentia could not verify local model setup. Re-download the selected model or restart Amentia."
+    if rawDetail.contains("backend")
+      || rawDetail.contains("llama")
+    {
+      return "Amentia could not start its local model engine. Reinstall Amentia from the latest release, then reopen the app."
+    }
+
+    return "Amentia could not verify local model setup. Restart Amentia, then refresh model setup if this returns."
   }
 }

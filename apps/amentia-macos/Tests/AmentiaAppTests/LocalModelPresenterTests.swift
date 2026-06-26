@@ -420,6 +420,31 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(detail.contains("llama"))
   }
 
+  func testRuntimeModelSetupFailureClassifiesIntegrityBeforeEngineFailures() {
+    let checksumFailure = RuntimeModelSetupFailurePresenter.detail(
+      error: NSError(domain: "AmentiaTests", code: 1, userInfo: [
+        NSLocalizedDescriptionKey:
+          "Local inference setup verification failed: model checksum mismatch"
+      ])
+    )
+    let engineFailure = RuntimeModelSetupFailurePresenter.detail(
+      error: NSError(domain: "AmentiaTests", code: 2, userInfo: [
+        NSLocalizedDescriptionKey: "failed to launch llama.cpp backend"
+      ])
+    )
+    let genericFailure = RuntimeModelSetupFailurePresenter.detail(
+      error: NSError(domain: "AmentiaTests", code: 3, userInfo: [
+        NSLocalizedDescriptionKey: "request timed out"
+      ])
+    )
+
+    XCTAssertTrue(checksumFailure.contains("Re-download the model"))
+    XCTAssertFalse(checksumFailure.contains("Reinstall Amentia"))
+    XCTAssertTrue(engineFailure.contains("Reinstall Amentia"))
+    XCTAssertTrue(genericFailure.contains("Restart Amentia"))
+    XCTAssertFalse(genericFailure.contains("Re-download"))
+  }
+
   func testSavedActiveModelInvalidationCopyAvoidsSetupInternals() {
     let missing = UserFacingFailurePresenter.savedActiveModelMissingDetail()
     let invalid = UserFacingFailurePresenter.savedActiveModelInvalidDetail()
