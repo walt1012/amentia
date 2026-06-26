@@ -80,7 +80,7 @@ enum PluginConnectorCredentialDialogPresenter {
       : "Amentia will not save a token."
     var prompt = "\(connector.pluginDisplayName) requests \(authType) access for \(service). "
       + "\(access) \(storage) "
-      + "Tokens are passed only to the local plugin runner for each approved run. "
+      + "Tokens are passed only to the local plugin action for each approved run. "
     if requiresLocalTokenOrKey(connector) {
       prompt += "Paste a local token or API key for this connection."
     } else {
@@ -130,7 +130,7 @@ enum PluginConnectorCredentialDialogPresenter {
     }
 
     return "Paste the local token or API key before authorizing this connection. "
-      + "Amentia will keep it local and pass it only to the local plugin runner for each approved run."
+      + "Amentia will keep it local and pass it only to the local plugin action for each approved run."
   }
 
   static func defaultCredentialLabel(_ connector: PluginConnectorSummary) -> String {

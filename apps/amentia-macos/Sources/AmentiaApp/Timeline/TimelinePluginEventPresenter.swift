@@ -3,7 +3,7 @@ import Foundation
 enum TimelinePluginEventPresenter {
   static let runningPluginCommandDetail = "Running plugin action..."
   static let pluginCommandNeedsExecutionContractDetail =
-    "Plugin action needs a supported local runner before it can run."
+    "Plugin action is not available from this plugin yet."
   static let pluginCommandNeedsConnectorAuthDetail =
     "Authorize the required connection before running this action."
   static let pendingPluginCommandCancelledDetail = "Plugin action cancelled."
@@ -116,8 +116,8 @@ enum TimelinePluginEventPresenter {
     recoveryAttributes: [String: String]
   ) -> TimelineEntry {
     let setupBody = diagnostics.isEmpty
-      ? "No plugin setup issues."
-      : diagnostics.map { "Setup note: \($0)" }.joined(separator: "\n")
+      ? "No plugin issues."
+      : diagnostics.map { "Plugin note: \($0)" }.joined(separator: "\n")
     var attributes = recoveryAttributes
     if attributes["pluginRefreshStatus"] == nil {
       attributes["pluginRefreshStatus"] = diagnostics.isEmpty

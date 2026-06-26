@@ -23,7 +23,7 @@ enum AppFilePicker {
     panel.canChooseFiles = true
     panel.allowsMultipleSelection = false
     panel.prompt = "Add Plugin"
-    panel.message = "Choose a local plugin folder. Advanced users can select the plugin setup file directly."
+    panel.message = "Choose a local plugin folder. Advanced users can select the plugin file directly."
 
     guard panel.runModal() == .OK else {
       return nil

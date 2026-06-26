@@ -868,7 +868,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let detail = PluginStatusDisplay.validationDetail(plugin)
 
     XCTAssertTrue(detail.contains("Plugin setup needs review."))
-    XCTAssertTrue(detail.contains("Fix: Check the plugin setup file, then refresh the plugin."))
+    XCTAssertTrue(detail.contains("Fix: Check the plugin file, then refresh the plugin."))
     XCTAssertFalse(detail.contains("/tmp/notion"))
     XCTAssertFalse(detail.contains("amentia-plugin.json"))
     XCTAssertFalse(detail.contains("displayName"))
@@ -889,7 +889,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
     let detail = PluginDashboardDetailPresenter.pluginDetailSummary(snapshot)
 
     XCTAssertTrue(detail.contains("needs attention"))
-    XCTAssertTrue(detail.contains("Fix: Check the plugin setup file, then refresh the plugin."))
+    XCTAssertTrue(detail.contains("Fix: Check the plugin file, then refresh the plugin."))
     XCTAssertFalse(detail.contains("/tmp/notion"))
     XCTAssertFalse(detail.contains("amentia-plugin.json"))
     XCTAssertFalse(detail.contains("displayName"))
@@ -1255,20 +1255,23 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertEqual(cancelled.body, "The pending request was cancelled before it finished.")
     XCTAssertEqual(
       TimelinePluginEventPresenter.pluginCommandNeedsExecutionContractDetail,
-      "Plugin action needs a supported local runner before it can run."
+      "Plugin action is not available from this plugin yet."
     )
     XCTAssertFalse(cancelled.body.contains("local execution"))
     XCTAssertFalse(
       TimelinePluginEventPresenter.pluginCommandNeedsExecutionContractDetail.contains("contract")
     )
+    XCTAssertFalse(
+      TimelinePluginEventPresenter.pluginCommandNeedsExecutionContractDetail.contains("runner")
+    )
   }
 
-  func testPluginInstallRepairHintsUseSetupLanguage() {
+  func testPluginInstallRepairHintsUseProductLanguage() {
     XCTAssertEqual(
       PluginInstallDialogPresenter.repairHint(for: TestPresentationError(
         message: "Plugin does not contain amentia-plugin.json"
       )),
-      "Choose a complete plugin folder, or select the plugin setup file directly."
+      "Choose a complete plugin folder, or select the plugin file directly."
     )
     XCTAssertEqual(
       PluginInstallDialogPresenter.repairHint(for: TestPresentationError(
@@ -1280,7 +1283,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
       PluginInstallDialogPresenter.repairHint(for: TestPresentationError(
         message: "Select a plugin folder or the amentia-plugin.json manifest"
       )),
-      "Point the installer at a plugin directory or the plugin setup file."
+      "Point the installer at a plugin directory or the plugin file."
     )
   }
 

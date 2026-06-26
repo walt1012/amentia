@@ -82,8 +82,8 @@ The current product baseline includes:
   Skills, MCP, Tools, Checks, credentials, retries, Notion proof, and generic
   connector receipts.
 - Product quality: normal UI avoids raw protocol names, hashes, paths, manifest
-  details, runner errors, and legacy Pith identity; diagnostics keep technical
-  details when needed.
+  details, runner/setup-file wording, and legacy Pith identity; diagnostics keep
+  technical details when needed.
 
 ## M15 Cowork Continuity
 

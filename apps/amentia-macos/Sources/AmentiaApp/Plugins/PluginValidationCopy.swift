@@ -12,7 +12,7 @@ enum PluginValidationCopy {
       "must be a plugin directory or amentia-plugin.json file",
       "Select a plugin folder or the amentia-plugin.json manifest",
     ]) {
-      return "Plugin setup file is missing."
+      return "Plugin file is missing."
     }
 
     if normalized.contains("cannot contain nested amentia-plugin.json manifests") {
@@ -32,7 +32,7 @@ enum PluginValidationCopy {
     }
 
     if containsAny(normalized, ["correct format", "is missing", "failed to parse"]) {
-      return "Plugin setup file needs review."
+      return "Plugin file needs review."
     }
 
     if containsRawSetupDetail(normalized) {
@@ -51,7 +51,7 @@ enum PluginValidationCopy {
     if containsRawSetupDetail(normalized)
       || containsAny(normalized, ["correct format", "camelCase", "displayName"])
     {
-      return "Check the plugin setup file, then refresh the plugin."
+      return "Check the plugin file, then refresh the plugin."
     }
 
     return normalized

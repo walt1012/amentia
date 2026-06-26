@@ -55,11 +55,11 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("does not contain amentia-plugin.json") {
-      return "Choose a complete plugin folder, or select the plugin setup file directly."
+      return "Choose a complete plugin folder, or select the plugin file directly."
     }
 
     if message.contains("must be a plugin directory or amentia-plugin.json file") {
-      return "Choose the plugin directory itself or the plugin setup file."
+      return "Choose the plugin directory itself or the plugin file."
     }
 
     if message.contains("is already installed") {
@@ -75,7 +75,7 @@ enum PluginInstallDialogPresenter {
     }
 
     if message.contains("Select a plugin folder or the amentia-plugin.json manifest") {
-      return "Point the installer at a plugin directory or the plugin setup file."
+      return "Point the installer at a plugin directory or the plugin file."
     }
 
     if message.contains("Plugin manifest name") {
@@ -85,7 +85,7 @@ enum PluginInstallDialogPresenter {
     if message.contains("correct format")
       || message.contains("is missing")
     {
-      return "Check that the plugin setup file is valid JSON and uses camelCase keys such as displayName and defaultEnabled."
+      return "Check that the plugin file is valid JSON and uses camelCase keys such as displayName and defaultEnabled."
     }
 
     if message.contains("failed to create plugin install root")

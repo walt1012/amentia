@@ -119,13 +119,13 @@ extension AppViewModel {
 
   func revealPluginManifest(pluginID: String) {
     guard let plugin = pluginSummary(pluginID: pluginID) else {
-      runtimeDetail = "Plugin setup file is unavailable."
+      runtimeDetail = "Plugin file is unavailable."
       return
     }
 
     runtimeDetail = FileRevealService.revealFilePath(
       plugin.manifestPath,
-      successDetail: "Revealed \(plugin.displayName) setup file."
+      successDetail: "Revealed \(plugin.displayName) plugin file."
     )
   }
 

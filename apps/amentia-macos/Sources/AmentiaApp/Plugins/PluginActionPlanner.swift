@@ -234,7 +234,7 @@ enum PluginActionPlanner {
       return command.runBlocker ?? "Action is not ready."
     }
     guard command.execution?.supported == true else {
-      return "Action needs a supported local runner."
+      return "Action is not available from this plugin yet."
     }
 
     if !command.unsupportedRequiredInputFieldNames.isEmpty {
