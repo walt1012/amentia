@@ -97,6 +97,11 @@ struct TimelineRuntimeState {
   }
 
   mutating func deleteThread(threadID: String, remainingThreads: [ThreadSummary]) {
+    guard !remainingThreads.isEmpty else {
+      resetToWelcomeState(TimelineSessionState.welcomeState())
+      return
+    }
+
     threads = remainingThreads
     threadTimelines.removeValue(forKey: threadID)
     threadPendingApprovalIDs.removeValue(forKey: threadID)
