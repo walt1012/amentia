@@ -193,7 +193,9 @@ fn thread_delete_removes_session_owned_records_from_store() {
   let workspace = create_temp_workspace("thread-delete-records");
   let store_root = create_temp_workspace("thread-delete-record-store");
   let store = RuntimeStore::new(store_root.join("amentia.db"));
-  context.persistence_state.set_store_for_testing(store.clone());
+  context
+    .persistence_state
+    .set_store_for_testing(store.clone());
 
   let workspace_file = workspace.join("notes.txt");
   fs::write(&workspace_file, "keep workspace data\n").expect("write workspace file");
