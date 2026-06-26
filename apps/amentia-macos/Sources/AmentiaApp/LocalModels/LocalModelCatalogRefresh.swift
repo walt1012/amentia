@@ -54,13 +54,17 @@ struct LocalModelReadinessState {
     probeState = LocalModelProbeState(modelID: modelID, status: .checking, detail: nil)
   }
 
-  mutating func applyProbeResult(modelID: String, status: String, detail: String?) {
+  mutating func applyProbeResult(modelID: String, status: String, detail _: String?) {
     if status == "ready" {
       probeState = LocalModelProbeState(modelID: modelID, status: .passed, detail: nil)
       return
     }
 
-    probeState = LocalModelProbeState(modelID: modelID, status: .failed, detail: detail)
+    probeState = LocalModelProbeState(
+      modelID: modelID,
+      status: .failed,
+      detail: LocalModelProbePresenter.readinessFailureDetail()
+    )
   }
 
   func blocksReadiness(activeModelID: String?) -> Bool {

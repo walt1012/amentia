@@ -57,6 +57,10 @@ enum UserFacingFailurePresenter {
     "Could not open that project. Choose a folder you can access, then try again."
   }
 
+  static func workspaceRestoreFailureBody() -> String {
+    "Could not restore the last project. Open a project folder to continue."
+  }
+
   static func approvalResponseFailureBody() -> String {
     "Could not send your approval choice. Restart Amentia, then try again."
   }

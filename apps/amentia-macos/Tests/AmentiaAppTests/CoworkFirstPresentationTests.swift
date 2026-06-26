@@ -1208,6 +1208,17 @@ final class CoworkFirstPresentationTests: XCTestCase {
       isLocalModelReady: false,
       localModelRequiredSummary: "Choose a local model to continue."
     )).first { $0.title == "Project Restored" }
+    let restoreFailed = RuntimeLaunchAnnotationFactory.entries(RuntimeLaunchAnnotationSnapshot(
+      serverName: "amentia-runtime",
+      serverVersion: "0.1.0",
+      shouldAnnotateSetupLaunch: false,
+      restoredWorkspace: nil,
+      skippedWorkspaceRestorePath: nil,
+      workspaceRestoreErrorDetail: "open failed at /Users/example/private",
+      modelHealth: nil,
+      isLocalModelReady: false,
+      localModelRequiredSummary: "Choose a local model to continue."
+    )).first { $0.title == "Project Restore Failed" }
     let memory = TimelineEventPresenter.memoryNoteSaved(RuntimeBridge.RuntimeMemoryNote(
       id: "note-1",
       title: "Review habit",
@@ -1223,6 +1234,15 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(opened.body.contains("/Users/example"))
     XCTAssertEqual(restored?.body, "Restored Amentia as the active project.")
     XCTAssertFalse(restored?.body.contains("/Users/example") == true)
+    XCTAssertEqual(
+      restoreFailed?.body,
+      "Could not restore the last project. Open a project folder to continue."
+    )
+    XCTAssertFalse(restoreFailed?.body.contains("/Users/example") == true)
+    XCTAssertEqual(
+      restoreFailed?.attributes["technicalError"],
+      "open failed at /Users/example/private"
+    )
     XCTAssertEqual(memory.body, "Saved project memory note Review habit.")
     XCTAssertFalse(memory.body.contains("built-in workspace"))
   }

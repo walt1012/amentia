@@ -54,8 +54,10 @@ enum RuntimeLaunchAnnotationFactory {
       entries.append(
         TimelineEntryFactory.warning(
           title: "Project Restore Failed",
-          body: workspaceRestoreErrorDetail,
-          attributes: [:]
+          body: UserFacingFailurePresenter.workspaceRestoreFailureBody(),
+          attributes: [
+            "technicalError": workspaceRestoreErrorDetail
+          ]
         )
       )
     }

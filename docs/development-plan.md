@@ -106,6 +106,8 @@ The current product baseline includes:
   first while keeping technical details in diagnostics attributes.
 - Project search, file reveal, and plugin entry failures keep raw paths and
   runner errors out of normal UI while preserving diagnostics attributes.
+- Model check readiness and project restore failures keep recovery guidance in
+  normal UI and preserve raw diagnostics only as attributes.
 - Amentia is a fresh app identity; legacy state migration and legacy model-path
   aliases are out of the active path.
 

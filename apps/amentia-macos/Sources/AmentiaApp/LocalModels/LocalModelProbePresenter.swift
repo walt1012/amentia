@@ -45,6 +45,10 @@ enum LocalModelProbePresenter {
     )
   }
 
+  static func readinessFailureDetail() -> String {
+    recoveryDetail
+  }
+
   private static func successPresentation(
     for probe: RuntimeBridge.RuntimeModelProbe
   ) -> LocalModelProbePresentation {

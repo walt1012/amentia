@@ -57,14 +57,22 @@ final class LocalModelProbeCoordinatorTests: XCTestCase {
     state.applyProbeResult(
       modelID: "granite-4.0-h-350m",
       status: "error",
-      detail: "The local model did not answer."
+      detail: "llama backend failed at /Users/example/model.gguf"
     )
 
     XCTAssertTrue(state.blocksReadiness(activeModelID: "granite-4.0-h-350m"))
     XCTAssertFalse(state.blocksReadiness(activeModelID: "minicpm5-1b"))
     XCTAssertEqual(
       state.probeFailureDetail(activeModelID: "granite-4.0-h-350m"),
-      "The local model did not answer."
+      "Local model check failed. Restart Amentia or re-download the selected model, then check again."
+    )
+    XCTAssertFalse(
+      state.probeFailureDetail(activeModelID: "granite-4.0-h-350m")?.contains("/Users/example")
+        == true
+    )
+    XCTAssertFalse(
+      state.probeFailureDetail(activeModelID: "granite-4.0-h-350m")?.contains("llama")
+        == true
     )
   }
 
