@@ -20,8 +20,7 @@ use discovery::{
 };
 use health::{display_path, missing_runtime_detail, model_metrics};
 use inference::{
-  generate_with_llama_cpp, generation_cancelled_text, generation_failure_text,
-  request_is_cancelled,
+  generate_with_llama_cpp, generation_cancelled_text, generation_failure_text, request_is_cancelled,
 };
 use validation::{validate_runtime_backend, validate_runtime_model_file};
 

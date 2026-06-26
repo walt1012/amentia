@@ -33,7 +33,10 @@ pub(crate) fn to_protocol_model_probe(response: GenerateResponse) -> ModelProbeR
   let detail = if is_ready {
     "The active local model answered a short probe.".to_string()
   } else {
-    response.detail.clone().unwrap_or_else(|| response.text.clone())
+    response
+      .detail
+      .clone()
+      .unwrap_or_else(|| response.text.clone())
   };
   let sample = if is_ready {
     Some(compact_probe_sample(&response.text))
