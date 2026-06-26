@@ -42,7 +42,14 @@ fn unconfigured_generation_returns_unavailable_error() {
 
   assert!(response
     .text
-    .contains("could not produce a local summarizer response"));
+    .contains("could not finish the local summarizer response"));
+  assert!(response.text.contains("Restart Amentia"));
+  assert!(!response.text.contains("Local model runtime is unavailable"));
+  assert!(response
+    .detail
+    .as_deref()
+    .unwrap_or_default()
+    .contains("Local model runtime is unavailable"));
   assert_eq!(response.backend, "unconfigured");
   assert_eq!(response.status, "unavailable");
   assert_eq!(response.model_id, "granite-4.0-h-350m");

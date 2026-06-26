@@ -74,6 +74,7 @@ pub struct GenerateResponse {
   pub backend: String,
   pub status: String,
   pub model_id: String,
+  pub detail: Option<String>,
 }
 
 #[derive(Debug, Clone)]

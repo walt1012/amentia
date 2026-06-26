@@ -51,6 +51,19 @@ fn turn_start_warns_when_workspace_is_missing() {
 
   assert_eq!(items[0]["kind"], "userMessage");
   assert_eq!(items[1]["kind"], "plan");
+  assert_eq!(items[1]["attributes"]["modelStatus"], "unavailable");
+  assert!(items[1]["content"]
+    .as_str()
+    .expect("plan content")
+    .contains("Restart Amentia"));
+  assert!(!items[1]["content"]
+    .as_str()
+    .expect("plan content")
+    .contains("Local model runtime is unavailable"));
+  assert!(items[1]["attributes"]["modelFailureDetail"]
+    .as_str()
+    .expect("model failure detail")
+    .contains("Local model runtime is unavailable"));
   assert_eq!(items[2]["kind"], "warning");
 }
 

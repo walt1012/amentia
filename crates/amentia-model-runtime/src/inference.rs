@@ -286,15 +286,27 @@ fn clean_model_output(output: &str) -> String {
     .to_string()
 }
 
-pub(crate) fn generation_failure_text(role: &ModelRole, detail: &str) -> String {
-  let role_label = match role {
+pub(crate) fn generation_cancelled_text(role: &ModelRole) -> String {
+  let role_label = model_role_label(role);
+
+  format!("Amentia stopped the local {role_label} response before it finished.")
+}
+
+pub(crate) fn generation_failure_text(role: &ModelRole) -> String {
+  let role_label = model_role_label(role);
+
+  format!(
+    "Amentia could not finish the local {role_label} response. Restart Amentia or re-download the selected model."
+  )
+}
+
+fn model_role_label(role: &ModelRole) -> &'static str {
+  match role {
     ModelRole::Default => "default",
     ModelRole::Planner => "planner",
     ModelRole::Coder => "coder",
     ModelRole::Summarizer => "summarizer",
-  };
-
-  format!("Amentia could not produce a local {role_label} response because {detail}")
+  }
 }
 
 #[cfg(test)]

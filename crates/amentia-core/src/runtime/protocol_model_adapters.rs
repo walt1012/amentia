@@ -33,7 +33,7 @@ pub(crate) fn to_protocol_model_probe(response: GenerateResponse) -> ModelProbeR
   let detail = if is_ready {
     "The active local model answered a short probe.".to_string()
   } else {
-    response.text.clone()
+    response.detail.clone().unwrap_or_else(|| response.text.clone())
   };
   let sample = if is_ready {
     Some(compact_probe_sample(&response.text))
@@ -70,6 +70,7 @@ mod tests {
       backend: "llama.cpp".to_string(),
       status: "ready".to_string(),
       model_id: "test-model".to_string(),
+      detail: None,
     });
 
     assert_eq!(result.status, "ready");
@@ -83,14 +84,15 @@ mod tests {
   #[test]
   fn model_probe_failure_result_keeps_repair_detail_without_sample() {
     let result = to_protocol_model_probe(GenerateResponse {
-      text: "Amentia could not produce a local response.".to_string(),
+      text: "Amentia could not finish the local response.".to_string(),
       backend: "unconfigured".to_string(),
       status: "unavailable".to_string(),
       model_id: "test-model".to_string(),
+      detail: Some("Packaged backend missing.".to_string()),
     });
 
     assert_eq!(result.status, "unavailable");
-    assert_eq!(result.detail, "Amentia could not produce a local response.");
+    assert_eq!(result.detail, "Packaged backend missing.");
     assert_eq!(result.sample, None);
   }
 }

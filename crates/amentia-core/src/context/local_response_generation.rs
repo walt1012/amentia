@@ -30,11 +30,17 @@ pub(super) fn generate_local_summary(
     cancellation: cancellation.cloned(),
   });
 
+  let model_status = result.status.clone();
   let mut attributes = HashMap::from([
     ("modelId".to_string(), result.model_id),
     ("modelBackend".to_string(), result.backend),
     ("modelStatus".to_string(), result.status),
   ]);
+  if model_status != "ready" && model_status != "cancelled" {
+    if let Some(detail) = result.detail {
+      attributes.insert("modelFailureDetail".to_string(), detail);
+    }
+  }
   merge_memory_context_attributes(&mut attributes, memory_context);
   merge_generation_prompt_attributes(&mut attributes, &prompt);
   if let Some(observation) = observation {

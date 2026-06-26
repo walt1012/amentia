@@ -56,12 +56,18 @@ pub(crate) fn build_plan_item(
     timeout: None,
     cancellation: cancellation.cloned(),
   });
+  let model_status = result.status.clone();
   let mut attributes = HashMap::from([
     ("responseRole".to_string(), "planner".to_string()),
     ("modelId".to_string(), result.model_id),
     ("modelBackend".to_string(), result.backend),
     ("modelStatus".to_string(), result.status),
   ]);
+  if model_status != "ready" && model_status != "cancelled" {
+    if let Some(detail) = result.detail {
+      attributes.insert("modelFailureDetail".to_string(), detail);
+    }
+  }
   if let Some(workspace) = workspace {
     attributes.insert(
       "workspaceDisplayName".to_string(),

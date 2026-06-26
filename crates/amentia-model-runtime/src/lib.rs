@@ -19,7 +19,10 @@ use discovery::{
   resolve_model_path, suggested_manifest_install_path, ManifestResolution,
 };
 use health::{display_path, missing_runtime_detail, model_metrics};
-use inference::{generate_with_llama_cpp, generation_failure_text, request_is_cancelled};
+use inference::{
+  generate_with_llama_cpp, generation_cancelled_text, generation_failure_text,
+  request_is_cancelled,
+};
 use validation::{validate_runtime_backend, validate_runtime_model_file};
 
 #[derive(Debug, Clone)]
@@ -213,6 +216,7 @@ impl LocalModelRuntime {
           backend: "llama.cpp".to_string(),
           status: "ready".to_string(),
           model_id: self.pack.id.clone(),
+          detail: None,
         },
         Err(error) => {
           if request_is_cancelled(&request) {
@@ -232,13 +236,11 @@ impl LocalModelRuntime {
 
   fn generate_cancelled(&self, role: &ModelRole) -> GenerateResponse {
     GenerateResponse {
-      text: generation_failure_text(
-        role,
-        "local model generation was cancelled before completion.",
-      ),
+      text: generation_cancelled_text(role),
       backend: "local".to_string(),
       status: "cancelled".to_string(),
       model_id: self.pack.id.clone(),
+      detail: None,
     }
   }
 
@@ -250,10 +252,11 @@ impl LocalModelRuntime {
     detail: &str,
   ) -> GenerateResponse {
     GenerateResponse {
-      text: generation_failure_text(role, detail),
+      text: generation_failure_text(role),
       backend: backend.to_string(),
       status: status.to_string(),
       model_id: self.pack.id.clone(),
+      detail: Some(detail.to_string()),
     }
   }
 
