@@ -18,7 +18,7 @@ struct SessionSidebarView: View {
         } else if filteredSessions.isEmpty {
           SidebarEmptyState(
             title: "No Matching Sessions",
-            detail: "Try a different session title or recent request."
+            detail: SessionSearchPresenter.emptyMatchDetail
           )
         } else {
           ForEach(filteredSessions) { thread in
@@ -123,15 +123,10 @@ struct SessionSidebarView: View {
   }
 
   private var filteredSessions: [ThreadSummary] {
-    let query = sessionSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !query.isEmpty else {
-      return viewModel.threads
-    }
-
-    return viewModel.threads.filter { thread in
-      thread.title.localizedCaseInsensitiveContains(query)
-        || thread.preview.localizedCaseInsensitiveContains(query)
-    }
+    SessionSearchPresenter.filteredSessions(
+      viewModel.threads,
+      query: sessionSearchText
+    )
   }
 
   private var resetSummary: LocalDataSettingsSummary {
