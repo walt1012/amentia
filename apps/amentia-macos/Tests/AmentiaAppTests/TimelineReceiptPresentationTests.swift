@@ -115,6 +115,24 @@ final class TimelineReceiptPresentationTests: XCTestCase {
     XCTAssertEqual(noop.first?.tone, .neutral)
   }
 
+  func testModelFailureBadgeUsesPlainRecoveryLanguage() {
+    let failed = TimelineReceiptBadgePresenter.badges(attributes: [
+      "modelStatus": "error",
+      "modelBackend": "llama.cpp",
+    ])
+    let ready = TimelineReceiptBadgePresenter.badges(attributes: [
+      "modelStatus": "ready",
+    ])
+    let cancelled = TimelineReceiptBadgePresenter.badges(attributes: [
+      "modelStatus": "cancelled",
+    ])
+
+    XCTAssertEqual(failed.first?.label, "Model Needs Attention")
+    XCTAssertEqual(failed.first?.tone, .warning)
+    XCTAssertTrue(ready.isEmpty)
+    XCTAssertTrue(cancelled.isEmpty)
+  }
+
   func testInspectorSummarizesActionReceipt() {
     let summary = TimelineInspectorPresenter.selectedEntryActionReceiptSummary(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(
@@ -230,7 +248,7 @@ final class TimelineReceiptPresentationTests: XCTestCase {
     let summary = TimelineContextReceiptPresenter.cardSummary(TimelineEntry(
       id: "entry-1",
       kind: .warning,
-        title: "Action Blocked",
+      title: "Action Blocked",
       body: "Amentia did not run a shell command.",
       attributes: [
         "tool": "run_shell",
@@ -241,6 +259,56 @@ final class TimelineReceiptPresentationTests: XCTestCase {
     ))
 
     XCTAssertEqual(summary, "Action blocked by read-only mode")
+  }
+
+  func testTimelineCardSummaryFlagsLocalModelFailureWithoutBackendNoise() {
+    let entry = TimelineEntry(
+      id: "entry-1",
+      kind: .assistantMessage,
+      title: "Assistant",
+      body: "Amentia could not finish the local response.",
+      attributes: [
+        "modelStatus": "error",
+        "modelBackend": "llama.cpp",
+        "responseRole": "coworkHandoff",
+      ]
+    )
+
+    let summary = TimelineContextReceiptPresenter.cardSummary(entry)
+    let sections = TimelineContextReceiptPresenter.sections(
+      TimelineInspectorSnapshot(selectedEntry: entry)
+    )
+    let modelSection = sections.first { $0.id == "local-model" }
+
+    XCTAssertEqual(summary, "Local model needs attention")
+    XCTAssertEqual(modelSection?.title, "Local Model")
+    XCTAssertTrue(modelSection?.body.contains("Recovery: Restart Amentia") == true)
+    XCTAssertTrue(modelSection?.body.contains("Step: response") == true)
+    XCTAssertFalse(modelSection?.body.contains("llama.cpp") == true)
+  }
+
+  func testTimelineCardSummaryDoesNotShowModelReceiptForReadyOrCancelled() {
+    let readySummary = TimelineContextReceiptPresenter.cardSummary(TimelineEntry(
+      id: "entry-1",
+      kind: .assistantMessage,
+      title: "Assistant",
+      body: "Done.",
+      attributes: [
+        "modelStatus": "ready"
+      ]
+    ))
+    let cancelledSummary = TimelineContextReceiptPresenter.cardSummary(TimelineEntry(
+      id: "entry-2",
+      kind: .assistantMessage,
+      title: "Assistant",
+      body: "Cancelled.",
+      attributes: [
+        "modelStatus": "cancelled"
+      ]
+    ))
+
+    XCTAssertNil(readySummary)
+    XCTAssertNil(cancelledSummary)
   }
 
   func testSandboxProofHidesRawSupportPaths() {

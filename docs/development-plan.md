@@ -89,8 +89,9 @@ The current product baseline includes:
 
 Status: active, local model loop hardening is late-stage; guarded session
 operations, reset visibility, project-aware search, revert receipts, and
-session-owned record cleanup are in place; repeated saves to one file now
-revert as one clear file operation.
+session-owned record cleanup are in place; local model failures now surface as
+plain recovery receipts; repeated saves to one file now revert as one clear file
+operation.
 
 Current focus:
 

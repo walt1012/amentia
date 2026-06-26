@@ -10,6 +10,7 @@ enum TimelineContextReceiptPresenter {
   static func cardSummary(_ entry: TimelineEntry) -> String? {
     let parts = [
       actionCardSummary(entry.attributes),
+      localModelCardSummary(entry.attributes),
       sourceCardSummary(entry.attributes),
       memoryCardSummary(entry.attributes),
       pluginSkillCardSummary(entry.attributes),
@@ -30,6 +31,7 @@ enum TimelineContextReceiptPresenter {
 
     return [
       workspaceSection(entry),
+      localModelSection(entry),
       sourceSection(entry),
       actionSection(entry),
       memorySection(entry),
@@ -169,6 +171,27 @@ enum TimelineContextReceiptPresenter {
     return TimelineContextReceiptSection(
       id: "action",
       title: "Local Action",
+      body: lines.joined(separator: "\n")
+    )
+  }
+
+  private static func localModelSection(_ entry: TimelineEntry) -> TimelineContextReceiptSection? {
+    guard hasLocalModelIssue(entry.attributes) else {
+      return nil
+    }
+
+    var lines = [
+      "Status: needs attention",
+      "Impact: Amentia could not finish the local model response.",
+      "Recovery: Restart Amentia or re-download the selected model.",
+    ]
+    if let role = entry.attributes["responseRole"] {
+      lines.append("Step: \(readableResponseRole(role))")
+    }
+
+    return TimelineContextReceiptSection(
+      id: "local-model",
+      title: "Local Model",
       body: lines.joined(separator: "\n")
     )
   }
@@ -543,6 +566,14 @@ enum TimelineContextReceiptPresenter {
     return "Context compacted"
   }
 
+  private static func localModelCardSummary(_ attributes: [String: String]) -> String? {
+    guard hasLocalModelIssue(attributes) else {
+      return nil
+    }
+
+    return "Local model needs attention"
+  }
+
   private static func compactApprovalPolicy(_ value: String) -> String {
     switch value {
     case "autoApproved":
@@ -555,6 +586,27 @@ enum TimelineContextReceiptPresenter {
       return "needs plugin permission"
     case "readOnlyAllowed":
       return "read-only"
+    default:
+      return value
+    }
+  }
+
+  private static func hasLocalModelIssue(_ attributes: [String: String]) -> Bool {
+    guard let modelStatus = attributes["modelStatus"] else {
+      return false
+    }
+
+    return modelStatus != "ready" && modelStatus != "cancelled"
+  }
+
+  private static func readableResponseRole(_ value: String) -> String {
+    switch value {
+    case "planner":
+      return "planning"
+    case "coworkHandoff":
+      return "response"
+    case "actionHandoff":
+      return "action result"
     default:
       return value
     }

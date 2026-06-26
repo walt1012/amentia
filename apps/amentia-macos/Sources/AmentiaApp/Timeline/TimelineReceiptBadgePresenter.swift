@@ -10,6 +10,7 @@ enum TimelineReceiptBadgePresenter {
     [
       actionReceiptBadge(attributes: attributes),
       sessionChangeBadge(attributes: attributes),
+      localModelBadge(attributes: attributes),
       webSearchBadge(attributes: attributes),
       connectorWorkflowBadge(attributes: attributes) ?? remoteWriteBadge(attributes: attributes),
     ]
@@ -47,6 +48,19 @@ enum TimelineReceiptBadgePresenter {
     }
 
     return TimelineReceiptBadgeSummary(label: "Search Result Sources", tone: .active)
+  }
+
+  private static func localModelBadge(
+    attributes: [String: String]
+  ) -> TimelineReceiptBadgeSummary? {
+    guard let modelStatus = attributes["modelStatus"],
+          modelStatus != "ready",
+          modelStatus != "cancelled"
+    else {
+      return nil
+    }
+
+    return TimelineReceiptBadgeSummary(label: "Model Needs Attention", tone: .warning)
   }
 
   private static func actionReceiptBadge(
