@@ -11,9 +11,6 @@ struct LocalModelActionSnapshot {
   let canDownloadSelectedModel: Bool
   let canBootstrapModelPackMetadata: Bool
   let canCancelDownload: Bool
-  let canProbeModel: Bool
-  let isCheckingModel: Bool
-  let hasModelCheckFailure: Bool
   let defaultDownloadTitle: String
 }
 
@@ -23,7 +20,6 @@ enum LocalModelPrimaryAction {
   case downloadSelectedModel
   case blockedDownload
   case bootstrapModelPackMetadata
-  case probeModel
 }
 
 enum LocalModelSecondaryAction {
@@ -50,9 +46,6 @@ enum LocalModelActionPlanner {
     if snapshot.canBootstrapModelPackMetadata {
       return .bootstrapModelPackMetadata
     }
-    if snapshot.canProbeModel || snapshot.isCheckingModel {
-      return .probeModel
-    }
 
     return nil
   }
@@ -77,9 +70,6 @@ enum LocalModelActionPlanner {
       if snapshot.canBootstrapModelPackMetadata {
         return .bootstrapModelPackMetadata
       }
-    }
-    if snapshot.canProbeModel || snapshot.isCheckingModel {
-      return .probeModel
     }
 
     return nil
@@ -112,11 +102,6 @@ enum LocalModelActionPlanner {
       return "Download Blocked"
     case .bootstrapModelPackMetadata:
       return "Refresh Model Setup"
-    case .probeModel:
-      if snapshot.hasModelCheckFailure {
-        return snapshot.isCheckingModel ? "Checking Again" : "Check Again"
-      }
-      return snapshot.isCheckingModel ? "Checking Model" : "Check Model"
     }
   }
 
@@ -139,8 +124,6 @@ enum LocalModelActionPlanner {
       return false
     case .bootstrapModelPackMetadata:
       return snapshot.canBootstrapModelPackMetadata
-    case .probeModel:
-      return snapshot.canProbeModel
     }
   }
 

@@ -27,9 +27,9 @@ enum LocalModelDownloadCompletionPlanner {
     if activationRequested, canActivateNow, let manifestPath {
       return LocalModelDownloadCompletionPlan(
         mode: .activated,
-        runtimeDetail: "Downloaded and selected \(modelName). Amentia will check it next.",
+        runtimeDetail: "Downloaded and selected \(modelName). Amentia will start it next.",
         timelineBody:
-          "\(modelName) was downloaded and selected. Amentia will check it before cowork starts.",
+          "\(modelName) was downloaded and selected. Amentia will start it before cowork begins.",
         attributes: baseAttributes(model: model, sourceURL: sourceURL).merging(
           [
             "manifestPath": manifestPath,
@@ -37,8 +37,8 @@ enum LocalModelDownloadCompletionPlanner {
           ],
           uniquingKeysWith: { _, new in new }
         ),
-        relaunchRunningDetail: "Restarting Amentia to check \(modelName)...",
-        relaunchIdleDetail: "\(modelName) will be checked when Amentia starts."
+        relaunchRunningDetail: "Restarting Amentia with \(modelName)...",
+        relaunchIdleDetail: "\(modelName) will start when Amentia opens."
       )
     }
 

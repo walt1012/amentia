@@ -102,15 +102,15 @@ enum LocalModelActivationPlanner {
     let modelName = LocalModelDisplayPresenter.actionName(model)
     return LocalModelActivationPlan(
       timelineTitle: "Local Model Selected",
-      timelineBody: "\(modelName) is selected. Amentia will check it before cowork starts.",
+      timelineBody: "\(modelName) is selected. Amentia will start it before cowork begins.",
       attributes: [
         "manifestPath": manifestPath,
         "modelId": model.id,
         "modelPath": model.installPath,
         "result": "selected",
       ],
-      relaunchRunningDetail: "Restarting Amentia to check \(modelName)...",
-      relaunchIdleDetail: "\(modelName) will be checked when Amentia starts."
+      relaunchRunningDetail: "Restarting Amentia with \(modelName)...",
+      relaunchIdleDetail: "\(modelName) will start when Amentia opens."
     )
   }
 

@@ -52,8 +52,8 @@ final class LocalModelFirstUseTests: XCTestCase {
     }
     XCTAssertEqual(plan.attributes["result"], "activated")
     XCTAssertEqual(plan.attributes["manifestPath"], manifestPath)
-    XCTAssertTrue(plan.runtimeDetail.contains("will check"))
-    XCTAssertTrue(plan.timelineBody.contains("will check it before cowork starts"))
+    XCTAssertTrue(plan.runtimeDetail.contains("will start"))
+    XCTAssertTrue(plan.timelineBody.contains("will start it before cowork begins"))
     XCTAssertFalse(plan.timelineBody.contains("active local model"))
   }
 

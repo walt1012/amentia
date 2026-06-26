@@ -85,7 +85,7 @@ enum SetupProgressPresenter {
   private static func modelNextStep(_ readinessDetail: String) -> String {
     switch readinessDetail {
     case "Checking":
-      return "Check Model"
+      return "Starting Model"
     case "Downloading":
       return "Monitor Model"
     case "Paused":
@@ -97,7 +97,7 @@ enum SetupProgressPresenter {
     case "Select":
       return "Use Model"
     case "Check Failed":
-      return "Check Model"
+      return "Restart Amentia"
     case "Repair":
       return "Refresh Model"
     case "Choose":

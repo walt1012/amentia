@@ -112,7 +112,6 @@ extension AppViewModel {
   func showsModelActivity() -> Bool {
     LocalModelStatusPresenter.showsActivity(localModelStatusSnapshot())
       || isCheckingLocalModel
-      || localModelProbeCoordinator.hasPendingPostActivationCheck
   }
 
   func isModelActionBlocking() -> Bool {

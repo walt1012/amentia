@@ -5,13 +5,25 @@ enum TimelineEventPresenter {
   static let pendingTurnCancelledDetail = "Request cancelled."
   static let cancellingTurnDetail = "Cancelling request..."
   static let turnFailedDetail = "Amentia could not finish the response. Your prompt is still in the composer."
+  static let modelInvocationFailedDetail =
+    "The local model could not finish this response. Restart Amentia or re-download the selected model."
 
   static let cancelledResponsePreview = "Cancelled response"
   static let cancellingResponsePreview = "Cancelling response"
   static let failedResponsePreview = "Response failed"
+  static let modelInvocationFailedPreview = "Model response failed"
 
   static func turnPreview(turnID: String, activeTurnID: String?) -> String {
     activeTurnID == nil ? "Response ready" : "Response in progress"
+  }
+
+  static func hasModelInvocationFailure(_ items: [TimelineEntry]) -> Bool {
+    items.contains { item in
+      guard let modelStatus = item.attributes["modelStatus"] else {
+        return false
+      }
+      return modelStatus != "ready" && modelStatus != "cancelled"
+    }
   }
 
   static func threadCreationFailed(error: Error) -> TimelineEntry {

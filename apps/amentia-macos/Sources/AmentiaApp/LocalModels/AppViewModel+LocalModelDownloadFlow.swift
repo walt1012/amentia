@@ -111,9 +111,6 @@ extension AppViewModel {
     switch plan.mode {
     case .activated, .waitingForTurn:
       selectedSetupModelID = model.id
-      if case .activated = plan.mode {
-        localModelProbeCoordinator.schedulePostActivationCheck(modelID: model.id)
-      }
     case .downloadedOnly:
       break
     }

@@ -193,6 +193,28 @@ final class CoworkFirstPresentationTests: XCTestCase {
     XCTAssertFalse(entry.body.contains("backend stack trace"))
   }
 
+  func testTimelineDetectsModelInvocationFailure() {
+    let failedItem = TimelineEntryFactory.warning(
+      title: "Assistant",
+      body: "The local model could not answer.",
+      attributes: [
+        "modelStatus": "error",
+        "modelBackend": "llama.cpp",
+      ]
+    )
+    let readyItem = TimelineEntryFactory.system(
+      title: "Assistant",
+      body: "Ready.",
+      attributes: [
+        "modelStatus": "ready"
+      ]
+    )
+
+    XCTAssertTrue(TimelineEventPresenter.hasModelInvocationFailure([failedItem]))
+    XCTAssertFalse(TimelineEventPresenter.hasModelInvocationFailure([readyItem]))
+    XCTAssertEqual(TimelineEventPresenter.modelInvocationFailedPreview, "Model response failed")
+  }
+
   func testReadinessStripStaysVisibleForToolSetup() {
     XCTAssertTrue(
       RuntimeReadinessStripPresenter.shouldShow(
@@ -409,9 +431,9 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testComposerShowsModelSetupNextActionBeforeCoworkUnlocks() {
     let snapshot = ComposerStatusSnapshot(
       runtimeState: .ready,
-      modelSetupTitle: "Almost Ready",
-      modelSetupSummary: "Granite is selected. Amentia will run one final local check next.",
-      modelSetupActionSummary: "Run the model check to unlock cowork.",
+      modelSetupTitle: "Starting Local Model",
+      modelSetupSummary: "Amentia is confirming Granite during startup.",
+      modelSetupActionSummary: "Amentia will confirm it automatically when startup finishes.",
       isLocalModelReady: false,
       hasWorkspace: true,
       hasRuntimeThreadSelection: true,
@@ -421,10 +443,10 @@ final class CoworkFirstPresentationTests: XCTestCase {
       hasRestoredLocalExecutionDraft: false
     )
 
-    XCTAssertEqual(ComposerStatusPresenter.placeholder(snapshot), "Almost Ready")
+    XCTAssertEqual(ComposerStatusPresenter.placeholder(snapshot), "Starting Local Model")
     XCTAssertEqual(
       ComposerStatusPresenter.statusSummary(snapshot),
-      "Granite is selected. Amentia will run one final local check next. Run the model check to unlock cowork."
+      "Amentia is confirming Granite during startup. Amentia will confirm it automatically when startup finishes."
     )
     XCTAssertFalse(ComposerStatusPresenter.statusSummary(snapshot).contains("Continue model setup"))
   }
@@ -614,7 +636,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testRequestPolicyMapsInternalMethodsToUserTasks() {
     XCTAssertEqual(
       RuntimeBridgeRequestPolicy.userFacingRequestName(for: "model/probe"),
-      "model check"
+      "startup model check"
     )
     XCTAssertEqual(
       RuntimeBridgeRequestPolicy.userFacingRequestName(for: "workspace/search"),

@@ -389,7 +389,7 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(genericFailure.runtimeDetail.contains("/Users/example"))
   }
 
-  func testModelActivationSuccessExplainsPendingCheck() {
+  func testModelActivationSuccessExplainsStartupModelStart() {
     let selectedModel = model(
       id: "granite-4.0-h-350m",
       displayName: "Granite 4.0-H-350M Q4_K_M",
@@ -403,9 +403,9 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertEqual(plan.timelineTitle, "Local Model Selected")
-    XCTAssertTrue(plan.timelineBody.contains("will check it before cowork starts"))
-    XCTAssertTrue(plan.relaunchRunningDetail.contains("check Granite 4.0-H-350M"))
-    XCTAssertTrue(plan.relaunchIdleDetail.contains("will be checked"))
+    XCTAssertTrue(plan.timelineBody.contains("will start it before cowork begins"))
+    XCTAssertTrue(plan.relaunchRunningDetail.contains("with Granite 4.0-H-350M"))
+    XCTAssertTrue(plan.relaunchIdleDetail.contains("will start"))
     XCTAssertFalse(plan.timelineBody.contains("active local model"))
     XCTAssertFalse(plan.timelineBody.contains("Q4_K_M"))
   }
@@ -480,34 +480,7 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(recoverySummary.contains("turn"))
   }
 
-  func testPendingModelCheckHasClearUserGuidance() {
-    let selectedModel = model(
-      id: "granite-4.0-h-350m",
-      displayName: "Granite 4.0-H-350M Q4_K_M",
-      downloaded: true,
-      active: true
-    )
-    let snapshot = operationSnapshot(
-      isLocalModelReady: false,
-      hasPendingModelCheck: true,
-      selectedModel: selectedModel,
-      activeModelDisplayName: "Granite 4.0-H-350M"
-    )
-
-    let guidance = LocalModelOperationPresenter.setupGuidance(snapshot)
-    let managerSummary = LocalModelOperationPresenter.managerSummary(snapshot)
-    let recoverySummary = LocalModelOperationPresenter.recoverySummary(snapshot)
-
-    XCTAssertEqual(guidance.title, "Almost Ready")
-    XCTAssertEqual(guidance.readinessDetail, "Checking")
-    XCTAssertTrue(guidance.summary.contains("final local check"))
-    XCTAssertTrue(guidance.detail.contains("start cowork prompts"))
-    XCTAssertTrue(managerSummary.contains("confirm it can answer"))
-    XCTAssertTrue(recoverySummary.contains("check the active model"))
-    XCTAssertFalse(guidance.detail.contains("llama"))
-  }
-
-  func testRunningModelCheckHasClearUserGuidance() {
+  func testStartupModelStartHasClearUserGuidance() {
     let selectedModel = model(
       id: "granite-4.0-h-350m",
       displayName: "Granite 4.0-H-350M Q4_K_M",
@@ -523,10 +496,10 @@ final class LocalModelPresenterTests: XCTestCase {
 
     let guidance = LocalModelOperationPresenter.setupGuidance(snapshot)
 
-    XCTAssertEqual(guidance.title, "Checking Local Model")
+    XCTAssertEqual(guidance.title, "Starting Local Model")
     XCTAssertEqual(guidance.tone, .active)
-    XCTAssertTrue(guidance.actionSummary.contains("Checking"))
-    XCTAssertTrue(guidance.summary.contains("cowork unlocks"))
+    XCTAssertTrue(guidance.actionSummary.contains("Starting"))
+    XCTAssertTrue(guidance.summary.contains("during startup"))
     XCTAssertFalse(guidance.summary.contains("probe"))
   }
 
@@ -560,7 +533,7 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertEqual(guidance.readinessDetail, "Check Failed")
     XCTAssertEqual(status, "Model check failed")
     XCTAssertEqual(readiness, "Local model setup needs a successful check.")
-    XCTAssertTrue(guidance.actionSummary.contains("Check the model again"))
+    XCTAssertTrue(guidance.actionSummary.contains("Restart Amentia"))
     XCTAssertTrue(guidance.detail.contains("Cowork is paused"))
     XCTAssertTrue(
       LocalModelStatusPresenter.detailSummary(statusSnapshot(
@@ -580,43 +553,20 @@ final class LocalModelPresenterTests: XCTestCase {
     )
   }
 
-  func testSetupPrimaryActionOffersModelCheckWhenReady() {
+  func testSetupPrimaryActionDoesNotOfferManualModelCheckWhenReady() {
     let action = LocalModelActionPlanner.setupPrimaryAction(actionSnapshot(
-      isLocalModelReady: true,
-      canProbeModel: true
+      isLocalModelReady: true
     ))
 
-    guard let action else {
-      XCTFail("Expected ready model setup to offer model check")
-      return
-    }
-    guard case .probeModel = action else {
-      XCTFail("Expected ready model setup to offer model check")
-      return
-    }
-
-    XCTAssertEqual(
-      LocalModelActionPlanner.primaryTitle(for: action, snapshot: actionSnapshot(
-        isLocalModelReady: true,
-        canProbeModel: true
-      )),
-      "Check Model"
-    )
+    XCTAssertNil(action)
   }
 
-  func testFailedModelCheckPrimaryActionNamesRetry() {
+  func testFailedModelCheckDoesNotExposeManualRetryAction() {
     let action = LocalModelActionPlanner.setupPrimaryAction(actionSnapshot(
-      canProbeModel: true,
-      hasModelCheckFailure: true
+      isLocalModelReady: false
     ))
 
-    XCTAssertEqual(
-      LocalModelActionPlanner.primaryTitle(for: action, snapshot: actionSnapshot(
-        canProbeModel: true,
-        hasModelCheckFailure: true
-      )),
-      "Check Again"
-    )
+    XCTAssertNil(action)
   }
 
   func testModelProbeSuccessPresentationKeepsDefaultCopySimple() {
@@ -698,7 +648,6 @@ final class LocalModelPresenterTests: XCTestCase {
     isLocalModelReady: Bool = false,
     hasActiveTurn: Bool = false,
     isCheckingModel: Bool = false,
-    hasPendingModelCheck: Bool = false,
     modelCheckFailureDetail: String? = nil,
     downloadingModel: LocalModelSummary? = nil,
     pausedModel: LocalModelSummary? = nil,
@@ -714,7 +663,6 @@ final class LocalModelPresenterTests: XCTestCase {
       isLocalModelReady: isLocalModelReady,
       hasActiveTurn: hasActiveTurn,
       isCheckingModel: isCheckingModel,
-      hasPendingModelCheck: hasPendingModelCheck,
       modelCheckFailureDetail: modelCheckFailureDetail,
       downloadingModel: downloadingModel,
       pausedModel: pausedModel,
@@ -738,9 +686,6 @@ final class LocalModelPresenterTests: XCTestCase {
     canDownloadSelectedModel: Bool = false,
     canBootstrapModelPackMetadata: Bool = false,
     canCancelDownload: Bool = false,
-    canProbeModel: Bool = false,
-    isCheckingModel: Bool = false,
-    hasModelCheckFailure: Bool = false,
     defaultDownloadTitle: String = "Download Model"
   ) -> LocalModelActionSnapshot {
     LocalModelActionSnapshot(
@@ -754,9 +699,6 @@ final class LocalModelPresenterTests: XCTestCase {
       canDownloadSelectedModel: canDownloadSelectedModel,
       canBootstrapModelPackMetadata: canBootstrapModelPackMetadata,
       canCancelDownload: canCancelDownload,
-      canProbeModel: canProbeModel,
-      isCheckingModel: isCheckingModel,
-      hasModelCheckFailure: hasModelCheckFailure,
       defaultDownloadTitle: defaultDownloadTitle
     )
   }

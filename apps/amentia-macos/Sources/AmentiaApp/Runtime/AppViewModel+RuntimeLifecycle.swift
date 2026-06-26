@@ -143,6 +143,23 @@ extension AppViewModel {
     }
   }
 
+  func prepareForAppTermination() {
+    runtimeLaunchCoordinator.cancel()
+    runtimeRelaunchCoordinator.cancel()
+    workspaceOpenCoordinator.cancel()
+    threadCreationCoordinator.cancel()
+    threadHistoryLoadCoordinator.cancel()
+    localExecutionRequests.clearAll()
+    turnCancellationCoordinator.cancel()
+    localModelMetadataCoordinator.cancel()
+    localModelActivationCoordinator.cancel()
+    modelDownloadCoordinator.cancelActiveDownload()
+    pluginLifecycleOperations.cancel()
+    resetWorkspaceSearch()
+    isCheckingLocalModel = false
+    runtimeBridge.stopRuntime(detail: "Amentia is closing.")
+  }
+
   private func applyRuntimeLaunchBootstrap(_ bootstrap: RuntimeLaunchBootstrap) async throws {
     let currentWorkspace = bootstrap.workspaceRestore.workspace
 
@@ -151,6 +168,7 @@ extension AppViewModel {
       serverLabel: "\(bootstrap.session.serverName) \(bootstrap.session.serverVersion)",
       announcesFirstRequestReady: false
     )
+    await runStartupLocalModelCheckIfReady()
     applyMemoryStateRefresh(bootstrap.memoryRefresh, clearsMissing: true)
     await refreshPluginState()
 
@@ -173,7 +191,6 @@ extension AppViewModel {
     }
     await refreshRuntimeReadiness()
     appendRuntimeLaunchAnnotations(bootstrap, currentWorkspace: currentWorkspace)
-    probePendingActivatedModelIfReady()
   }
 
   private func appendRuntimeLaunchAnnotations(

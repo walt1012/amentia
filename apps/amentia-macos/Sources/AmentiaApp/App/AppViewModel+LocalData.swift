@@ -51,7 +51,6 @@ extension AppViewModel {
     turnCancellationCoordinator.cancel()
     runtimeRelaunchCoordinator.cancel()
     localModelMetadataCoordinator.cancel()
-    localModelProbeCoordinator.cancelPendingPostActivationCheck()
     localModelActivationCoordinator.cancel()
     pluginLifecycleOperations.cancel()
     modelDownloadCoordinator.cancelActiveDownload()

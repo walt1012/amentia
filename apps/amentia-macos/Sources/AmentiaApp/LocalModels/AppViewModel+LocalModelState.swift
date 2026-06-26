@@ -92,7 +92,6 @@ extension AppViewModel {
       isLocalModelReady: isLocalModelReady(),
       hasActiveTurn: hasActiveOrPendingTurn(),
       isCheckingModel: isCheckingLocalModel,
-      hasPendingModelCheck: localModelProbeCoordinator.hasPendingPostActivationCheck,
       modelCheckFailureDetail: modelCheckFailureDetail(),
       downloadingModel: localModel(for: modelDownloadState.activeModelID),
       pausedModel: localModel(for: modelDownloadState.pausedModelID),
@@ -121,9 +120,6 @@ extension AppViewModel {
       canDownloadSelectedModel: canDownloadLocalModel(),
       canBootstrapModelPackMetadata: canBootstrapModelPackMetadata(),
       canCancelDownload: canCancelModelDownload(),
-      canProbeModel: canProbeLocalModel(),
-      isCheckingModel: isCheckingLocalModel,
-      hasModelCheckFailure: modelCheckFailureDetail() != nil,
       defaultDownloadTitle: defaultModelDownloadButtonTitle()
     )
   }

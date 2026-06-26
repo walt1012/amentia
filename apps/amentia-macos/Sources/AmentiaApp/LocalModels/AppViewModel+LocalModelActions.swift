@@ -37,14 +37,11 @@ extension AppViewModel {
       && runtimeBridge.activeLocalModelPath() != nil
   }
 
-  func canProbeLocalModel() -> Bool {
+  func canRunStartupLocalModelCheck() -> Bool {
     runtimeState == .ready
       && hasRunnableLocalModelSetup()
       && !isCheckingLocalModel
       && !hasActiveOrPendingTurn()
-      && !localModelActivationCoordinator.isActivating
-      && !modelDownloadCoordinator.isDownloading
-      && !modelDownloadState.hasPausedDownload
   }
 
   func canCancelModelDownload() -> Bool {
@@ -191,7 +188,6 @@ extension AppViewModel {
           manifestPath: preparedActivation.manifestPath,
           modelPath: model.installPath
         )
-        localModelProbeCoordinator.schedulePostActivationCheck(modelID: model.id)
         selectedSetupModelID = model.id
         refreshLocalModelCatalog()
         applyLocalModelActivationPlan(
@@ -218,65 +214,51 @@ extension AppViewModel {
     }
 
     runtimeBridge.clearActiveLocalModel()
-    localModelProbeCoordinator.cancelPendingPostActivationCheck()
     refreshLocalModelCatalog()
     applyLocalModelActivationPlan(LocalModelActivationPlanner.resetPlan())
   }
 
-  func probeLocalModel() {
-    guard canProbeLocalModel() else {
-      runtimeDetail = LocalModelProbePresenter.blockedDetail
+  func runStartupLocalModelCheckIfReady() async {
+    guard canRunStartupLocalModelCheck() else {
       return
     }
 
     isCheckingLocalModel = true
+    defer {
+      isCheckingLocalModel = false
+    }
+
     if let activeModelID = activeLocalModelID() {
       updateLocalModelReadinessState { state in
         state.markProbeStarted(modelID: activeModelID)
       }
     }
     runtimeDetail = LocalModelProbePresenter.startedDetail()
-    Task {
-      defer {
-        isCheckingLocalModel = false
-      }
 
-      do {
-        let probe = try await runtimeBridge.probeModel()
-        updateLocalModelReadinessState { state in
-          state.applyProbeResult(
-            modelID: probe.modelID,
-            status: probe.status,
-            detail: probe.detail
-          )
-        }
-        applyLocalModelProbePresentation(LocalModelProbePresenter.presentation(for: probe))
-      } catch {
-        if let activeModelID = activeLocalModelID() {
-          updateLocalModelReadinessState { state in
-            state.applyProbeResult(
-              modelID: activeModelID,
-              status: "request_failed",
-              detail: error.localizedDescription
-            )
-          }
-        }
-        applyLocalModelProbePresentation(
-          LocalModelProbePresenter.requestFailurePresentation(error: error)
+    do {
+      let probe = try await runtimeBridge.probeModel()
+      updateLocalModelReadinessState { state in
+        state.applyProbeResult(
+          modelID: probe.modelID,
+          status: probe.status,
+          detail: probe.detail
         )
       }
+      applyLocalModelProbePresentation(LocalModelProbePresenter.presentation(for: probe))
+    } catch {
+      if let activeModelID = activeLocalModelID() {
+        updateLocalModelReadinessState { state in
+          state.applyProbeResult(
+            modelID: activeModelID,
+            status: "request_failed",
+            detail: error.localizedDescription
+          )
+        }
+      }
+      applyLocalModelProbePresentation(
+        LocalModelProbePresenter.requestFailurePresentation(error: error)
+      )
     }
-  }
-
-  func probePendingActivatedModelIfReady() {
-    guard localModelProbeCoordinator.consumePostActivationCheck(
-      activeModelID: activeLocalModelID(),
-      canProbe: canProbeLocalModel()
-    ) != nil else {
-      return
-    }
-
-    probeLocalModel()
   }
 
   private func applyLocalModelProbePresentation(_ presentation: LocalModelProbePresentation) {

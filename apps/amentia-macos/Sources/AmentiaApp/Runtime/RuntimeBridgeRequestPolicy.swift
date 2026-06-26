@@ -47,7 +47,7 @@ enum RuntimeBridgeRequestPolicy {
     case "turn/start":
       return "current request"
     case "model/probe":
-      return "model check"
+      return "startup model check"
     case "workspace/search":
       return "project search"
     case "plugin/commandRun":

@@ -12,6 +12,11 @@ struct AmentiaApp: App {
         .frame(minWidth: 1120, minHeight: 720)
         .background(AmentiaVisualStyle.windowBackground)
         .background(MainWindowMarker())
+        .onReceive(
+          NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
+        ) { _ in
+          viewModel.prepareForAppTermination()
+        }
     }
     .commands {
       CommandGroup(replacing: .newItem) {

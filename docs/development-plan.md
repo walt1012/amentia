@@ -91,7 +91,7 @@ Status: active, local model loop hardening is late-stage.
 
 Current focus:
 
-- Finish fresh-install model deploy, self-check, invoke, and recovery polish.
+- Finish fresh-install model deploy, startup readiness check, invoke, and recovery polish.
 - Keep session delete, revert, reset, and failure recovery clean and visible.
 - Remove stale identity/model docs and user-visible internal wording.
 - Polish the primary cowork path before adding more extension surface.
@@ -101,10 +101,10 @@ server agent or a code-only assistant.
 
 Exit criteria:
 
-- A fresh install can download, activate, self-check, and invoke a local model
+- A fresh install can download, activate, start, and invoke a local model
   without expert context.
-- A failed local model self-check blocks cowork use until the model is checked,
-  restarted, or replaced.
+- A failed startup model check blocks cowork use until Amentia restarts with a
+  passing model or the model is replaced.
 - Users can delete sessions, revert session changes, and Reset Amentia from
   visible UI without leaving app-owned garbage behind.
 - Web Search, workspace context, memory ranking, and session search provide
@@ -117,8 +117,8 @@ Exit criteria:
 
 Work order:
 
-1. Finish the local model loop: invoke reliability, failed-check recovery, and
-   plain-language first-use guidance.
+1. Finish the local model loop: startup-only readiness check, invocation failure
+   feedback, process cleanup, and plain-language first-use guidance.
 2. Keep ordinary UI language product-first while leaving plugin, Skill, MCP,
    and diagnostics terms only where they help advanced users.
 3. Finish session continuity: deletion, change ledger, revert, receipts,
