@@ -37,6 +37,14 @@ enum UserFacingFailurePresenter {
     "Could not delete all local Amentia data. Close Amentia, reopen it, and try Delete All Local Data again."
   }
 
+  static func savedActiveModelMissingDetail() -> String {
+    "The saved local model selection was reset because the model is no longer on this Mac. Choose or download a model to continue."
+  }
+
+  static func savedActiveModelInvalidDetail() -> String {
+    "The saved local model selection was reset because it no longer passes verification. Choose or download a model to continue."
+  }
+
   static func fileRevealFailureDetail() -> String {
     "Amentia could not open that folder. Check Finder permissions, then try again."
   }

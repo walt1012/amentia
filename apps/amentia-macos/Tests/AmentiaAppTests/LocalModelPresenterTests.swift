@@ -399,6 +399,19 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(detail.contains("llama"))
   }
 
+  func testSavedActiveModelInvalidationCopyAvoidsSetupInternals() {
+    let missing = UserFacingFailurePresenter.savedActiveModelMissingDetail()
+    let invalid = UserFacingFailurePresenter.savedActiveModelInvalidDetail()
+
+    for detail in [missing, invalid] {
+      XCTAssertTrue(detail.contains("Choose or download a model"))
+      XCTAssertFalse(detail.contains("manifest"))
+      XCTAssertFalse(detail.contains("setup file"))
+      XCTAssertFalse(detail.contains("catalog"))
+      XCTAssertFalse(detail.contains("model file"))
+    }
+  }
+
   func testRefreshGuidanceAvoidsInternalSetupInfoLanguage() {
     let guidance = LocalModelOperationPresenter.setupGuidance(operationSnapshot())
 

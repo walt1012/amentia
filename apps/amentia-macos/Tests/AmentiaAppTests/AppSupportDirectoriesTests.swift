@@ -67,6 +67,48 @@ final class AppSupportDirectoriesTests: XCTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: workspaceFile.path))
   }
 
+  func testDeleteLocalDataClearsModelSelectionPreferences() throws {
+    let parentURL = try makeTemporaryDirectory(prefix: "amentia-app-support")
+    let rootURL = parentURL.appendingPathComponent("Amentia", isDirectory: true)
+    defer {
+      try? FileManager.default.removeItem(at: parentURL)
+      AppDataResetService.clearKnownPreferences()
+    }
+    let metadata = LocalModelFileMetadata(
+      sizeBytes: 128,
+      creationDate: Date(timeIntervalSince1970: 1),
+      modificationDate: Date(timeIntervalSince1970: 2),
+      systemFileNumber: 3
+    )
+    AppPreferences.storeSelectedSetupModelID("minicpm5-1b")
+    RuntimeBridgeLocalEnvironment.configureActiveLocalModel(
+      manifestPath: "/tmp/model-pack.json",
+      modelPath: "/tmp/model.gguf"
+    )
+    LocalModelVerificationStampStore.rememberVerifiedModel(
+      modelID: "minicpm5-1b",
+      path: "/tmp/model.gguf",
+      expectedSHA256: String(repeating: "a", count: 64),
+      localMetadata: metadata
+    )
+
+    _ = try AppDataResetService.deleteLocalData(
+      rootDirectory: rootURL,
+      allowsNonDefaultRoot: true
+    )
+
+    XCTAssertNil(AppPreferences.storedSelectedSetupModelID(matching: [
+      localModel(id: "minicpm5-1b")
+    ]))
+    XCTAssertNil(RuntimeBridgeLocalEnvironment.activeLocalModelPath())
+    XCTAssertFalse(LocalModelVerificationStampStore.hasVerifiedModel(
+      modelID: "minicpm5-1b",
+      path: "/tmp/model.gguf",
+      expectedSHA256: String(repeating: "a", count: 64),
+      localMetadata: metadata
+    ))
+  }
+
   private func expectedDirectories(rootURL: URL) -> [URL] {
     [
       rootURL,
@@ -77,6 +119,28 @@ final class AppSupportDirectoriesTests: XCTestCase {
       rootURL.appendingPathComponent("plugins", isDirectory: true),
       rootURL.appendingPathComponent("model-downloads", isDirectory: true),
     ]
+  }
+
+  private func localModel(id: String) -> LocalModelSummary {
+    LocalModelSummary(
+      id: id,
+      displayName: id,
+      description: "Reset fixture.",
+      fileName: "\(id).gguf",
+      downloadURL: "https://example.com/\(id).gguf",
+      homepage: "https://example.com/\(id)",
+      sizeBytes: 1,
+      sha256: String(repeating: "a", count: 64),
+      contextSize: 4096,
+      modelContextSize: 4096,
+      maxOutputTokens: 192,
+      license: "apache-2.0",
+      tags: ["test"],
+      installPath: "/tmp/\(id).gguf",
+      downloaded: false,
+      active: false,
+      localSizeBytes: nil
+    )
   }
 
 }

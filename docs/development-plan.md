@@ -94,6 +94,8 @@ The current product baseline includes:
 - Reset Amentia for app-owned data, downloaded models, and paused downloads.
 - Local data deletion copy is unified around app-owned data and clearly excludes
   project folders and repositories.
+- Local data deletion clears selected model, active model, paused download, and
+  verification state so first-run setup starts cleanly.
 - Local plugin registry, installation lifecycle, Actions, Connections, Skills,
   MCP, Tools, Checks, credentials, retries, and generic connector receipts.
 - Legacy prompt-pack aliases are out of the active plugin contract.

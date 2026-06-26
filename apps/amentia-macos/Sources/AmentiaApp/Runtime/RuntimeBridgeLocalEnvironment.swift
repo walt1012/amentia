@@ -122,11 +122,8 @@ enum RuntimeBridgeLocalEnvironment {
     guard manager.fileExists(atPath: manifestPath),
           manager.fileExists(atPath: modelPath)
     else {
-      let missingFileDetail =
-        "The saved active local model was reset because its setup file or model file no longer "
-        + "exists. Choose or download a model to continue."
       clearActiveLocalModel(
-        invalidationDetail: missingFileDetail
+        invalidationDetail: UserFacingFailurePresenter.savedActiveModelMissingDetail()
       )
       return nil
     }
@@ -136,11 +133,8 @@ enum RuntimeBridgeLocalEnvironment {
       modelPath: modelPath,
       manifestPath: manifestPath
     ) else {
-      let verificationDetail =
-        "The saved active local model was reset because its setup file and model file no longer "
-        + "match Amentia's verified catalog. Choose or download a model to continue."
       clearActiveLocalModel(
-        invalidationDetail: verificationDetail
+        invalidationDetail: UserFacingFailurePresenter.savedActiveModelInvalidDetail()
       )
       return nil
     }
