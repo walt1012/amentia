@@ -391,7 +391,9 @@ fn thread_revert_changes_collapses_multiple_saves_to_same_file() {
 
   assert!(preview_response.error.is_none());
   let preview_result = preview_response.result.expect("preview result");
-  let preview_changes = preview_result["changes"].as_array().expect("preview changes");
+  let preview_changes = preview_result["changes"]
+    .as_array()
+    .expect("preview changes");
   assert_eq!(preview_changes.len(), 1);
   assert_eq!(preview_changes[0]["relativePath"], "docs/output.txt");
   assert_eq!(preview_changes[0]["canRevert"], json!(true));

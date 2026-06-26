@@ -145,9 +145,7 @@ fn active_workspace_changes_for_thread(
   Ok(changes)
 }
 
-fn revert_plan_for_changes(
-  changes: &[StoredWorkspaceChangeRecord],
-) -> Vec<ThreadFileRevertPlan> {
+fn revert_plan_for_changes(changes: &[StoredWorkspaceChangeRecord]) -> Vec<ThreadFileRevertPlan> {
   let mut plan = Vec::<ThreadFileRevertPlan>::new();
 
   for change in changes {
