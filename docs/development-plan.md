@@ -89,7 +89,7 @@ The current product baseline includes:
 
 Status: active, local model loop hardening is late-stage; guarded session
 operations, reset visibility, project-aware search, and revert receipts are in
-place.
+place; repeated saves to one file now revert as one clear file operation.
 
 Current focus:
 
@@ -123,8 +123,8 @@ Work order:
    feedback, process cleanup, and plain-language first-use guidance.
 2. Keep ordinary UI language product-first while leaving plugin, Skill, MCP,
    and diagnostics terms only where they help advanced users.
-3. Finish session continuity: remaining change-ledger edge cases and any
-   delete/revert recovery gaps found in installed use.
+3. Finish session continuity: remaining delete/revert recovery gaps found in
+   installed use.
 4. Trim duplicated test fixtures and oversized presentation/plugin tests around
    stable user-visible contracts instead of implementation snapshots.
 5. Improve cowork retrieval: Web Search by default, bounded memory ranking, and

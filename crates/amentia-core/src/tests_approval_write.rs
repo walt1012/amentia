@@ -3,7 +3,7 @@ use super::test_support::{
 };
 use super::*;
 use amentia_protocol::methods;
-use amentia_storage::RuntimeStore;
+use amentia_storage::{RuntimeStore, StoredWorkspaceChangeRecord};
 use serde_json::json;
 use std::fs;
 
@@ -317,6 +317,95 @@ fn thread_revert_changes_refuses_user_modified_file() {
 }
 
 #[test]
+fn thread_revert_changes_collapses_multiple_saves_to_same_file() {
+  let mut context = RuntimeContext::new_in_memory();
+  let workspace = create_temp_workspace("approval-revert-repeated-file");
+  let store_root = create_temp_workspace("approval-revert-repeated-file-store");
+  let store = RuntimeStore::new(store_root.join("amentia.db"));
+  context
+    .persistence_state
+    .set_store_for_testing(store.clone());
+  fs::create_dir_all(workspace.join("docs")).expect("create docs");
+  fs::write(workspace.join("docs").join("output.txt"), "second").expect("write latest file");
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::WORKSPACE_OPEN,
+      Some(json!({
+        "path": workspace.display().to_string()
+      })),
+    ),
+  );
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Repeated Save Thread"
+      })),
+    ),
+  );
+  store
+    .save_workspace_change(&stored_change(
+      "change-1",
+      workspace.display().to_string(),
+      Some(b"original".to_vec()),
+      b"first".to_vec(),
+    ))
+    .expect("save first change");
+  store
+    .save_workspace_change(&stored_change(
+      "change-2",
+      workspace.display().to_string(),
+      Some(b"first".to_vec()),
+      b"second".to_vec(),
+    ))
+    .expect("save second change");
+
+  let preview_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_CHANGE_PREVIEW,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  let revert_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_REVERT_CHANGES,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+  let restored_content =
+    fs::read_to_string(workspace.join("docs").join("output.txt")).expect("read restored file");
+  let reverted_changes = store
+    .load_workspace_changes_for_thread("thread-1")
+    .expect("load reverted changes");
+  remove_temp_workspace(&workspace);
+  fs::remove_dir_all(&store_root).expect("cleanup temp store");
+
+  assert!(preview_response.error.is_none());
+  let preview_result = preview_response.result.expect("preview result");
+  let preview_changes = preview_result["changes"].as_array().expect("preview changes");
+  assert_eq!(preview_changes.len(), 1);
+  assert_eq!(preview_changes[0]["relativePath"], "docs/output.txt");
+  assert_eq!(preview_changes[0]["canRevert"], json!(true));
+  assert!(revert_response.error.is_none());
+  let revert_result = revert_response.result.expect("revert result");
+  assert_eq!(revert_result["revertedCount"], 1);
+  assert_eq!(restored_content, "original");
+  assert_eq!(reverted_changes.len(), 2);
+  assert!(reverted_changes
+    .iter()
+    .all(|change| change.reverted_at.is_some()));
+}
+
+#[test]
 fn natural_handoff_save_uses_write_approval() {
   let mut context = RuntimeContext::new_in_memory();
   enable_full_access_plugin(&mut context);
@@ -508,4 +597,23 @@ fn explore_mode_blocks_workspace_write_even_with_permission() {
       && item["attributes"]["requiredPermission"] == "file.write"
       && item["attributes"]["retryMessage"] == "Write docs/explore.txt: This should not be written"
   }));
+}
+
+fn stored_change(
+  id: &str,
+  workspace_root_path: String,
+  previous_content: Option<Vec<u8>>,
+  next_content: Vec<u8>,
+) -> StoredWorkspaceChangeRecord {
+  StoredWorkspaceChangeRecord {
+    id: id.to_string(),
+    thread_id: "thread-1".to_string(),
+    approval_id: Some(id.to_string()),
+    workspace_root_path,
+    relative_path: "docs/output.txt".to_string(),
+    action: "write_file".to_string(),
+    previous_content,
+    next_content,
+    reverted_at: None,
+  }
 }

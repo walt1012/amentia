@@ -9,6 +9,15 @@ use crate::request_params::parse_required_params;
 use crate::requests::thread_requests::thread_has_active_work;
 use crate::RuntimeContext;
 
+struct ThreadFileRevertPlan {
+  workspace_root_path: String,
+  relative_path: String,
+  action: String,
+  previous_content: Option<Vec<u8>>,
+  expected_current_content: Vec<u8>,
+  change_ids: Vec<String>,
+}
+
 pub(crate) fn handle_thread_change_preview(
   context: &RuntimeContext,
   request: JsonRpcRequest,
@@ -28,11 +37,13 @@ pub(crate) fn handle_thread_change_preview(
     Err(error) => return JsonRpcResponse::error(request.id, -32010, error.to_string()),
   };
 
+  let revert_plan = revert_plan_for_changes(&changes);
+
   JsonRpcResponse::success(
     request.id,
     &ThreadChangePreviewResult {
       thread_id: params.thread_id,
-      changes: changes
+      changes: revert_plan
         .iter()
         .map(workspace_change_summary)
         .collect::<Vec<_>>(),
@@ -75,32 +86,35 @@ pub(crate) fn handle_thread_revert_changes(
       },
     );
   }
+  let revert_plan = revert_plan_for_changes(&changes);
 
-  for change in changes.iter().rev() {
+  for plan in revert_plan.iter().rev() {
     if let Err(error) = validate_file_change_revert(
-      std::path::Path::new(&change.workspace_root_path),
-      &change.relative_path,
-      &change.next_content,
+      std::path::Path::new(&plan.workspace_root_path),
+      &plan.relative_path,
+      &plan.expected_current_content,
     ) {
       return JsonRpcResponse::error(request.id, -32013, error.to_string());
     }
   }
 
-  for change in changes.iter().rev() {
+  for plan in revert_plan.iter().rev() {
     if let Err(error) = revert_file_change(
-      std::path::Path::new(&change.workspace_root_path),
-      &change.relative_path,
-      &change.next_content,
-      change.previous_content.as_deref(),
+      std::path::Path::new(&plan.workspace_root_path),
+      &plan.relative_path,
+      &plan.expected_current_content,
+      plan.previous_content.as_deref(),
     ) {
       return JsonRpcResponse::error(request.id, -32013, error.to_string());
     }
-    if let Err(error) = context.mark_workspace_change_reverted(&change.id) {
-      return JsonRpcResponse::error(request.id, -32010, error.to_string());
+    for change_id in &plan.change_ids {
+      if let Err(error) = context.mark_workspace_change_reverted(change_id) {
+        return JsonRpcResponse::error(request.id, -32010, error.to_string());
+      }
     }
   }
 
-  let item = thread_revert_completed_item(&changes);
+  let item = thread_revert_completed_item(&revert_plan);
   if let Some(thread) = context.thread_state.find_mut(&params.thread_id) {
     thread.append_items(vec![item.clone()]);
   }
@@ -112,7 +126,7 @@ pub(crate) fn handle_thread_revert_changes(
     request.id,
     &ThreadRevertChangesResult {
       thread_id: params.thread_id,
-      reverted_count: changes.len(),
+      reverted_count: revert_plan.len(),
       items: vec![item],
     },
   )
@@ -131,27 +145,56 @@ fn active_workspace_changes_for_thread(
   Ok(changes)
 }
 
-fn workspace_change_summary(change: &StoredWorkspaceChangeRecord) -> ThreadWorkspaceChangeSummary {
+fn revert_plan_for_changes(
+  changes: &[StoredWorkspaceChangeRecord],
+) -> Vec<ThreadFileRevertPlan> {
+  let mut plan = Vec::<ThreadFileRevertPlan>::new();
+
+  for change in changes {
+    if let Some(existing) = plan.iter_mut().find(|entry| {
+      entry.workspace_root_path == change.workspace_root_path
+        && entry.relative_path == change.relative_path
+    }) {
+      existing.action = change.action.clone();
+      existing.expected_current_content = change.next_content.clone();
+      existing.change_ids.push(change.id.clone());
+      continue;
+    }
+
+    plan.push(ThreadFileRevertPlan {
+      workspace_root_path: change.workspace_root_path.clone(),
+      relative_path: change.relative_path.clone(),
+      action: change.action.clone(),
+      previous_content: change.previous_content.clone(),
+      expected_current_content: change.next_content.clone(),
+      change_ids: vec![change.id.clone()],
+    });
+  }
+
+  plan
+}
+
+fn workspace_change_summary(change: &ThreadFileRevertPlan) -> ThreadWorkspaceChangeSummary {
   let conflict_reason = validate_file_change_revert(
     std::path::Path::new(&change.workspace_root_path),
     &change.relative_path,
-    &change.next_content,
+    &change.expected_current_content,
   )
   .err()
   .map(|error| error.to_string());
 
   ThreadWorkspaceChangeSummary {
-    id: change.id.clone(),
+    id: change.change_ids.join("+"),
     relative_path: change.relative_path.clone(),
     action: change.action.clone(),
-    bytes_written: change.next_content.len(),
+    bytes_written: change.expected_current_content.len(),
     will_delete_file: change.previous_content.is_none(),
     can_revert: conflict_reason.is_none(),
     conflict_reason,
   }
 }
 
-fn thread_revert_completed_item(changes: &[StoredWorkspaceChangeRecord]) -> TimelineItem {
+fn thread_revert_completed_item(changes: &[ThreadFileRevertPlan]) -> TimelineItem {
   let changed_paths = changes
     .iter()
     .rev()
