@@ -84,19 +84,23 @@ extension AppViewModel {
     runtimeState == .ready
       && !thread.id.hasPrefix("local-")
       && !hasActiveOrPendingTurn()
+      && !threadMutationCoordinator.isMutating
   }
 
   func canRevertThreadChanges(_ thread: ThreadSummary) -> Bool {
     runtimeState == .ready
       && !thread.id.hasPrefix("local-")
       && !hasActiveOrPendingTurn()
+      && !threadMutationCoordinator.isMutating
   }
 
   func previewThreadChanges(
     _ thread: ThreadSummary
   ) async -> RuntimeBridge.RuntimeThreadChangePreview? {
     guard canRevertThreadChanges(thread) else {
-      runtimeDetail = SessionChangePresenter.activeWorkBlocksRevertDetail
+      runtimeDetail = threadMutationCoordinator.isMutating
+        ? SessionChangePresenter.sessionOperationInProgressDetail
+        : SessionChangePresenter.activeWorkBlocksRevertDetail
       return nil
     }
 
@@ -120,40 +124,79 @@ extension AppViewModel {
   }
 
   func revertThreadChanges(_ thread: ThreadSummary) {
-    guard canRevertThreadChanges(thread) else {
+    guard runtimeState == .ready,
+          !thread.id.hasPrefix("local-")
+    else {
+      return
+    }
+    guard !hasActiveOrPendingTurn() else {
       runtimeDetail = SessionChangePresenter.activeWorkBlocksRevertDetail
       return
     }
+    guard let requestToken = threadMutationCoordinator.begin(threadID: thread.id, kind: .revert)
+    else {
+      runtimeDetail = SessionChangePresenter.sessionOperationInProgressDetail
+      return
+    }
 
-    Task {
+    runtimeDetail = SessionChangePresenter.revertingDetail(threadTitle: thread.title)
+    let task = Task {
+      defer {
+        threadMutationCoordinator.finish(requestToken)
+      }
       do {
         let result = try await runtimeBridge.revertThreadChanges(threadID: thread.id)
-        guard !Task.isCancelled else {
+        guard !Task.isCancelled,
+              threadMutationCoordinator.isCurrent(requestToken)
+        else {
           return
         }
         appendItemsToTimeline(threadID: result.threadID, items: result.items)
+        refreshThreadPreview(
+          threadID: result.threadID,
+          preview: SessionChangePresenter.revertThreadPreview(revertedCount: result.revertedCount)
+        )
         runtimeDetail = SessionChangePresenter.revertSuccessDetail(revertedCount: result.revertedCount)
       } catch {
-        guard !Task.isCancelled else {
+        guard !Task.isCancelled,
+              threadMutationCoordinator.isCurrent(requestToken)
+        else {
           return
         }
         runtimeDetail = SessionChangePresenter.revertFailedDetail(error: error)
       }
     }
+    threadMutationCoordinator.bind(task: task, token: requestToken)
   }
 
   func deleteThread(_ thread: ThreadSummary) {
-    guard canDeleteThread(thread) else {
+    guard runtimeState == .ready,
+          !thread.id.hasPrefix("local-")
+    else {
+      return
+    }
+    guard !hasActiveOrPendingTurn() else {
       runtimeDetail = SessionChangePresenter.activeWorkBlocksDeleteDetail
+      return
+    }
+    guard let requestToken = threadMutationCoordinator.begin(threadID: thread.id, kind: .delete)
+    else {
+      runtimeDetail = SessionChangePresenter.sessionOperationInProgressDetail
       return
     }
 
     let deletedThreadID = thread.id
     let deletedThreadTitle = thread.title
-    Task {
+    runtimeDetail = SessionChangePresenter.deletingDetail(threadTitle: deletedThreadTitle)
+    let task = Task {
+      defer {
+        threadMutationCoordinator.finish(requestToken)
+      }
       do {
         let runtimeThreads = try await runtimeBridge.deleteThread(threadID: deletedThreadID)
-        guard !Task.isCancelled else {
+        guard !Task.isCancelled,
+              threadMutationCoordinator.isCurrent(requestToken)
+        else {
           return
         }
         await applyDeletedThread(
@@ -162,12 +205,15 @@ extension AppViewModel {
           runtimeThreads: runtimeThreads
         )
       } catch {
-        guard !Task.isCancelled else {
+        guard !Task.isCancelled,
+              threadMutationCoordinator.isCurrent(requestToken)
+        else {
           return
         }
         runtimeDetail = SessionChangePresenter.deleteFailedDetail(error: error)
       }
     }
+    threadMutationCoordinator.bind(task: task, token: requestToken)
     threadHistoryLoadCoordinator.cancel()
   }
 
@@ -425,6 +471,65 @@ final class ThreadHistoryLoadCoordinator {
   }
 
   func cancel() {
+    taskSlot.cancel()
+  }
+}
+
+enum ThreadMutationKind: Equatable {
+  case delete
+  case revert
+}
+
+struct ThreadMutationRequestToken: Equatable {
+  fileprivate let id: UUID
+  let threadID: String
+  let kind: ThreadMutationKind
+}
+
+final class ThreadMutationCoordinator {
+  private let taskSlot = CancellableTaskSlot()
+  private(set) var activeThreadID: String?
+  private(set) var activeKind: ThreadMutationKind?
+
+  var isMutating: Bool {
+    taskSlot.isActive
+  }
+
+  func begin(threadID: String, kind: ThreadMutationKind) -> ThreadMutationRequestToken? {
+    guard let requestID = taskSlot.begin() else {
+      return nil
+    }
+
+    activeThreadID = threadID
+    activeKind = kind
+    return ThreadMutationRequestToken(
+      id: requestID,
+      threadID: threadID,
+      kind: kind
+    )
+  }
+
+  func bind(task: Task<Void, Never>, token: ThreadMutationRequestToken) {
+    taskSlot.bind(task: task, requestID: token.id)
+  }
+
+  func isCurrent(_ token: ThreadMutationRequestToken) -> Bool {
+    taskSlot.isCurrent(token.id)
+  }
+
+  func finish(_ token: ThreadMutationRequestToken) {
+    guard isCurrent(token) else {
+      return
+    }
+
+    activeThreadID = nil
+    activeKind = nil
+    taskSlot.finish(token.id)
+  }
+
+  func cancel() {
+    activeThreadID = nil
+    activeKind = nil
     taskSlot.cancel()
   }
 }

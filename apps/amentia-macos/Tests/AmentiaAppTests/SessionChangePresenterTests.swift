@@ -17,6 +17,10 @@ final class SessionChangePresenterTests: XCTestCase {
 
   func testDeleteSuccessCopyNamesSessionAndPreservesProjectFiles() {
     XCTAssertEqual(
+      SessionChangePresenter.deletingDetail(threadTitle: "Design Review"),
+      "Deleting Design Review..."
+    )
+    XCTAssertEqual(
       SessionChangePresenter.deleteSuccessDetail(threadTitle: "Design Review"),
       "Deleted Design Review. Project files were not changed."
     )
@@ -47,18 +51,42 @@ final class SessionChangePresenterTests: XCTestCase {
     }
   }
 
+  func testSessionOperationInProgressCopyIsUserFacing() {
+    XCTAssertEqual(
+      SessionChangePresenter.sessionOperationInProgressDetail,
+      "Finish the current session operation before starting another one."
+    )
+    XCTAssertEqual(
+      SessionChangePresenter.revertingDetail(threadTitle: "Design Review"),
+      "Reverting changes saved by Design Review..."
+    )
+    XCTAssertFalse(SessionChangePresenter.sessionOperationInProgressDetail.contains("thread"))
+  }
+
   func testRevertSuccessCopyHandlesZeroOneAndManyFiles() {
     XCTAssertEqual(
       SessionChangePresenter.revertSuccessDetail(revertedCount: 0),
       "No files were reverted. Project files were not changed."
     )
     XCTAssertEqual(
+      SessionChangePresenter.revertThreadPreview(revertedCount: 0),
+      "No session changes to revert"
+    )
+    XCTAssertEqual(
       SessionChangePresenter.revertSuccessDetail(revertedCount: 1),
       "Reverted 1 file saved by this session."
     )
     XCTAssertEqual(
+      SessionChangePresenter.revertThreadPreview(revertedCount: 1),
+      "Reverted 1 file"
+    )
+    XCTAssertEqual(
       SessionChangePresenter.revertSuccessDetail(revertedCount: 3),
       "Reverted 3 files saved by this session."
+    )
+    XCTAssertEqual(
+      SessionChangePresenter.revertThreadPreview(revertedCount: 3),
+      "Reverted 3 files"
     )
   }
 

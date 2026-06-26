@@ -81,7 +81,7 @@ extension AppViewModel {
 
   func downloadRecommendedModel(modelID: String, activateAfterDownload: Bool = false) {
     guard !localModelActivationCoordinator.isActivating else {
-      runtimeDetail = "Finish the current model selection check before downloading another model."
+      runtimeDetail = "Finish the current model selection before downloading another model."
       return
     }
 
@@ -152,7 +152,7 @@ extension AppViewModel {
       return
     }
     guard let requestID = localModelActivationCoordinator.begin() else {
-      runtimeDetail = "Finish the current model selection check before switching models."
+      runtimeDetail = "Finish the current model selection before switching models."
       return
     }
 
@@ -209,7 +209,7 @@ extension AppViewModel {
   func resetActiveLocalModel() {
     guard canResetActiveLocalModel() else {
       runtimeDetail =
-        "Finish Amentia startup, model download, model selection check, or active work before resetting model selection."
+        "Finish Amentia startup, model download, model selection, or active work before resetting model selection."
       return
     }
 

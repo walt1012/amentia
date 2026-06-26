@@ -112,6 +112,7 @@ extension AppViewModel {
       workspaceOpenCoordinator.cancel()
       threadCreationCoordinator.cancel()
       threadHistoryLoadCoordinator.cancel()
+      threadMutationCoordinator.cancel()
       localModelMetadataCoordinator.cancel()
       pluginLifecycleOperations.cancel()
       updatePluginState { state in
@@ -149,6 +150,7 @@ extension AppViewModel {
     workspaceOpenCoordinator.cancel()
     threadCreationCoordinator.cancel()
     threadHistoryLoadCoordinator.cancel()
+    threadMutationCoordinator.cancel()
     localExecutionRequests.clearAll()
     turnCancellationCoordinator.cancel()
     localModelMetadataCoordinator.cancel()

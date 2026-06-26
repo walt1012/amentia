@@ -20,6 +20,7 @@ extension AppViewModel {
     runtimeState != .launching
       && !localDataResetInProgress
       && !hasActiveOrPendingTurn()
+      && !threadMutationCoordinator.isMutating
       && !isCheckingLocalModel
       && !localModelActivationCoordinator.isActivating
       && !pluginLifecycleOperations.isActive
@@ -47,6 +48,7 @@ extension AppViewModel {
     workspaceOpenCoordinator.cancel()
     threadCreationCoordinator.cancel()
     threadHistoryLoadCoordinator.cancel()
+    threadMutationCoordinator.cancel()
     localExecutionRequests.clearAll()
     turnCancellationCoordinator.cancel()
     runtimeRelaunchCoordinator.cancel()

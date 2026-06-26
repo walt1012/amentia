@@ -79,6 +79,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
 
     XCTAssertFalse(summary.canDeleteLocalData)
     XCTAssertTrue(summary.blockedDetail?.contains("Finish active work") == true)
+    XCTAssertTrue(summary.blockedDetail?.contains("session operations") == true)
     XCTAssertFalse(summary.blockedDetail?.contains("model downloads") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("model startup") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("deleting local data") == true)

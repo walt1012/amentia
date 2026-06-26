@@ -16,8 +16,18 @@ struct SessionDeletePrompt {
 enum SessionChangePresenter {
   static let activeWorkBlocksDeleteDetail = "Finish or cancel the current work before deleting a session."
   static let activeWorkBlocksRevertDetail = "Finish or cancel the current work before reverting session changes."
+  static let sessionOperationInProgressDetail =
+    "Finish the current session operation before starting another one."
   static let noRevertableChangesDetail = "This session has not saved any project files."
   static let deleteReceiptTitle = "Session Deleted"
+
+  static func deletingDetail(threadTitle: String) -> String {
+    "Deleting \(threadTitle)..."
+  }
+
+  static func revertingDetail(threadTitle: String) -> String {
+    "Reverting changes saved by \(threadTitle)..."
+  }
 
   static func deleteSuccessDetail(threadTitle: String) -> String {
     "Deleted \(threadTitle). Project files were not changed."
@@ -47,6 +57,17 @@ enum SessionChangePresenter {
       return "Reverted 1 file saved by this session."
     default:
       return "Reverted \(revertedCount) files saved by this session."
+    }
+  }
+
+  static func revertThreadPreview(revertedCount: Int) -> String {
+    switch revertedCount {
+    case 0:
+      return "No session changes to revert"
+    case 1:
+      return "Reverted 1 file"
+    default:
+      return "Reverted \(revertedCount) files"
     }
   }
 
