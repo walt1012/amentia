@@ -4,6 +4,8 @@ use anyhow::Result;
 
 use crate::approval_types::PendingApproval;
 use crate::runtime_context::RuntimeContext;
+use crate::runtime_execution::RuntimeExecutionState;
+use crate::runtime_threads::RuntimeThreadState;
 
 impl RuntimeContext {
   pub(crate) fn persist_threads(&self) -> Result<()> {
@@ -14,6 +16,19 @@ impl RuntimeContext {
     self
       .persistence_state
       .save_runtime_state(&self.thread_state, &self.execution_state)
+  }
+
+  pub(crate) fn persist_runtime_after_thread_delete(
+    &self,
+    thread_id: &str,
+    thread_state: &RuntimeThreadState,
+    execution_state: &RuntimeExecutionState,
+  ) -> Result<()> {
+    self.persistence_state.save_runtime_after_thread_delete(
+      thread_state,
+      execution_state,
+      thread_id,
+    )
   }
 
   pub(crate) fn persist_memory_note(&self, note: &MemoryNote) -> Result<()> {
@@ -32,12 +47,6 @@ impl RuntimeContext {
     decision: &str,
   ) -> Result<()> {
     self.persistence_state.resolve_approval(approval, decision)
-  }
-
-  pub(crate) fn delete_approvals_for_thread(&self, thread_id: &str) -> Result<usize> {
-    self
-      .persistence_state
-      .delete_approvals_for_thread(thread_id)
   }
 
   pub(crate) fn persist_workspace_change(
@@ -60,11 +69,5 @@ impl RuntimeContext {
     self
       .persistence_state
       .mark_workspace_change_reverted(change_id)
-  }
-
-  pub(crate) fn delete_workspace_changes_for_thread(&self, thread_id: &str) -> Result<usize> {
-    self
-      .persistence_state
-      .delete_workspace_changes_for_thread(thread_id)
   }
 }

@@ -79,22 +79,22 @@ pub(crate) fn handle_thread_delete(
     );
   }
 
-  let Some(_removed_thread) = context.thread_state.remove(&params.thread_id) else {
+  let mut next_thread_state = context.thread_state.clone();
+  let Some(_removed_thread) = next_thread_state.remove(&params.thread_id) else {
     return JsonRpcResponse::error(request.id, -32004, "Session not found");
   };
-  context
-    .execution_state
-    .remove_pending_approvals_for_thread(&params.thread_id);
+  let mut next_execution_state = context.execution_state.clone();
+  next_execution_state.remove_pending_approvals_for_thread(&params.thread_id);
 
-  if let Err(error) = context.persist_runtime_state() {
+  if let Err(error) = context.persist_runtime_after_thread_delete(
+    &params.thread_id,
+    &next_thread_state,
+    &next_execution_state,
+  ) {
     return JsonRpcResponse::error(request.id, -32010, error.to_string());
   }
-  if let Err(error) = context.delete_approvals_for_thread(&params.thread_id) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
-  if let Err(error) = context.delete_workspace_changes_for_thread(&params.thread_id) {
-    return JsonRpcResponse::error(request.id, -32010, error.to_string());
-  }
+  context.thread_state = next_thread_state;
+  context.execution_state = next_execution_state;
 
   JsonRpcResponse::success(
     request.id,

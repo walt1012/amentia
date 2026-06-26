@@ -10,7 +10,7 @@ pub(super) fn readiness_repair_hint(run_status: &str, run_blocker: &str) -> Stri
         .to_string()
     }
     "missingPermission" => {
-      "Add the required permission to the plugin setup file or narrow the action capability."
+      "Add the required permission to the plugin manifest or narrow the action capability."
         .to_string()
     }
     "runnerSetup" => runner_setup_repair_hint(run_blocker),

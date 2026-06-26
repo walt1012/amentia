@@ -10,8 +10,9 @@ use super::runtime_persistence_environment::{
   save_memory_note as save_memory_note_to_store, save_workspace as save_workspace_to_store,
 };
 use super::runtime_persistence_execution::{
-  delete_approvals_for_thread as delete_approvals_for_thread_from_store,
-  resolve_approval as resolve_approval_in_store, save_runtime_state as save_runtime_state_to_store,
+  resolve_approval as resolve_approval_in_store,
+  save_runtime_after_thread_delete as save_runtime_after_thread_delete_to_store,
+  save_runtime_state as save_runtime_state_to_store,
 };
 use super::runtime_persistence_plugins::{
   delete_plugin_connector_credential as delete_plugin_connector_credential_from_store,
@@ -69,6 +70,20 @@ impl RuntimePersistenceState {
     save_runtime_state_to_store(self.store(), thread_state, execution_state)
   }
 
+  pub(crate) fn save_runtime_after_thread_delete(
+    &self,
+    thread_state: &RuntimeThreadState,
+    execution_state: &RuntimeExecutionState,
+    deleted_thread_id: &str,
+  ) -> Result<()> {
+    save_runtime_after_thread_delete_to_store(
+      self.store(),
+      thread_state,
+      execution_state,
+      deleted_thread_id,
+    )
+  }
+
   pub(crate) fn save_memory_note(&self, note: &MemoryNote) -> Result<()> {
     save_memory_note_to_store(self.store(), note)
   }
@@ -79,10 +94,6 @@ impl RuntimePersistenceState {
 
   pub(crate) fn resolve_approval(&self, approval: &PendingApproval, decision: &str) -> Result<()> {
     resolve_approval_in_store(self.store(), approval, decision)
-  }
-
-  pub(crate) fn delete_approvals_for_thread(&self, thread_id: &str) -> Result<usize> {
-    delete_approvals_for_thread_from_store(self.store(), thread_id)
   }
 
   pub(crate) fn save_workspace_change(&self, change: &StoredWorkspaceChangeRecord) -> Result<()> {
@@ -110,14 +121,6 @@ impl RuntimePersistenceState {
     };
 
     store.mark_workspace_change_reverted(change_id)
-  }
-
-  pub(crate) fn delete_workspace_changes_for_thread(&self, thread_id: &str) -> Result<usize> {
-    let Some(store) = self.store() else {
-      return Ok(0);
-    };
-
-    store.delete_workspace_changes_for_thread(thread_id)
   }
 
   pub(crate) fn save_plugin_enabled(&self, plugin_id: &str, enabled: bool) -> Result<()> {

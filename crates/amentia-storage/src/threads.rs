@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use rusqlite::params;
 
 use crate::time::current_timestamp;
-use crate::types::StoredThreadRecord;
+use crate::types::{StoredApprovalRecord, StoredThreadRecord};
 use crate::RuntimeStore;
 
 impl RuntimeStore {
@@ -59,45 +59,114 @@ impl RuntimeStore {
     let mut connection = self.open_connection()?;
     let transaction = connection.transaction()?;
 
-    transaction.execute("DELETE FROM threads", [])?;
+    replace_threads(&transaction, threads)?;
+    transaction.commit()?;
+    Ok(())
+  }
 
-    for thread in threads {
-      let items_json =
-        serde_json::to_string(&thread.items).context("failed to serialize timeline items")?;
-      let workspace = thread
-        .workspace
-        .clone()
-        .or(thread.summary.workspace.clone());
+  pub fn save_runtime_after_thread_delete(
+    &self,
+    threads: &[StoredThreadRecord],
+    pending_approvals: &[StoredApprovalRecord],
+    deleted_thread_id: &str,
+  ) -> Result<()> {
+    let mut connection = self.open_connection()?;
+    let transaction = connection.transaction()?;
 
-      transaction.execute(
-        "INSERT INTO threads (
-          id,
-          title,
-          status,
-          turn_count,
-          items_json,
-          workspace_root_path,
-          workspace_display_name,
-          updated_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        params![
-          &thread.summary.id,
-          &thread.summary.title,
-          &thread.summary.status,
-          thread.turn_count as i64,
-          items_json,
-          workspace
-            .as_ref()
-            .map(|workspace| workspace.root_path.clone()),
-          workspace
-            .as_ref()
-            .map(|workspace| workspace.display_name.clone()),
-          current_timestamp()?,
-        ],
-      )?;
+    replace_threads(&transaction, threads)?;
+    transaction.execute(
+      "DELETE FROM approvals WHERE decision IS NULL OR thread_id = ?1",
+      params![deleted_thread_id],
+    )?;
+    for approval in pending_approvals {
+      if approval.thread_id == deleted_thread_id {
+        continue;
+      }
+      insert_pending_approval(&transaction, approval)?;
     }
+    transaction.execute(
+      "DELETE FROM workspace_changes WHERE thread_id = ?1",
+      params![deleted_thread_id],
+    )?;
 
     transaction.commit()?;
     Ok(())
   }
+}
+
+fn replace_threads(
+  transaction: &rusqlite::Transaction<'_>,
+  threads: &[StoredThreadRecord],
+) -> Result<()> {
+  transaction.execute("DELETE FROM threads", [])?;
+
+  for thread in threads {
+    let items_json =
+      serde_json::to_string(&thread.items).context("failed to serialize timeline items")?;
+    let workspace = thread
+      .workspace
+      .clone()
+      .or(thread.summary.workspace.clone());
+
+    transaction.execute(
+      "INSERT INTO threads (
+        id,
+        title,
+        status,
+        turn_count,
+        items_json,
+        workspace_root_path,
+        workspace_display_name,
+        updated_at
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+      params![
+        &thread.summary.id,
+        &thread.summary.title,
+        &thread.summary.status,
+        thread.turn_count as i64,
+        items_json,
+        workspace
+          .as_ref()
+          .map(|workspace| workspace.root_path.clone()),
+        workspace
+          .as_ref()
+          .map(|workspace| workspace.display_name.clone()),
+        current_timestamp()?,
+      ],
+    )?;
+  }
+
+  Ok(())
+}
+
+fn insert_pending_approval(
+  transaction: &rusqlite::Transaction<'_>,
+  approval: &StoredApprovalRecord,
+) -> Result<()> {
+  transaction.execute(
+    "INSERT INTO approvals (
+      id,
+      thread_id,
+      action,
+      title,
+      relative_path,
+      content,
+      command,
+      requested_at,
+      decision,
+      resolved_at
+    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL)",
+    params![
+      &approval.id,
+      &approval.thread_id,
+      &approval.action,
+      &approval.title,
+      &approval.relative_path,
+      &approval.content,
+      &approval.command,
+      current_timestamp()?,
+    ],
+  )?;
+
+  Ok(())
 }

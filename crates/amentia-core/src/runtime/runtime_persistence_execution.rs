@@ -1,7 +1,7 @@
 use amentia_storage::RuntimeStore;
 use anyhow::Result;
 
-use super::runtime_persistence_records::stored_approval_record;
+use super::runtime_persistence_records::{stored_approval_record, stored_thread_record};
 use super::runtime_persistence_threads::save_threads;
 use crate::approval_types::PendingApproval;
 use crate::runtime_execution::RuntimeExecutionState;
@@ -45,13 +45,25 @@ pub(super) fn resolve_approval(
   store.resolve_approval(&stored_approval_record(approval.clone()), decision)
 }
 
-pub(super) fn delete_approvals_for_thread(
+pub(super) fn save_runtime_after_thread_delete(
   store: Option<&RuntimeStore>,
-  thread_id: &str,
-) -> Result<usize> {
+  thread_state: &RuntimeThreadState,
+  execution_state: &RuntimeExecutionState,
+  deleted_thread_id: &str,
+) -> Result<()> {
   let Some(store) = store else {
-    return Ok(0);
+    return Ok(());
   };
 
-  store.delete_approvals_for_thread(thread_id)
+  let threads = thread_state
+    .iter()
+    .map(stored_thread_record)
+    .collect::<Vec<_>>();
+  let approvals = execution_state
+    .pending_approval_snapshots()
+    .into_iter()
+    .map(stored_approval_record)
+    .collect::<Vec<_>>();
+
+  store.save_runtime_after_thread_delete(&threads, &approvals, deleted_thread_id)
 }
