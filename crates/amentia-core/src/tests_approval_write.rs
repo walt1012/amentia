@@ -207,6 +207,20 @@ fn approval_respond_writes_file_after_approval() {
   assert!(revert_response.error.is_none());
   let revert_result = revert_response.result.expect("revert result");
   assert_eq!(revert_result["revertedCount"], 1);
+  let revert_items = revert_result["items"].as_array().expect("revert items");
+  assert_eq!(revert_items[0]["title"], "Session Changes Reverted");
+  assert!(revert_items[0]["content"]
+    .as_str()
+    .expect("revert receipt content")
+    .contains("Reverted 1 file saved by this session"));
+  assert!(!revert_items[0]["content"]
+    .as_str()
+    .expect("revert receipt content")
+    .contains("workspace change"));
+  assert_eq!(
+    revert_items[0]["attributes"]["receiptKind"],
+    "sessionChangeRevert"
+  );
   assert!(!file_exists_after_revert);
   assert!(reverted_changes[0].reverted_at.is_some());
 }

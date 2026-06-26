@@ -97,6 +97,24 @@ final class TimelineReceiptPresentationTests: XCTestCase {
     XCTAssertEqual(badges.first?.tone, .warning)
   }
 
+  func testSessionChangeBadgesUsePlainReceiptLabels() {
+    let reverted = TimelineReceiptBadgePresenter.badges(attributes: [
+      "receiptKind": "sessionChangeRevert",
+      "action": "thread.revertChanges",
+      "revertedCount": "2",
+    ])
+    let noop = TimelineReceiptBadgePresenter.badges(attributes: [
+      "receiptKind": "sessionChangeRevert",
+      "action": "thread.revertChanges",
+      "revertedCount": "0",
+    ])
+
+    XCTAssertEqual(reverted.first?.label, "Files Reverted")
+    XCTAssertEqual(reverted.first?.tone, .ready)
+    XCTAssertEqual(noop.first?.label, "No Files Reverted")
+    XCTAssertEqual(noop.first?.tone, .neutral)
+  }
+
   func testInspectorSummarizesActionReceipt() {
     let summary = TimelineInspectorPresenter.selectedEntryActionReceiptSummary(
       TimelineInspectorSnapshot(selectedEntry: TimelineEntry(

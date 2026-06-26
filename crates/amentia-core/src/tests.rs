@@ -172,3 +172,39 @@ fn thread_delete_removes_session_without_touching_workspace_files() {
   );
   assert_eq!(file_content, "keep workspace data\n");
 }
+
+#[test]
+fn thread_revert_without_changes_returns_plain_noop_receipt() {
+  let mut context = RuntimeContext::new_in_memory();
+
+  let _ = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_START,
+      Some(json!({
+        "title": "Clean Session"
+      })),
+    ),
+  );
+
+  let revert_response = handle_request(
+    &mut context,
+    request(
+      methods::THREAD_REVERT_CHANGES,
+      Some(json!({
+        "threadId": "thread-1"
+      })),
+    ),
+  );
+
+  assert!(revert_response.error.is_none());
+  let result = revert_response.result.expect("revert result");
+  assert_eq!(result["revertedCount"], 0);
+  let items = result["items"].as_array().expect("revert items");
+  assert_eq!(items[0]["title"], "No Session Changes To Revert");
+  assert_eq!(
+    items[0]["content"],
+    "This session has no saved project files left to revert."
+  );
+  assert_eq!(items[0]["attributes"]["receiptKind"], "sessionChangeRevert");
+}

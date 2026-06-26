@@ -9,10 +9,27 @@ enum TimelineReceiptBadgePresenter {
   static func badges(attributes: [String: String]) -> [TimelineReceiptBadgeSummary] {
     [
       actionReceiptBadge(attributes: attributes),
+      sessionChangeBadge(attributes: attributes),
       webSearchBadge(attributes: attributes),
       connectorWorkflowBadge(attributes: attributes) ?? remoteWriteBadge(attributes: attributes),
     ]
       .compactMap { $0 }
+  }
+
+  private static func sessionChangeBadge(
+    attributes: [String: String]
+  ) -> TimelineReceiptBadgeSummary? {
+    guard attributes["receiptKind"] == "sessionChangeRevert"
+      || attributes["action"] == "thread.revertChanges"
+    else {
+      return nil
+    }
+
+    if attributes["revertedCount"] == "0" {
+      return TimelineReceiptBadgeSummary(label: "No Files Reverted", tone: .neutral)
+    }
+
+    return TimelineReceiptBadgeSummary(label: "Files Reverted", tone: .ready)
   }
 
   private static func webSearchBadge(

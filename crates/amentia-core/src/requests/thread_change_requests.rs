@@ -161,15 +161,19 @@ fn thread_revert_completed_item(changes: &[StoredWorkspaceChangeRecord]) -> Time
   TimelineItem {
     kind: "toolResult".to_string(),
     title: "Session Changes Reverted".to_string(),
-    content: format!(
-      "Reverted {} approved workspace change(s):\n{}",
-      changes.len(),
-      changed_paths
-    ),
+    content: format!("{}:\n{}", revert_count_line(changes.len()), changed_paths),
     attributes: Some(std::collections::HashMap::from([
       ("action".to_string(), "thread.revertChanges".to_string()),
+      ("receiptKind".to_string(), "sessionChangeRevert".to_string()),
       ("revertedCount".to_string(), changes.len().to_string()),
     ])),
+  }
+}
+
+fn revert_count_line(reverted_count: usize) -> String {
+  match reverted_count {
+    1 => "Reverted 1 file saved by this session".to_string(),
+    count => format!("Reverted {count} files saved by this session"),
   }
 }
 
@@ -177,9 +181,10 @@ fn thread_revert_noop_item() -> TimelineItem {
   TimelineItem {
     kind: "toolResult".to_string(),
     title: "No Session Changes To Revert".to_string(),
-    content: "This session has no unreverted workspace changes.".to_string(),
+    content: "This session has no saved project files left to revert.".to_string(),
     attributes: Some(std::collections::HashMap::from([
       ("action".to_string(), "thread.revertChanges".to_string()),
+      ("receiptKind".to_string(), "sessionChangeRevert".to_string()),
       ("revertedCount".to_string(), "0".to_string()),
     ])),
   }
