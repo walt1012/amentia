@@ -182,7 +182,7 @@ enum LocalModelOperationPresenter {
         title: "Model Startup Needed",
         summary: "The active local model did not answer successfully.",
         detail: LocalModelProbePresenter.recoveryDetail(for: failureDetail),
-        actionSummary: "Restart Amentia or re-download the selected model.",
+        actionSummary: "Restart Amentia to try starting the selected model again.",
         readinessDetail: "Startup Failed",
         tone: .warning
       )

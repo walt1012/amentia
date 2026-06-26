@@ -91,7 +91,9 @@ Status: active, local model loop hardening is late-stage; guarded session
 operations, reset visibility, project-aware search, revert receipts, and
 session-owned record cleanup are in place; local model failures now surface as
 plain recovery receipts and chat text while diagnostic detail stays in metadata;
-repeated saves to one file now revert as one clear file operation.
+startup failures are restart-first while re-download remains reserved for
+missing or damaged model files; repeated saves to one file now revert as one
+clear file operation.
 
 Current focus:
 

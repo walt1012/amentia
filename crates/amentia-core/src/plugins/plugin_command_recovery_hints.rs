@@ -251,7 +251,7 @@ mod tests {
   fn readiness_hint_explains_missing_runner_file() {
     let hint = readiness_repair_hint(
       "runnerSetup",
-      "Plugin runner entrypoint could not be resolved: No such file or directory",
+      "Plugin entrypoint could not be resolved: No such file or directory",
     );
 
     assert!(hint.contains("Add the runner file"));

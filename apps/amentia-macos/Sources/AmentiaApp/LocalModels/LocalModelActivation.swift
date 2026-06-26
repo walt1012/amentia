@@ -131,7 +131,7 @@ enum LocalModelActivationPlanner {
       return activationError.localizedDescription
     }
 
-    return "Model selection failed. Restart Amentia or re-download the selected model, then try again."
+    return "Model selection failed. Restart Amentia, then try selecting the model again."
   }
 
   static func failurePlan(error: Error) -> LocalModelActivationFailurePlan {

@@ -296,7 +296,7 @@ pub(crate) fn generation_failure_text(role: &ModelRole) -> String {
   let role_label = model_role_label(role);
 
   format!(
-    "Amentia could not finish the local {role_label} response. Restart Amentia or re-download the selected model."
+    "Amentia could not finish the local {role_label} response. Restart Amentia to try the selected model again."
   )
 }
 

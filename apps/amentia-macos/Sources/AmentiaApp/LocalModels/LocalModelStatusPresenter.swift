@@ -160,7 +160,7 @@ enum LocalModelStatusPresenter {
     case "binary_missing":
       return "Amentia's local model engine is missing from the app package. Reinstall Amentia from the latest release."
     case "misconfigured":
-      return "Model setup is incomplete. Refresh model setup, or re-download the selected model."
+      return "Model setup is incomplete. Refresh model setup, then select the model again."
     default:
       return "Model setup needs attention. Refresh setup or download a verified local model."
     }

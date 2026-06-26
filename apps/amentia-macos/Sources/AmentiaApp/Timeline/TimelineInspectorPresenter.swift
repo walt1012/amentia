@@ -317,19 +317,19 @@ enum TimelineInspectorPresenter {
     let kind = entry.attributes["pluginRunnerExecutionKind"]
       ?? entry.attributes["executionKind"]
       ?? "local action"
-    lines.append("Plugin runner: \(readableIdentifier(kind))")
+    lines.append("Plugin execution: \(readableIdentifier(kind))")
 
     if let setupStatus = entry.attributes["pluginRunnerSetupStatus"] {
       let phase = entry.attributes["pluginRunnerSetupPhase"] ?? "unknown"
-      lines.append("Runner setup: \(readableStatus(setupStatus)) | \(readableIdentifier(phase))")
+      lines.append("Execution setup: \(readableStatus(setupStatus)) | \(readableIdentifier(phase))")
     }
     if let check = entry.attributes["pluginRunnerEntrypointCheck"] {
-      lines.append("Runner file check: \(readableStatus(check))")
+      lines.append("Plugin file check: \(readableStatus(check))")
     }
     if entry.attributes["pluginRunnerResolvedEntrypoint"] != nil
       || entry.attributes["pluginRunnerPluginRoot"] != nil
     {
-      lines.append("Runner paths are available in Support Details.")
+      lines.append("Plugin paths are available in Support Details.")
     }
   }
 
@@ -348,12 +348,12 @@ enum TimelineInspectorPresenter {
     let code = entry.attributes["pluginRunnerExitCode"] ?? "unknown"
     let failureKind = entry.attributes["pluginRunnerFailureKind"] ?? "unknown"
     lines.append(
-      "Plugin runner: \(readableIdentifier(failureKind)) | \(readableIdentifier(reason)) | "
+      "Plugin execution: \(readableIdentifier(failureKind)) | \(readableIdentifier(reason)) | "
         + "status \(readableStatus(status)) | exit \(code)"
     )
 
     if let errorCode = entry.attributes["pluginRunnerErrorCode"] {
-      lines.append("Runner error: \(readableIdentifier(errorCode))")
+      lines.append("Execution error: \(readableIdentifier(errorCode))")
     }
     if let recoveryHint = entry.attributes["pluginRunnerRecoveryHint"] {
       lines.append("Recovery: \(recoveryHint)")
@@ -362,14 +362,14 @@ enum TimelineInspectorPresenter {
     if entry.attributes["pluginRunnerStdoutRetainedBytes"] != nil
       || entry.attributes["pluginRunnerStderrRetainedBytes"] != nil
     {
-      lines.append("Runner output was condensed for context.")
+      lines.append("Plugin output was condensed for context.")
     }
 
     if let stderrPreview = entry.attributes["pluginRunnerStderrPreview"] {
-      lines.append("Runner error preview:\n\(stderrPreview)")
+      lines.append("Plugin error preview:\n\(stderrPreview)")
     }
     if let stdoutPreview = entry.attributes["pluginRunnerStdoutPreview"] {
-      lines.append("Runner output preview:\n\(stdoutPreview)")
+      lines.append("Plugin output preview:\n\(stdoutPreview)")
     }
   }
 

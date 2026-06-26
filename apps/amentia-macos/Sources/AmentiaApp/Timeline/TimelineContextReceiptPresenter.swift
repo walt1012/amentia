@@ -183,7 +183,7 @@ enum TimelineContextReceiptPresenter {
     var lines = [
       "Status: needs attention",
       "Impact: Amentia could not finish the local model response.",
-      "Recovery: Restart Amentia or re-download the selected model.",
+      "Recovery: Restart Amentia to try the selected model again.",
     ]
     if let role = entry.attributes["responseRole"] {
       lines.append("Step: \(readableResponseRole(role))")

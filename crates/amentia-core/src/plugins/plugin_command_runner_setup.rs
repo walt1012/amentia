@@ -403,7 +403,7 @@ pub(super) fn safe_entrypoint_path(
   {
     return Err((
       -32054,
-      "Plugin runner entrypoint must stay inside the plugin bundle.".to_string(),
+      "Plugin entrypoint must stay inside the plugin bundle.".to_string(),
     ));
   }
 
@@ -417,13 +417,13 @@ pub(super) fn safe_entrypoint_path(
   let resolved = candidate.canonicalize().map_err(|error| {
     (
       -32054,
-      format!("Plugin runner entrypoint could not be resolved: {error}"),
+      format!("Plugin entrypoint could not be resolved: {error}"),
     )
   })?;
   if !resolved.starts_with(&root) {
     return Err((
       -32054,
-      "Plugin runner entrypoint resolved outside the plugin bundle.".to_string(),
+      "Plugin entrypoint resolved outside the plugin bundle.".to_string(),
     ));
   }
 

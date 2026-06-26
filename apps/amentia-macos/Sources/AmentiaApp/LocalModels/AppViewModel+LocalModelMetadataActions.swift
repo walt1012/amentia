@@ -51,7 +51,7 @@ extension AppViewModel {
 
 enum LocalModelMetadataPresenter {
   static func refreshFailureDetail() -> String {
-    "Could not refresh local model setup. Restart Amentia or re-download the selected model, then try again."
+    "Could not refresh local model setup. Restart Amentia, then try refreshing setup again."
   }
 }
 

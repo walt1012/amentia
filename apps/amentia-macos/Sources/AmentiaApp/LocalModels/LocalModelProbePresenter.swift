@@ -36,7 +36,7 @@ enum LocalModelProbePresenter {
       runtimeDetail: recoveryDetail,
       timelineTitle: "Local Model Startup Failed",
       timelineBody:
-        "Amentia could not start the selected local model. Restart Amentia or re-download the selected model.",
+        "Amentia could not start the selected local model. Restart Amentia to try starting it again.",
       timelineKind: .warning,
       attributes: attributes
     )
@@ -90,7 +90,7 @@ enum LocalModelProbePresenter {
       runtimeDetail: recoveryDetail,
       timelineTitle: "Local Model Startup Failed",
       timelineBody:
-        "The selected local model did not answer during startup. Restart Amentia or re-download the model.",
+        "The selected local model did not answer during startup. Restart Amentia to try starting it again.",
       timelineKind: .warning,
       attributes: attributes
     )
@@ -98,7 +98,7 @@ enum LocalModelProbePresenter {
 
   private static let recoveryDetail =
     "Cowork is paused until the local model starts successfully. "
-    + "Restart Amentia or re-download the selected model."
+    + "Restart Amentia to try starting it again."
 
   private static func baseAttributes(
     for probe: RuntimeBridge.RuntimeModelProbe

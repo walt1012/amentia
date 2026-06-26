@@ -87,7 +87,7 @@ struct LocalModelReadinessState {
       return nil
     }
 
-    return probeState.detail ?? "Local model startup failed. Restart Amentia or re-download it."
+    return probeState.detail ?? "Local model startup failed. Restart Amentia to try starting it again."
   }
 
   private mutating func reconcileProbeStateWithActiveModel() {

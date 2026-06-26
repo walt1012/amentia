@@ -414,7 +414,7 @@ final class LocalModelPresenterTests: XCTestCase {
     let detail = LocalModelMetadataPresenter.refreshFailureDetail()
 
     XCTAssertTrue(detail.contains("Restart Amentia"))
-    XCTAssertTrue(detail.contains("re-download the selected model"))
+    XCTAssertTrue(detail.contains("try refreshing setup again"))
     XCTAssertFalse(detail.contains("JSON-RPC"))
     XCTAssertFalse(detail.contains("manifest"))
     XCTAssertFalse(detail.contains("llama"))
@@ -534,7 +534,9 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertEqual(status, "Model startup failed")
     XCTAssertEqual(readiness, "Local model setup needs a successful start.")
     XCTAssertTrue(guidance.actionSummary.contains("Restart Amentia"))
+    XCTAssertFalse(guidance.actionSummary.contains("re-download"))
     XCTAssertTrue(guidance.detail.contains("Cowork is paused"))
+    XCTAssertFalse(guidance.detail.contains("re-download"))
     XCTAssertTrue(
       LocalModelStatusPresenter.detailSummary(statusSnapshot(
         selectedModel: selectedModel,
@@ -625,9 +627,10 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertEqual(presentation.timelineTitle, "Local Model Startup Failed")
     XCTAssertEqual(presentation.timelineKind, .warning)
     XCTAssertTrue(presentation.runtimeDetail.contains("Cowork is paused"))
-    XCTAssertTrue(presentation.runtimeDetail.contains("re-download the selected model"))
     XCTAssertTrue(presentation.runtimeDetail.contains("Restart Amentia"))
+    XCTAssertFalse(presentation.runtimeDetail.contains("re-download"))
     XCTAssertFalse(presentation.timelineBody.contains("llama.cpp"))
+    XCTAssertFalse(presentation.timelineBody.contains("re-download"))
     XCTAssertEqual(presentation.attributes["detail"], "Local llama.cpp inference failed.")
     XCTAssertNil(presentation.attributes["sample"])
   }
