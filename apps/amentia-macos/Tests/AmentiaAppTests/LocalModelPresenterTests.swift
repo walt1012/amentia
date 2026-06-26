@@ -529,10 +529,10 @@ final class LocalModelPresenterTests: XCTestCase {
       modelCheckFailureDetail: detail
     ))
 
-    XCTAssertEqual(guidance.title, "Model Check Needed")
-    XCTAssertEqual(guidance.readinessDetail, "Check Failed")
-    XCTAssertEqual(status, "Model check failed")
-    XCTAssertEqual(readiness, "Local model setup needs a successful check.")
+    XCTAssertEqual(guidance.title, "Model Startup Needed")
+    XCTAssertEqual(guidance.readinessDetail, "Startup Failed")
+    XCTAssertEqual(status, "Model startup failed")
+    XCTAssertEqual(readiness, "Local model setup needs a successful start.")
     XCTAssertTrue(guidance.actionSummary.contains("Restart Amentia"))
     XCTAssertTrue(guidance.detail.contains("Cowork is paused"))
     XCTAssertTrue(
@@ -578,8 +578,8 @@ final class LocalModelPresenterTests: XCTestCase {
       sample: "Amentia model ready."
     ))
 
-    XCTAssertEqual(presentation.runtimeDetail, "Local model check passed.")
-    XCTAssertEqual(presentation.timelineTitle, "Local Model Checked")
+    XCTAssertEqual(presentation.runtimeDetail, "Local model started.")
+    XCTAssertEqual(presentation.timelineTitle, "Local Model Started")
     XCTAssertEqual(presentation.timelineKind, .system)
     XCTAssertEqual(presentation.attributes["sample"], "Amentia model ready.")
     XCTAssertFalse(presentation.runtimeDetail.contains("llama"))
@@ -594,7 +594,7 @@ final class LocalModelPresenterTests: XCTestCase {
       sample: nil
     ))
 
-    XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
+    XCTAssertEqual(presentation.timelineTitle, "Local Model Startup Failed")
     XCTAssertEqual(presentation.timelineKind, .warning)
     XCTAssertTrue(presentation.runtimeDetail.contains("Cowork is paused"))
     XCTAssertTrue(presentation.runtimeDetail.contains("re-download the selected model"))
@@ -611,7 +611,7 @@ final class LocalModelPresenterTests: XCTestCase {
       ])
     )
 
-    XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
+    XCTAssertEqual(presentation.timelineTitle, "Local Model Startup Failed")
     XCTAssertTrue(presentation.runtimeDetail.contains("Cowork is paused"))
     XCTAssertTrue(presentation.runtimeDetail.contains("Restart Amentia"))
     XCTAssertFalse(presentation.timelineBody.contains("JSON-RPC"))

@@ -25,7 +25,7 @@ enum LocalModelStatusPresenter {
       case .disconnected:
         return "Start Amentia to inspect model setup."
       case .launching:
-        return "Checking Amentia setup..."
+        return "Starting Amentia setup..."
       case .failed:
         return "Restart Amentia to recover model setup."
       case .ready:
@@ -37,7 +37,7 @@ enum LocalModelStatusPresenter {
       return "Choose a verified model"
     }
     if snapshot.modelCheckFailureDetail != nil {
-      return "Model check failed"
+      return "Model startup failed"
     }
 
     switch modelHealth.status {
@@ -48,7 +48,7 @@ enum LocalModelStatusPresenter {
     case "error":
       return "Model needs attention"
     default:
-      return "Checking local model"
+      return "Starting local model"
     }
   }
 
@@ -121,7 +121,7 @@ enum LocalModelStatusPresenter {
     let packReady = modelHealth.metrics["packReady"] ?? "false"
     if readiness == "ready", packReady == "true" {
       if snapshot.modelCheckFailureDetail != nil {
-        return "Local model setup needs a successful check."
+        return "Local model setup needs a successful start."
       }
 
       return "Local model setup is ready."
@@ -168,7 +168,7 @@ enum LocalModelStatusPresenter {
 
   static func suggestedPathSummary(_ snapshot: LocalModelStatusSnapshot) -> String {
     guard snapshot.modelHealth != nil else {
-      return "Local folders appear after Amentia finishes checking setup."
+      return "Local folders appear after Amentia finishes startup."
     }
 
     return "Advanced: inspect downloaded model files only if setup keeps failing."

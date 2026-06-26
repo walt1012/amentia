@@ -21,7 +21,7 @@ final class LocalModelReadinessStateTests: XCTestCase {
     XCTAssertFalse(state.blocksReadiness(activeModelID: "minicpm5-1b"))
     XCTAssertEqual(
       state.probeFailureDetail(activeModelID: "granite-4.0-h-350m"),
-      "Cowork is paused until the local model check passes. Restart Amentia or re-download the selected model."
+      "Cowork is paused until the local model starts successfully. Restart Amentia or re-download the selected model."
     )
     XCTAssertFalse(
       state.probeFailureDetail(activeModelID: "granite-4.0-h-350m")?.contains("/Users/example")

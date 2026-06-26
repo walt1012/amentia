@@ -22,6 +22,15 @@ extension AppViewModel {
       $0.attributes["pluginCommandStatus"] == "blocked"
     }
     let modelInvocationFailed = TimelineEventPresenter.hasModelInvocationFailure(result.items)
+    if modelInvocationFailed, let activeModelID = activeLocalModelID() {
+      updateLocalModelReadinessState { state in
+        state.applyProbeResult(
+          modelID: activeModelID,
+          status: "error",
+          detail: TimelineEventPresenter.modelInvocationFailedDetail
+        )
+      }
+    }
     if pluginCommandCancelled {
       runtimeDetail = TimelinePluginEventPresenter.pendingPluginCommandCancelledDetail
     } else if wasCancelled {

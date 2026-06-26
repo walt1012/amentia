@@ -628,7 +628,7 @@ final class CoworkFirstPresentationTests: XCTestCase {
   func testRequestPolicyMapsInternalMethodsToUserTasks() {
     XCTAssertEqual(
       RuntimeBridgeRequestPolicy.userFacingRequestName(for: "model/probe"),
-      "startup model check"
+      "model startup"
     )
     XCTAssertEqual(
       RuntimeBridgeRequestPolicy.userFacingRequestName(for: "workspace/search"),

@@ -42,8 +42,8 @@ enum LocalModelOperationPresenter {
         title: "Starting Amentia",
         summary: "Amentia is reconnecting your selected local model.",
         detail: "Your model choices and download progress will appear after Amentia is ready.",
-        actionSummary: "Checking Amentia setup...",
-        readinessDetail: "Checking",
+        actionSummary: "Starting Amentia setup...",
+        readinessDetail: "Starting",
         tone: .active
       )
     case .failed:
@@ -105,10 +105,10 @@ enum LocalModelOperationPresenter {
       return "Active: \(snapshot.activeModelDisplayName ?? "local model"). Switching waits for the current work."
     }
     if snapshot.isCheckingModel {
-      return "Checking the active local model before using it for cowork."
+      return "Starting the active local model before using it for cowork."
     }
     if snapshot.modelCheckFailureDetail != nil {
-      return "The active local model needs a successful check before cowork can continue."
+      return "The active local model needs to start successfully before cowork can continue."
     }
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
@@ -172,18 +172,18 @@ enum LocalModelOperationPresenter {
         summary: "Amentia is confirming the selected local model during startup.",
         detail: "This startup step runs on this Mac and confirms the selected model can answer.",
         actionSummary: "Starting the selected model for local cowork...",
-        readinessDetail: "Checking",
+        readinessDetail: "Starting",
         tone: .active
       )
     }
 
     if let failureDetail = snapshot.modelCheckFailureDetail {
       return LocalModelSetupGuidance(
-        title: "Model Check Needed",
+        title: "Model Startup Needed",
         summary: "The active local model did not answer successfully.",
         detail: LocalModelProbePresenter.recoveryDetail(for: failureDetail),
         actionSummary: "Restart Amentia or re-download the selected model.",
-        readinessDetail: "Check Failed",
+        readinessDetail: "Startup Failed",
         tone: .warning
       )
     }

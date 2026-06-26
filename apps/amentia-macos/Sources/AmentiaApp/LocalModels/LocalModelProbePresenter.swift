@@ -9,11 +9,8 @@ struct LocalModelProbePresentation {
 }
 
 enum LocalModelProbePresenter {
-  static let blockedDetail =
-    "Finish startup, model download, model selection, or active work before checking the model."
-
   static func startedDetail() -> String {
-    "Checking the active local model..."
+    "Starting the active local model..."
   }
 
   static func presentation(
@@ -37,9 +34,9 @@ enum LocalModelProbePresenter {
 
     return LocalModelProbePresentation(
       runtimeDetail: recoveryDetail,
-      timelineTitle: "Local Model Check Failed",
+      timelineTitle: "Local Model Startup Failed",
       timelineBody:
-        "Amentia could not complete the startup model check. Restart Amentia or re-download the selected model.",
+        "Amentia could not start the selected local model. Restart Amentia or re-download the selected model.",
       timelineKind: .warning,
       attributes: attributes
     )
@@ -72,9 +69,9 @@ enum LocalModelProbePresenter {
     }
 
     return LocalModelProbePresentation(
-      runtimeDetail: "Local model check passed.",
-      timelineTitle: "Local Model Checked",
-      timelineBody: "The active local model answered a short local prompt.",
+      runtimeDetail: "Local model started.",
+      timelineTitle: "Local Model Started",
+      timelineBody: "The active local model is ready for local cowork.",
       timelineKind: .system,
       attributes: attributes
     )
@@ -91,7 +88,7 @@ enum LocalModelProbePresenter {
 
     return LocalModelProbePresentation(
       runtimeDetail: recoveryDetail,
-      timelineTitle: "Local Model Check Failed",
+      timelineTitle: "Local Model Startup Failed",
       timelineBody:
         "The selected local model did not answer during startup. Restart Amentia or re-download the model.",
       timelineKind: .warning,
@@ -100,7 +97,7 @@ enum LocalModelProbePresenter {
   }
 
   private static let recoveryDetail =
-    "Cowork is paused until the local model check passes. "
+    "Cowork is paused until the local model starts successfully. "
     + "Restart Amentia or re-download the selected model."
 
   private static func baseAttributes(

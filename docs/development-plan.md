@@ -71,8 +71,8 @@ The current product baseline includes:
 - Release: unsigned x86_64 DMG, checksum, install guide, manifest, and manual
   acceptance before visible ad-hoc prereleases.
 - Model: in-app download, verification, activation, pause, resume, cancel,
-  first-use guidance, self-check recovery, packaged backend probing, and one
-  active local model with cowork paused until model checks pass.
+  first-use guidance, startup recovery, packaged backend probing, and one
+  active local model with cowork paused until model startup succeeds.
 - Cowork loop: workspace tools, Web Search retrieval, approvals, sandbox
   diagnostics, cancellable subprocesses, compact receipts, and first prompt
   drafting from setup or composer.
@@ -103,7 +103,7 @@ Exit criteria:
 
 - A fresh install can download, activate, start, and invoke a local model
   without expert context.
-- A failed startup model check blocks cowork use until Amentia restarts with a
+- A failed model startup blocks cowork use until Amentia restarts with a
   passing model or the model is replaced.
 - Users can delete sessions, revert session changes, and Reset Amentia from
   visible UI without leaving app-owned garbage behind.
