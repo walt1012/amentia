@@ -196,7 +196,7 @@ enum LocalModelOperationPresenter {
       return LocalModelSetupGuidance(
         title: "Model Check Needed",
         summary: "The active local model did not answer successfully.",
-        detail: failureDetail,
+        detail: modelCheckRecoveryDetail(failureDetail),
         actionSummary: "Check the model again, restart Amentia, or re-download the selected model.",
         readinessDetail: "Check Failed",
         tone: .warning
@@ -298,7 +298,7 @@ enum LocalModelOperationPresenter {
     }
 
     if let failureDetail = snapshot.modelCheckFailureDetail {
-      return "\(failureDetail) Check the model again after restarting or re-downloading it."
+      return modelCheckRecoveryDetail(failureDetail)
     }
 
     if snapshot.isLocalModelReady {
@@ -327,5 +327,18 @@ enum LocalModelOperationPresenter {
 
   private static func displayName(_ model: LocalModelSummary) -> String {
     LocalModelDisplayPresenter.actionName(model)
+  }
+
+  private static func modelCheckRecoveryDetail(_ failureDetail: String) -> String {
+    let detail = failureDetail.trimmingCharacters(in: .whitespacesAndNewlines)
+    let recoveryDetail = LocalModelProbePresenter.readinessFailureDetail()
+
+    if detail.isEmpty {
+      return recoveryDetail
+    }
+    if detail.contains("Cowork is paused") {
+      return detail
+    }
+    return "\(detail) \(recoveryDetail)"
   }
 }
