@@ -68,52 +68,22 @@ Git history, not as a growing plan backlog.
 
 The current product baseline includes:
 
-- Unsigned x86_64 DMG release flow with concise public assets.
-- In-app model download, verification, activation, pause, resume, cancel, and
-  one active model, with first-use model check guidance in the model panel and
-  composer.
-- Model setup UI uses plain recovery language by default and keeps file/path
-  inspection behind Advanced surfaces.
-- Local model self-check failures show user-facing recovery first and keep
-  backend error details out of the primary timeline body.
-- Local model download, selection, and setup refresh failures show recovery
-  guidance instead of raw paths, manifests, network errors, or backend terms.
-- Model choice copy presents practical fit, size, and recovery actions instead
-  of internal model tags or runner terminology.
-- Packaged local backend launch probing and bounded file-backed inference.
-- Project-scoped tools, Web Search retrieval, approvals, sandbox diagnostics,
-  cancellable subprocesses, and human receipts.
-- Session search, delete, deletion receipts, change preview, and revert.
-- Session delete and revert confirmations name the target session and keep
-  project-file ownership clear.
-- Session delete and revert failures keep raw local errors out of the primary
-  status copy and point users back to safe retry paths.
-- Deleting the last session returns to a clean welcome timeline instead of an
-  empty or orphaned selection state.
-- First prompt drafting and sending from the setup checklist or composer.
-- Failed first prompts keep the user draft, show a retryable recovery message,
-  and update the session preview without exposing backend details.
-- Reset Amentia for app-owned data, downloaded models, and paused downloads.
-- Local data deletion copy is unified around app-owned data and clearly excludes
-  project folders and repositories.
-- Local data deletion clears selected model, active model, paused download, and
-  verification state so first-run setup starts cleanly.
-- Local plugin registry, installation lifecycle, Actions, Connections, Skills,
-  MCP, Tools, Checks, credentials, retries, and generic connector receipts.
-- Legacy prompt-pack aliases are out of the active plugin contract.
-- Notion as the reference connection, not as a hardcoded platform direction.
-- Product-first UI language that avoids raw protocol names, hashes, paths, and
-  manifest details in normal use.
-- Request timeout, cancellation, and launch details use cowork task language
-  instead of JSON-RPC method names or helper process labels.
-- Startup, local data deletion, and common timeline failures show recovery copy
-  first while keeping technical details in diagnostics attributes.
-- Project search, file reveal, and plugin entry failures keep raw paths and
-  runner errors out of normal UI while preserving diagnostics attributes.
-- Model check readiness and project restore failures keep recovery guidance in
-  normal UI and preserve raw diagnostics only as attributes.
-- Amentia is a fresh app identity; legacy state migration and legacy model-path
-  aliases are out of the active path.
+- Release: unsigned x86_64 DMG, checksum, install guide, manifest, and manual
+  acceptance before visible ad-hoc prereleases.
+- Model: in-app download, verification, activation, pause, resume, cancel,
+  first-use guidance, self-check recovery, packaged backend probing, and one
+  active local model.
+- Cowork loop: workspace tools, Web Search retrieval, approvals, sandbox
+  diagnostics, cancellable subprocesses, compact receipts, and first prompt
+  drafting from setup or composer.
+- Continuity: session search, delete, change preview, revert, last-session
+  welcome recovery, reset of app-owned data, and clean recovery states.
+- Extensions: local plugin registry, install lifecycle, Actions, Connections,
+  Skills, MCP, Tools, Checks, credentials, retries, Notion proof, and generic
+  connector receipts.
+- Product quality: normal UI avoids raw protocol names, hashes, paths, manifest
+  details, runner errors, and legacy Pith identity; diagnostics keep technical
+  details when needed.
 
 ## M15 Cowork Continuity
 
@@ -147,17 +117,19 @@ Exit criteria:
 
 Work order:
 
-1. Remove stale identity/model docs, dead compatibility paths, and duplicated
-   fixtures while keeping ownership boundaries narrow.
-2. Prove the local model loop from the packaged app: download, activate,
+1. Prove the local model loop from the packaged app: download, activate,
    self-check, invoke, fail closed, and recover in plain language.
+2. Keep ordinary UI language product-first while leaving plugin, Skill, MCP,
+   and diagnostics terms only where they help advanced users.
 3. Finish session continuity: deletion, change ledger, revert, receipts,
    session search, reset, and clear recovery states.
-4. Improve cowork retrieval: Web Search by default, bounded memory ranking, and
+4. Trim duplicated test fixtures and oversized presentation/plugin tests around
+   stable user-visible contracts instead of implementation snapshots.
+5. Improve cowork retrieval: Web Search by default, bounded memory ranking, and
    project/session context before any local document RAG.
-5. Add a local follow-up queue only after approvals, receipts, and cancellation
+6. Add a local follow-up queue only after approvals, receipts, and cancellation
    remain reliable.
-6. Keep UI polish focused on the primary cowork path, not on admin panels or
+7. Keep UI polish focused on the primary cowork path, not on admin panels or
    diagnostic surfaces.
 
 ## M16 Extension Hardening
