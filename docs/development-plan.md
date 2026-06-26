@@ -87,11 +87,11 @@ The current product baseline includes:
 
 ## M15 Cowork Continuity
 
-Status: active, late-stage installed-app hardening.
+Status: active, local model loop hardening is late-stage.
 
 Current focus:
 
-- Prove the fresh-install model deploy and invoke loop from the user-facing app.
+- Finish fresh-install model deploy, self-check, invoke, and recovery polish.
 - Keep session delete, revert, reset, and failure recovery clean and visible.
 - Remove stale identity/model docs and user-visible internal wording.
 - Polish the primary cowork path before adding more extension surface.
@@ -117,8 +117,8 @@ Exit criteria:
 
 Work order:
 
-1. Prove the local model loop from the packaged app: download, activate,
-   self-check, invoke, fail closed, and recover in plain language.
+1. Finish the local model loop: invoke reliability, failed-check recovery, and
+   plain-language first-use guidance.
 2. Keep ordinary UI language product-first while leaving plugin, Skill, MCP,
    and diagnostics terms only where they help advanced users.
 3. Finish session continuity: deletion, change ledger, revert, receipts,

@@ -117,7 +117,8 @@ enum LocalModelOperationPresenter {
 
     let activeModel = snapshot.activeModelDisplayName ?? "none"
     let localSize = LocalModelByteFormatter.string(snapshot.downloadedLocalSizeBytes)
-    return "Active: \(activeModel). \(snapshot.downloadedModelCount) of \(snapshot.totalModelCount) models are ready. They use \(localSize) on this Mac."
+    return "Active: \(activeModel). \(snapshot.downloadedModelCount) "
+      + "of \(snapshot.totalModelCount) models are ready. They use \(localSize) on this Mac."
   }
 
   static func recoverySummary(_ snapshot: LocalModelOperationSnapshot) -> String {
@@ -196,7 +197,7 @@ enum LocalModelOperationPresenter {
       return LocalModelSetupGuidance(
         title: "Model Check Needed",
         summary: "The active local model did not answer successfully.",
-        detail: modelCheckRecoveryDetail(failureDetail),
+        detail: LocalModelProbePresenter.recoveryDetail(for: failureDetail),
         actionSummary: "Check the model again, restart Amentia, or re-download the selected model.",
         readinessDetail: "Check Failed",
         tone: .warning
@@ -253,7 +254,8 @@ enum LocalModelOperationPresenter {
     if let model = snapshot.selectedSetupModel {
       return LocalModelSetupGuidance(
         title: "Download Local Model",
-        summary: "Fresh installs need one curated local model before Amentia can answer locally. \(LocalModelDisplayPresenter.actionName(model)) is selected.",
+        summary: "Fresh installs need one curated local model before Amentia can answer locally. "
+          + "\(LocalModelDisplayPresenter.actionName(model)) is selected.",
         detail: modelDetail(model),
         actionSummary: "Choose the fast default or a stronger local option.",
         readinessDetail: "Download",
@@ -298,7 +300,7 @@ enum LocalModelOperationPresenter {
     }
 
     if let failureDetail = snapshot.modelCheckFailureDetail {
-      return modelCheckRecoveryDetail(failureDetail)
+      return LocalModelProbePresenter.recoveryDetail(for: failureDetail)
     }
 
     if snapshot.isLocalModelReady {
@@ -327,18 +329,5 @@ enum LocalModelOperationPresenter {
 
   private static func displayName(_ model: LocalModelSummary) -> String {
     LocalModelDisplayPresenter.actionName(model)
-  }
-
-  private static func modelCheckRecoveryDetail(_ failureDetail: String) -> String {
-    let detail = failureDetail.trimmingCharacters(in: .whitespacesAndNewlines)
-    let recoveryDetail = LocalModelProbePresenter.readinessFailureDetail()
-
-    if detail.isEmpty {
-      return recoveryDetail
-    }
-    if detail.contains("Cowork is paused") {
-      return detail
-    }
-    return "\(detail) \(recoveryDetail)"
   }
 }

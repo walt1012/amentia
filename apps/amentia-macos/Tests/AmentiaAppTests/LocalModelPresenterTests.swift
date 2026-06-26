@@ -562,6 +562,22 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertEqual(readiness, "Local model setup needs a successful check.")
     XCTAssertTrue(guidance.actionSummary.contains("Check the model again"))
     XCTAssertTrue(guidance.detail.contains("Cowork is paused"))
+    XCTAssertTrue(
+      LocalModelStatusPresenter.detailSummary(statusSnapshot(
+        selectedModel: selectedModel,
+        modelHealth: readyModelHealth(for: selectedModel),
+        hasActiveCatalogModel: true,
+        modelCheckFailureDetail: detail
+      )).contains("Cowork is paused")
+    )
+    XCTAssertTrue(
+      LocalModelStatusPresenter.installHintSummary(statusSnapshot(
+        selectedModel: selectedModel,
+        modelHealth: readyModelHealth(for: selectedModel),
+        hasActiveCatalogModel: true,
+        modelCheckFailureDetail: detail
+      )).contains("Cowork is paused")
+    )
   }
 
   func testSetupPrimaryActionOffersModelCheckWhenReady() {
@@ -585,6 +601,21 @@ final class LocalModelPresenterTests: XCTestCase {
         canProbeModel: true
       )),
       "Check Model"
+    )
+  }
+
+  func testFailedModelCheckPrimaryActionNamesRetry() {
+    let action = LocalModelActionPlanner.setupPrimaryAction(actionSnapshot(
+      canProbeModel: true,
+      hasModelCheckFailure: true
+    ))
+
+    XCTAssertEqual(
+      LocalModelActionPlanner.primaryTitle(for: action, snapshot: actionSnapshot(
+        canProbeModel: true,
+        hasModelCheckFailure: true
+      )),
+      "Check Again"
     )
   }
 
@@ -709,6 +740,7 @@ final class LocalModelPresenterTests: XCTestCase {
     canCancelDownload: Bool = false,
     canProbeModel: Bool = false,
     isCheckingModel: Bool = false,
+    hasModelCheckFailure: Bool = false,
     defaultDownloadTitle: String = "Download Model"
   ) -> LocalModelActionSnapshot {
     LocalModelActionSnapshot(
@@ -724,6 +756,7 @@ final class LocalModelPresenterTests: XCTestCase {
       canCancelDownload: canCancelDownload,
       canProbeModel: canProbeModel,
       isCheckingModel: isCheckingModel,
+      hasModelCheckFailure: hasModelCheckFailure,
       defaultDownloadTitle: defaultDownloadTitle
     )
   }

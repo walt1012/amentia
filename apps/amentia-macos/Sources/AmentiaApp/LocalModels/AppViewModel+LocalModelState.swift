@@ -123,6 +123,7 @@ extension AppViewModel {
       canCancelDownload: canCancelModelDownload(),
       canProbeModel: canProbeLocalModel(),
       isCheckingModel: isCheckingLocalModel,
+      hasModelCheckFailure: modelCheckFailureDetail() != nil,
       defaultDownloadTitle: defaultModelDownloadButtonTitle()
     )
   }

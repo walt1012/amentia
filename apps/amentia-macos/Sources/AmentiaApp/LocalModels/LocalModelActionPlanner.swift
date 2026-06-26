@@ -13,6 +13,7 @@ struct LocalModelActionSnapshot {
   let canCancelDownload: Bool
   let canProbeModel: Bool
   let isCheckingModel: Bool
+  let hasModelCheckFailure: Bool
   let defaultDownloadTitle: String
 }
 
@@ -112,6 +113,9 @@ enum LocalModelActionPlanner {
     case .bootstrapModelPackMetadata:
       return "Refresh Model Setup"
     case .probeModel:
+      if snapshot.hasModelCheckFailure {
+        return snapshot.isCheckingModel ? "Checking Again" : "Check Again"
+      }
       return snapshot.isCheckingModel ? "Checking Model" : "Check Model"
     }
   }

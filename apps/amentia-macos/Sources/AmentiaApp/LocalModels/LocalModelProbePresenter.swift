@@ -49,6 +49,18 @@ enum LocalModelProbePresenter {
     recoveryDetail
   }
 
+  static func recoveryDetail(for failureDetail: String) -> String {
+    let detail = failureDetail.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if detail.isEmpty {
+      return recoveryDetail
+    }
+    if detail.contains("Cowork is paused") {
+      return detail
+    }
+    return "\(detail) \(recoveryDetail)"
+  }
+
   private static func successPresentation(
     for probe: RuntimeBridge.RuntimeModelProbe
   ) -> LocalModelProbePresentation {

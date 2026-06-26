@@ -70,10 +70,11 @@ enum LocalModelStatusPresenter {
     }
 
     if modelHealth.status == "ready", !snapshot.hasActiveCatalogModel {
-      return "Choose a verified model from Amentia's curated list before running. Removed or external model selections need to be picked again."
+      return "Choose a verified model from Amentia's curated list before running. "
+        + "Removed or external model selections need to be picked again."
     }
     if let failureDetail = snapshot.modelCheckFailureDetail {
-      return "\(failureDetail) Check the model again, restart Amentia, or re-download it."
+      return LocalModelProbePresenter.recoveryDetail(for: failureDetail)
     }
 
     if modelHealth.status != "ready" {
@@ -135,7 +136,7 @@ enum LocalModelStatusPresenter {
 
     if modelHealth.status == "ready" {
       if let failureDetail = snapshot.modelCheckFailureDetail {
-        return "\(failureDetail) Check the model again, restart Amentia, or re-download it."
+        return LocalModelProbePresenter.recoveryDetail(for: failureDetail)
       }
 
       return "Local model setup is ready."
