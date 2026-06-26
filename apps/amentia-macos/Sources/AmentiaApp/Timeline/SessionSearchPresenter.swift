@@ -7,6 +7,10 @@ enum SessionSearchPresenter {
     _ sessions: [ThreadSummary],
     query rawQuery: String
   ) -> [ThreadSummary] {
+    if sessions.allSatisfy({ $0.id.hasPrefix("local-") }) {
+      return sessions
+    }
+
     let query = normalizedSearchText(rawQuery)
     guard !query.isEmpty else {
       return sessions

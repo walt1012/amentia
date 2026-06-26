@@ -24,6 +24,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       LocalDataSettingsSnapshot(
         downloadedModelBytes: 0,
         canDeleteLocalData: true,
+        isDeletingLocalData: false,
         localDataPath: "/Users/example/Library/Application Support/Amentia"
       )
     )
@@ -50,6 +51,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       LocalDataSettingsSnapshot(
         downloadedModelBytes: 222_662_560,
         canDeleteLocalData: true,
+        isDeletingLocalData: false,
         localDataPath: "/Users/example/Library/Application Support/Amentia"
       )
     )
@@ -73,6 +75,7 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
       LocalDataSettingsSnapshot(
         downloadedModelBytes: 0,
         canDeleteLocalData: false,
+        isDeletingLocalData: false,
         localDataPath: "/Users/example/Library/Application Support/Amentia"
       )
     )
@@ -84,6 +87,20 @@ final class LocalDataSettingsPresenterTests: XCTestCase {
     XCTAssertTrue(summary.blockedDetail?.contains("model startup") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("deleting local data") == true)
     XCTAssertTrue(summary.blockedDetail?.contains("plugin and connection operations") == true)
+  }
+
+  func testSummaryExplainsDeletionInProgress() {
+    let summary = LocalDataSettingsPresenter.summary(
+      LocalDataSettingsSnapshot(
+        downloadedModelBytes: 0,
+        canDeleteLocalData: false,
+        isDeletingLocalData: true,
+        localDataPath: "/Users/example/Library/Application Support/Amentia"
+      )
+    )
+
+    XCTAssertEqual(summary.deleteButtonTitle, "Deleting Local Data...")
+    XCTAssertTrue(summary.blockedDetail?.contains("Deleting Amentia local data") == true)
   }
 
   func testResetSummaryKeepsPathOutOfRuntimeDetail() {

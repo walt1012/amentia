@@ -88,7 +88,7 @@ The current product baseline includes:
 ## M15 Cowork Continuity
 
 Status: active, local model loop hardening is late-stage; guarded session
-operations are in place and session search is being polished for daily use.
+operations, reset visibility, and project-aware session search are in place.
 
 Current focus:
 
@@ -122,8 +122,8 @@ Work order:
    feedback, process cleanup, and plain-language first-use guidance.
 2. Keep ordinary UI language product-first while leaving plugin, Skill, MCP,
    and diagnostics terms only where they help advanced users.
-3. Finish session continuity: guarded deletion/revert, change ledger,
-   receipts, project-aware session search, reset, and clear recovery states.
+3. Finish session continuity: change ledger, receipts, reset recovery states,
+   and any remaining delete/revert edge cases.
 4. Trim duplicated test fixtures and oversized presentation/plugin tests around
    stable user-visible contracts instead of implementation snapshots.
 5. Improve cowork retrieval: Web Search by default, bounded memory ranking, and

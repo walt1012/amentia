@@ -11,6 +11,7 @@ extension AppViewModel {
       LocalDataSettingsSnapshot(
         downloadedModelBytes: localModelOperationSnapshot().downloadedLocalSizeBytes,
         canDeleteLocalData: canDeleteLocalData(),
+        isDeletingLocalData: localDataResetInProgress,
         localDataPath: localDataFolderPath()
       )
     )
@@ -40,9 +41,6 @@ extension AppViewModel {
     }
 
     localDataResetInProgress = true
-    defer {
-      localDataResetInProgress = false
-    }
     runtimeBridge.stopRuntime(detail: "Deleting Amentia local data. Restart Amentia to continue.")
     runtimeLaunchCoordinator.cancel()
     workspaceOpenCoordinator.cancel()
@@ -59,19 +57,37 @@ extension AppViewModel {
     modelDownloadCoordinator.finishActiveDownload()
     localModelDownloadRequestPlanCache.clear()
 
-    do {
-      let result = try AppDataResetService.deleteLocalData()
-      applyLocalDataResetSuccess(result)
-    } catch {
-      runtimeDetail = UserFacingFailurePresenter.localDataDeletionFailureDetail()
-      appendEntry(
-        to: selectedThreadID,
-        TimelineEntryFactory.warning(
-          title: "Local Data Delete Failed",
-          body: UserFacingFailurePresenter.localDataDeletionFailureDetail(),
-          attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
+    Task { [weak self] in
+      guard let self else {
+        return
+      }
+
+      defer {
+        self.localDataResetInProgress = false
+      }
+
+      do {
+        let result = try await Task.detached(priority: .userInitiated) {
+          try AppDataResetService.deleteLocalData()
+        }.value
+        guard !Task.isCancelled else {
+          return
+        }
+        self.applyLocalDataResetSuccess(result)
+      } catch {
+        guard !Task.isCancelled else {
+          return
+        }
+        self.runtimeDetail = UserFacingFailurePresenter.localDataDeletionFailureDetail()
+        self.appendEntry(
+          to: self.selectedThreadID,
+          TimelineEntryFactory.warning(
+            title: "Local Data Delete Failed",
+            body: UserFacingFailurePresenter.localDataDeletionFailureDetail(),
+            attributes: UserFacingFailurePresenter.technicalErrorAttributes(error)
+          )
         )
-      )
+      }
     }
   }
 

@@ -14,6 +14,17 @@ final class SessionSearchPresenterTests: XCTestCase {
     )
   }
 
+  func testLocalWelcomeSessionStaysVisibleDuringSearch() {
+    let sessions = [
+      session(id: "local-welcome", title: "Welcome to Amentia"),
+    ]
+
+    XCTAssertEqual(
+      SessionSearchPresenter.filteredSessions(sessions, query: "missing").map(\.id),
+      ["local-welcome"]
+    )
+  }
+
   func testSearchMatchesTitlePreviewAndProject() {
     let sessions = [
       session(

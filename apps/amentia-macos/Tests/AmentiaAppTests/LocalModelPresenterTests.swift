@@ -553,6 +553,34 @@ final class LocalModelPresenterTests: XCTestCase {
     )
   }
 
+  func testMissingModelEngineUsesPlainRepairCopy() {
+    let selectedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: true,
+      active: true
+    )
+    let health = ModelHealthSummary(
+      packID: selectedModel.id,
+      displayName: selectedModel.displayName,
+      backend: "llama.cpp",
+      status: "unavailable",
+      detail: "Binary missing",
+      source: "local",
+      binaryPath: nil,
+      modelPath: selectedModel.installPath,
+      manifestPath: "/tmp/model-pack.json",
+      metrics: ["readiness": "binary_missing"]
+    )
+    let detail = LocalModelStatusPresenter.installHintSummary(statusSnapshot(
+      selectedModel: selectedModel,
+      modelHealth: health
+    ))
+
+    XCTAssertTrue(detail.contains("local model engine"))
+    XCTAssertFalse(detail.contains("runner"))
+  }
+
   func testSetupPrimaryActionDoesNotOfferManualModelCheckWhenReady() {
     let action = LocalModelActionPlanner.setupPrimaryAction(actionSnapshot(
       isLocalModelReady: true

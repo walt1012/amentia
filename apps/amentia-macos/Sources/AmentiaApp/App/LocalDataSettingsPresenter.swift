@@ -3,6 +3,7 @@ import Foundation
 struct LocalDataSettingsSnapshot: Equatable {
   let downloadedModelBytes: Int64
   let canDeleteLocalData: Bool
+  let isDeletingLocalData: Bool
   let localDataPath: String
 }
 
@@ -37,10 +38,13 @@ enum LocalDataSettingsPresenter {
         "Amentia keeps downloaded models, sessions, plugins, saved connection sign-ins, preferences, caches, and window layout on this Mac. Project folders are never deleted here.",
       uninstallDetail:
         "Removing Amentia.app does not remove this data. Use Delete All Local Data when you want a fresh first-run setup.",
-      blockedDetail: blockedDetail(canDeleteLocalData: snapshot.canDeleteLocalData),
+      blockedDetail: blockedDetail(
+        canDeleteLocalData: snapshot.canDeleteLocalData,
+        isDeletingLocalData: snapshot.isDeletingLocalData
+      ),
       localDataPath: snapshot.localDataPath,
       revealButtonTitle: "Show Local Data",
-      deleteButtonTitle: "Delete All Local Data...",
+      deleteButtonTitle: deleteButtonTitle(isDeletingLocalData: snapshot.isDeletingLocalData),
       confirmationTitle: "Delete All Local Amentia Data?",
       confirmationMessage:
         "Amentia will remove Amentia data from this Mac: downloaded models, sessions, plugins, saved connection sign-ins, paused downloads, preferences, caches, and saved window layout. Your project folders and repositories will not be deleted.",
@@ -69,7 +73,18 @@ enum LocalDataSettingsPresenter {
     return "No downloaded model files yet. Sessions, plugins, saved connections, preferences, and caches stay on this Mac."
   }
 
-  private static func blockedDetail(canDeleteLocalData: Bool) -> String? {
+  private static func deleteButtonTitle(isDeletingLocalData: Bool) -> String {
+    isDeletingLocalData ? "Deleting Local Data..." : "Delete All Local Data..."
+  }
+
+  private static func blockedDetail(
+    canDeleteLocalData: Bool,
+    isDeletingLocalData: Bool
+  ) -> String? {
+    if isDeletingLocalData {
+      return "Deleting Amentia local data. Restart Amentia when it finishes."
+    }
+
     if canDeleteLocalData {
       return nil
     }

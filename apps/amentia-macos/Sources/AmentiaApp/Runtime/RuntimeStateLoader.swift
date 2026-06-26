@@ -72,7 +72,7 @@ enum RuntimeStateLoader {
       || rawDetail.contains("backend")
       || rawDetail.contains("llama")
     {
-      return "Amentia could not start its local model runner. Reinstall Amentia from the latest release, then reopen the app."
+      return "Amentia could not start its local model engine. Reinstall Amentia from the latest release, then reopen the app."
     }
 
     if rawDetail.contains("checksum")

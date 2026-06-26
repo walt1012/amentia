@@ -158,7 +158,7 @@ enum LocalModelStatusPresenter {
     case "model_missing", "manifest_only", "unconfigured":
       return "Download \(selectedModelName) in Amentia, then Amentia will select and run it automatically."
     case "binary_missing":
-      return "Amentia's local model runner is missing from the app package. Reinstall Amentia from the latest release."
+      return "Amentia's local model engine is missing from the app package. Reinstall Amentia from the latest release."
     case "misconfigured":
       return "Model setup is incomplete. Refresh model setup, or re-download the selected model."
     default:
