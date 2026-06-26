@@ -88,7 +88,8 @@ enum LocalModelProbePresenter {
   }
 
   private static let recoveryDetail =
-    "Local model check failed. Restart Amentia or re-download the selected model, then check again."
+    "Cowork is paused until the local model check passes. "
+    + "Restart Amentia or re-download the selected model, then check again."
 
   private static func baseAttributes(
     for probe: RuntimeBridge.RuntimeModelProbe

@@ -72,7 +72,7 @@ The current product baseline includes:
   acceptance before visible ad-hoc prereleases.
 - Model: in-app download, verification, activation, pause, resume, cancel,
   first-use guidance, self-check recovery, packaged backend probing, and one
-  active local model.
+  active local model with cowork paused until model checks pass.
 - Cowork loop: workspace tools, Web Search retrieval, approvals, sandbox
   diagnostics, cancellable subprocesses, compact receipts, and first prompt
   drafting from setup or composer.

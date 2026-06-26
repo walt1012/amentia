@@ -52,6 +52,9 @@ final class LocalModelFirstUseTests: XCTestCase {
     }
     XCTAssertEqual(plan.attributes["result"], "activated")
     XCTAssertEqual(plan.attributes["manifestPath"], manifestPath)
+    XCTAssertTrue(plan.runtimeDetail.contains("will check"))
+    XCTAssertTrue(plan.timelineBody.contains("will check it before cowork starts"))
+    XCTAssertFalse(plan.timelineBody.contains("active local model"))
   }
 
   func testPausedFirstUseDownloadResumesFromKnownProgress() throws {

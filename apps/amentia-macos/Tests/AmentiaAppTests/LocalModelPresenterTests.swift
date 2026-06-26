@@ -389,6 +389,27 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertFalse(genericFailure.runtimeDetail.contains("/Users/example"))
   }
 
+  func testModelActivationSuccessExplainsPendingCheck() {
+    let selectedModel = model(
+      id: "granite-4.0-h-350m",
+      displayName: "Granite 4.0-H-350M Q4_K_M",
+      downloaded: true,
+      active: false
+    )
+
+    let plan = LocalModelActivationPlanner.selectionPlan(
+      model: selectedModel,
+      manifestPath: "/tmp/model-pack.json"
+    )
+
+    XCTAssertEqual(plan.timelineTitle, "Local Model Selected")
+    XCTAssertTrue(plan.timelineBody.contains("will check it before cowork starts"))
+    XCTAssertTrue(plan.relaunchRunningDetail.contains("check Granite 4.0-H-350M"))
+    XCTAssertTrue(plan.relaunchIdleDetail.contains("will be checked"))
+    XCTAssertFalse(plan.timelineBody.contains("active local model"))
+    XCTAssertFalse(plan.timelineBody.contains("Q4_K_M"))
+  }
+
   func testModelSetupRefreshFailureCopyAvoidsBackendDetails() {
     let detail = LocalModelMetadataPresenter.refreshFailureDetail()
 
@@ -540,6 +561,7 @@ final class LocalModelPresenterTests: XCTestCase {
     XCTAssertEqual(status, "Model check failed")
     XCTAssertEqual(readiness, "Local model setup needs a successful check.")
     XCTAssertTrue(guidance.actionSummary.contains("Check the model again"))
+    XCTAssertTrue(guidance.detail.contains("Cowork is paused"))
   }
 
   func testSetupPrimaryActionOffersModelCheckWhenReady() {
@@ -593,6 +615,7 @@ final class LocalModelPresenterTests: XCTestCase {
 
     XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
     XCTAssertEqual(presentation.timelineKind, .warning)
+    XCTAssertTrue(presentation.runtimeDetail.contains("Cowork is paused"))
     XCTAssertTrue(presentation.runtimeDetail.contains("re-download the selected model"))
     XCTAssertTrue(presentation.runtimeDetail.contains("Restart Amentia"))
     XCTAssertFalse(presentation.timelineBody.contains("llama.cpp"))
@@ -608,6 +631,7 @@ final class LocalModelPresenterTests: XCTestCase {
     )
 
     XCTAssertEqual(presentation.timelineTitle, "Local Model Check Failed")
+    XCTAssertTrue(presentation.runtimeDetail.contains("Cowork is paused"))
     XCTAssertTrue(presentation.runtimeDetail.contains("Restart Amentia"))
     XCTAssertFalse(presentation.timelineBody.contains("JSON-RPC"))
     XCTAssertEqual(
